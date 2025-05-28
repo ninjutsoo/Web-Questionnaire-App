@@ -1,3 +1,15 @@
+# Node dependencies
+node_modules/
+
+# Build output
+/dist/
+/build/
+/out/        # e.g. Next.js or some static exports
+
+# Local env files (don’t commit your secrets!)
+.env
+.env.*.local
+
 # Logs
 logs
 *.log
@@ -16,9 +28,25 @@ dist-ssr
 .vscode/*
 !.vscode/extensions.json
 .idea
-.DS_Store
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
+
+# OS‐specific files
+.DS_Store
+Thumbs.db
+
+# Test coverage
+coverage/
+
+# Optional lock files if you want to regenerate each time
+# (most teams check these in, so uncomment only if you regenerate)
+# npm-shrinkwrap.json
+# yarn.lock
+
+# Misc
+.vite/       # Vite’s cache
+.cache/      # some tools’ caches
+*.localhistory
