@@ -1,52 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Select, Input, Space, Typography } from 'antd';
 import { CarOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-export default function Mobility({ responses, onSave }) {
-  const [localResponses, setLocalResponses] = useState({
-    movementMethods: { tags: [], text: '' },
-    goingWell: { tags: [], text: '' },
-    limitations: { tags: [], text: '' },
-    questions: { tags: [], text: '' },
-    ...responses
-  });
+export default function Mobility({ questionnaire, responses, onSave }) {
+  const [localResponses, setLocalResponses] = useState(responses || {});
+  const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
-    setLocalResponses(prev => ({ ...prev, ...responses }));
+    setLocalResponses(responses || {});
   }, [responses]);
 
-  const suggestedTags = {
-    movementMethods: ["Walk", "Cane", "Wheelchair", "Exercise videos", "Public transport", "Physical therapy", "Drive with help"],
-    goingWell: ["Can walk easily", "Exercise regularly", "Home is easy to move in", "Dog walking", "Pain is improving"],
-    limitations: ["Fall risk", "Shoulder pain", "Breathlessness", "Can't carry laundry", "Back pain", "Hard to reach shelves"],
-    questions: ["How can I move more safely?", "Do I need a mobility aid?", "How to deal with pain?", "Is it time to think about home changes?"]
-  };
-
-  const questions = [
-    {
-      key: 'movementMethods',
-      title: 'How do you move around at home and outside?',
-      tags: suggestedTags.movementMethods
-    },
-    {
-      key: 'goingWell',
-      title: "What's going well with your mobility?",
-      tags: suggestedTags.goingWell
-    },
-    {
-      key: 'limitations',
-      title: 'What is limiting your movement or getting in your way?',
-      tags: suggestedTags.limitations
-    },
-    {
-      key: 'questions',
-      title: 'What questions do you want to ask your provider about your mobility?',
-      tags: suggestedTags.questions
+  // Debounced save function - only triggers when localResponses actually changes
+  useEffect(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  ];
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      onSave(localResponses);
+    }, 5000); // Save after 5 seconds of no changes
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [localResponses]); // Removed onSave from dependencies
+
+  // Get questions from questionnaire structure
+  const questions = questionnaire?.sections?.mobility?.questions || {};
 
   const handleTagChange = (questionKey, selectedTags) => {
     const updated = {
@@ -57,7 +42,6 @@ export default function Mobility({ responses, onSave }) {
       }
     };
     setLocalResponses(updated);
-    onSave(updated);
   };
 
   const handleTextChange = (questionKey, text) => {
@@ -69,7 +53,6 @@ export default function Mobility({ responses, onSave }) {
       }
     };
     setLocalResponses(updated);
-    onSave(updated);
   };
 
   return (
@@ -91,9 +74,9 @@ export default function Mobility({ responses, onSave }) {
       </div>
 
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        {questions.map((question, index) => (
+        {Object.entries(questions).map(([questionKey, question], index) => (
           <Card 
-            key={question.key}
+            key={questionKey}
             style={{ 
               marginBottom: '30px',
               border: '2px solid #e8e8e8',
@@ -102,7 +85,7 @@ export default function Mobility({ responses, onSave }) {
             title={
               <div style={{ fontSize: '18px', fontWeight: '600', color: '#333' }}>
                 <CarOutlined style={{ marginRight: '8px', color: '#fa541c' }} />
-                {`${index + 1}. ${question.title}`}
+                {`${index + 1}. ${question.text}`}
               </div>
             }
           >
@@ -115,10 +98,10 @@ export default function Mobility({ responses, onSave }) {
                   mode="multiple"
                   size="large"
                   placeholder="Choose from suggestions..."
-                  value={localResponses[question.key]?.tags || []}
-                  onChange={(values) => handleTagChange(question.key, values)}
+                  value={localResponses[questionKey]?.tags || []}
+                  onChange={(values) => handleTagChange(questionKey, values)}
                   style={{ width: '100%' }}
-                  options={question.tags.map(tag => ({ label: tag, value: tag }))}
+                  options={question.tags?.map(tag => ({ label: tag, value: tag })) || []}
                   maxTagCount="responsive"
                 />
               </div>
@@ -134,8 +117,8 @@ export default function Mobility({ responses, onSave }) {
                     "Example: I walk with a cane around the house. I use my car to go to the store but sometimes need help with heavy bags. I do chair exercises every morning." :
                     "You can write anything else you'd like to share about this question..."
                   }
-                  value={localResponses[question.key]?.text || ''}
-                  onChange={(e) => handleTextChange(question.key, e.target.value)}
+                  value={localResponses[questionKey]?.text || ''}
+                  onChange={(e) => handleTextChange(questionKey, e.target.value)}
                   style={{ fontSize: '16px' }}
                 />
               </div>

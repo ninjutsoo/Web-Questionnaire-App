@@ -1,52 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Select, Input, Space, Typography } from 'antd';
 import { TagsOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-export default function WhatMatters({ responses, onSave }) {
-  const [localResponses, setLocalResponses] = useState({
-    importantThings: { tags: [], text: '' },
-    enjoyableActivities: { tags: [], text: '' },
-    obstacles: { tags: [], text: '' },
-    providerInfo: { tags: [], text: '' },
-    ...responses
-  });
+export default function WhatMatters({ questionnaire, responses, onSave }) {
+  const [localResponses, setLocalResponses] = useState(responses || {});
+  const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
-    setLocalResponses(prev => ({ ...prev, ...responses }));
+    setLocalResponses(responses || {});
   }, [responses]);
 
-  const suggestedTags = {
-    importantThings: ["Family", "Health", "Friends", "Retirement", "Faith", "Volunteering", "Hobbies", "Pets", "Independence"],
-    enjoyableActivities: ["Playing music", "Watching sports", "Working", "Spending time with grandchildren", "Reading", "Cooking", "Gardening", "Community service"],
-    obstacles: ["Trouble sleeping", "Low energy", "Caring for others", "Mobility issues", "Bladder issues", "Hearing loss", "Access to food"],
-    providerInfo: ["Living with family", "Caring for someone", "Yearly goals", "Faith-based needs", "People who support me", "People who stress me"]
-  };
-
-  const questions = [
-    {
-      key: 'importantThings',
-      title: 'What are the most important things in your life right now?',
-      tags: suggestedTags.importantThings
-    },
-    {
-      key: 'enjoyableActivities', 
-      title: 'What activities do you enjoy doing regularly?',
-      tags: suggestedTags.enjoyableActivities
-    },
-    {
-      key: 'obstacles',
-      title: "What's getting in the way of doing what you enjoy?",
-      tags: suggestedTags.obstacles
-    },
-    {
-      key: 'providerInfo',
-      title: 'What do you want your provider to know about you?',
-      tags: suggestedTags.providerInfo
+  // Debounced save function - only triggers when localResponses actually changes
+  useEffect(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  ];
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      onSave(localResponses);
+    }, 5000); // Save after 5 seconds of no changes
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [localResponses]); // Removed onSave from dependencies
+
+  // Get questions from questionnaire structure
+  const questions = questionnaire?.sections?.matters?.questions || {};
 
   const handleTagChange = (questionKey, selectedTags) => {
     const updated = {
@@ -57,7 +42,6 @@ export default function WhatMatters({ responses, onSave }) {
       }
     };
     setLocalResponses(updated);
-    onSave(updated);
   };
 
   const handleTextChange = (questionKey, text) => {
@@ -69,7 +53,6 @@ export default function WhatMatters({ responses, onSave }) {
       }
     };
     setLocalResponses(updated);
-    onSave(updated);
   };
 
   return (
@@ -91,9 +74,9 @@ export default function WhatMatters({ responses, onSave }) {
       </div>
 
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        {questions.map((question, index) => (
+        {Object.entries(questions).map(([questionKey, question], index) => (
           <Card 
-            key={question.key}
+            key={questionKey}
             style={{ 
               marginBottom: '30px',
               border: '2px solid #e8e8e8',
@@ -102,7 +85,7 @@ export default function WhatMatters({ responses, onSave }) {
             title={
               <div style={{ fontSize: '18px', fontWeight: '600', color: '#333' }}>
                 <TagsOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
-                {`${index + 1}. ${question.title}`}
+                {`${index + 1}. ${question.text}`}
               </div>
             }
           >
@@ -115,10 +98,10 @@ export default function WhatMatters({ responses, onSave }) {
                   mode="multiple"
                   size="large"
                   placeholder="Choose from suggestions..."
-                  value={localResponses[question.key]?.tags || []}
-                  onChange={(values) => handleTagChange(question.key, values)}
+                  value={localResponses[questionKey]?.tags || []}
+                  onChange={(values) => handleTagChange(questionKey, values)}
                   style={{ width: '100%' }}
-                  options={question.tags.map(tag => ({ label: tag, value: tag }))}
+                  options={question.tags?.map(tag => ({ label: tag, value: tag })) || []}
                   maxTagCount="responsive"
                 />
               </div>
@@ -131,8 +114,8 @@ export default function WhatMatters({ responses, onSave }) {
                   size="large"
                   rows={4}
                   placeholder="You can write anything else you'd like to share about this question..."
-                  value={localResponses[question.key]?.text || ''}
-                  onChange={(e) => handleTextChange(question.key, e.target.value)}
+                  value={localResponses[questionKey]?.text || ''}
+                  onChange={(e) => handleTextChange(questionKey, e.target.value)}
                   style={{ fontSize: '16px' }}
                 />
               </div>

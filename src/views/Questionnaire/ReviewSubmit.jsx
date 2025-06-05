@@ -4,7 +4,7 @@ import { CheckCircleOutlined, SendOutlined, EditOutlined } from '@ant-design/ico
 
 const { Title, Text, Paragraph } = Typography;
 
-export default function ReviewSubmit({ responses, onFinalSubmit }) {
+export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }) {
 
   const getSectionSummary = (sectionKey, sectionData) => {
     if (!sectionData || Object.keys(sectionData).length === 0) {
@@ -27,13 +27,8 @@ export default function ReviewSubmit({ responses, onFinalSubmit }) {
   };
 
   const getTotalQuestions = (sectionKey) => {
-    const totals = {
-      matters: 4,
-      medication: 4,
-      mind: 7,
-      mobility: 4
-    };
-    return totals[sectionKey] || 0;
+    if (!questionnaire?.sections?.[sectionKey]?.questions) return 0;
+    return Object.keys(questionnaire.sections[sectionKey].questions).length;
   };
 
   const getCompletionColor = (answered, total) => {
@@ -84,8 +79,22 @@ export default function ReviewSubmit({ responses, onFinalSubmit }) {
           border: `2px solid ${getCompletionColor(summary.answered, summary.total)}`,
           borderRadius: '12px'
         }}
+        headStyle={{
+          textAlign: 'center',
+          paddingLeft: '0px',
+          paddingRight: '0px'
+        }}
         title={
-          <div style={{ fontSize: '20px', fontWeight: '600', color: section.color }}>
+          <div style={{ 
+            fontSize: '20px', 
+            fontWeight: '600', 
+            color: section.color,
+            textAlign: 'center',
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
+          }}>
             <span style={{ marginRight: '10px' }}>{section.icon}</span>
             {section.title}
           </div>
@@ -111,46 +120,53 @@ export default function ReviewSubmit({ responses, onFinalSubmit }) {
           </Text>
         ) : (
           <Space direction="vertical" size="small" style={{ width: '100%' }}>
-            {Object.entries(sectionData).map(([key, value]) => (
-              <div key={key} style={{ marginBottom: '10px' }}>
-                <Text strong style={{ fontSize: '14px', textTransform: 'capitalize' }}>
-                  {key.replace(/([A-Z])/g, ' $1').trim()}:
-                </Text>
-                <div style={{ marginTop: '4px' }}>
-                  {typeof value === 'object' && value !== null ? (
-                    <div>
-                      {value.tags && value.tags.length > 0 && (
-                        <div style={{ marginBottom: '6px' }}>
-                          {value.tags.map(tag => (
-                            <Tag key={tag} color="blue" style={{ marginBottom: '2px' }}>
-                              {tag}
-                            </Tag>
-                          ))}
-                        </div>
-                      )}
-                      {value.text && (
-                        <Paragraph 
-                          style={{ 
-                            fontSize: '14px', 
-                            margin: 0, 
-                            color: '#666',
-                            backgroundColor: '#f8f8f8',
-                            padding: '8px',
-                            borderRadius: '4px'
-                          }}
-                        >
-                          {value.text}
-                        </Paragraph>
-                      )}
-                    </div>
-                  ) : (
-                    <Text style={{ fontSize: '14px', color: '#666' }}>
-                      {typeof value === 'number' ? `${value}%` : value}
-                    </Text>
-                  )}
+            {Object.entries(sectionData).map(([key, value]) => {
+              // Get the actual question text from the questionnaire structure
+              const questionText = questionnaire?.sections?.[section.key]?.questions?.[key]?.text || 
+                                 key.replace(/([A-Z])/g, ' $1').trim();
+              
+              return (
+                <div key={key} style={{ marginBottom: '15px', padding: '12px', backgroundColor: '#fafafa', borderRadius: '8px' }}>
+                  <Text strong style={{ fontSize: '15px', color: '#333', display: 'block', marginBottom: '8px' }}>
+                    {questionText}
+                  </Text>
+                  <div style={{ marginTop: '4px', paddingLeft: '16px' }}>
+                    {typeof value === 'object' && value !== null ? (
+                      <div>
+                        {value.tags && value.tags.length > 0 && (
+                          <div style={{ marginBottom: '6px' }}>
+                            {value.tags.map(tag => (
+                              <Tag key={tag} color="blue" style={{ marginBottom: '2px' }}>
+                                {tag}
+                              </Tag>
+                            ))}
+                          </div>
+                        )}
+                        {value.text && (
+                          <Paragraph 
+                            style={{ 
+                              fontSize: '14px', 
+                              margin: 0, 
+                              color: '#666',
+                              backgroundColor: '#f0f0f0',
+                              padding: '8px',
+                              borderRadius: '4px',
+                              fontStyle: 'italic'
+                            }}
+                          >
+                            "{value.text}"
+                          </Paragraph>
+                        )}
+                      </div>
+                    ) : (
+                      <Text style={{ fontSize: '16px', color: '#1890ff', fontWeight: '600' }}>
+                        {typeof value === 'number' ? `${value}%` : value}
+                      </Text>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </Space>
         )}
       </Card>

@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, Button, Progress, message } from 'antd';
 import { HomeOutlined, LeftOutlined } from '@ant-design/icons';
-import { auth, db } from '../../services/firebase';
+import { auth } from '../../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { getQuestionnaire, getUserSession, saveSectionResponses } from '../../services/questionnaireService';
 import WhatMatters from './WhatMatters';
 import Medication from './Medication';
 import Mind from './Mind';
@@ -15,6 +15,8 @@ export default function Questionnaire() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('matters');
+  const [questionnaire, setQuestionnaire] = useState(null);
+  const [sessionId, setSessionId] = useState(null);
   const [responses, setResponses] = useState({
     matters: {},
     medication: {},
@@ -31,34 +33,57 @@ export default function Questionnaire() {
       } else {
         console.log("User authenticated:", currentUser.uid, currentUser.email);
         setUser(currentUser);
-        loadExistingResponses(currentUser.uid);
+        initializeQuestionnaire(currentUser.uid);
       }
     });
     return () => unsubscribe();
   }, [navigate]);
 
-  const loadExistingResponses = async (uid) => {
+  const initializeQuestionnaire = async (uid) => {
     try {
-      // Use the existing Users collection which already has proper permissions
-      const docRef = doc(db, 'Users', uid);
-      const docSnap = await getDoc(docRef);
+      console.log('Initializing questionnaire for user:', uid);
+      // Load questionnaire structure and user session in parallel
+      const [questionnaireData, sessionData] = await Promise.all([
+        getQuestionnaire(),
+        getUserSession(uid)
+      ]);
       
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        // Load questionnaire responses if they exist
-        if (data.questionnaireResponses) {
-          setResponses(data.questionnaireResponses || responses);
-        }
+      console.log('Questionnaire data loaded:', !!questionnaireData);
+      console.log('Session data loaded:', !!sessionData);
+      
+      if (questionnaireData) {
+        setQuestionnaire(questionnaireData);
+      } else {
+        console.error('No questionnaire data received');
+        message.error('Failed to load questionnaire structure');
+        return;
       }
+      
+      if (sessionData) {
+        setSessionId(sessionData.sessionId);
+        setResponses(sessionData.data.responses || {
+          matters: {},
+          medication: {},
+          mind: {},
+          mobility: {}
+        });
+      } else {
+        console.error('No session data received');
+        message.error('Failed to load user session');
+        return;
+      }
+      
+      console.log('Questionnaire initialized successfully');
     } catch (error) {
-      console.error('Error loading responses:', error);
+      console.error('Error initializing questionnaire:', error);
+      message.error('Failed to load questionnaire. Please check your internet connection and try again.');
     } finally {
       setLoading(false);
     }
   };
 
   const saveResponses = async (section, data) => {
-    if (!user) return;
+    if (!sessionId) return;
     
     const updatedResponses = {
       ...responses,
@@ -68,13 +93,8 @@ export default function Questionnaire() {
     setResponses(updatedResponses);
     
     try {
-      // Save to the existing Users collection with merge option
-      await setDoc(doc(db, 'Users', user.uid), {
-        questionnaireResponses: updatedResponses,
-        questionnaireLastUpdated: new Date(),
-      }, { merge: true }); // This preserves existing user data
-      
-      message.success('Progress saved!');
+      await saveSectionResponses(sessionId, section, data);
+      // Silent save - no notification
     } catch (error) {
       console.error('Error saving responses:', error);
       message.error('Failed to save progress');
@@ -82,20 +102,15 @@ export default function Questionnaire() {
   };
 
   const calculateProgress = (sectionData) => {
-    const totalQuestions = {
-      matters: 4,
-      medication: 4, 
-      mind: 7,
-      mobility: 4
-    };
-    
-    if (!sectionData || typeof sectionData !== 'object') {
+    if (!questionnaire || !sectionData || typeof sectionData !== 'object') {
       return 0;
     }
     
+    const sectionQuestions = questionnaire.sections[activeTab]?.questions || {};
+    const totalQuestions = Object.keys(sectionQuestions).length;
     const answered = Object.keys(sectionData).length;
-    const total = totalQuestions[activeTab] || 1;
-    return Math.round((answered / total) * 100);
+    
+    return totalQuestions > 0 ? Math.round((answered / totalQuestions) * 100) : 0;
   };
 
   const getSectionBaseColor = (tabKey) => {
@@ -125,6 +140,7 @@ export default function Questionnaire() {
       label: 'What Matters',
       children: (
         <WhatMatters 
+          questionnaire={questionnaire}
           responses={responses.matters}
           onSave={(data) => saveResponses('matters', data)}
         />
@@ -135,6 +151,7 @@ export default function Questionnaire() {
       label: 'Medication',
       children: (
         <Medication 
+          questionnaire={questionnaire}
           responses={responses.medication}
           onSave={(data) => saveResponses('medication', data)}
         />
@@ -145,6 +162,7 @@ export default function Questionnaire() {
       label: 'Mind',
       children: (
         <Mind 
+          questionnaire={questionnaire}
           responses={responses.mind}
           onSave={(data) => saveResponses('mind', data)}
         />
@@ -155,6 +173,7 @@ export default function Questionnaire() {
       label: 'Mobility',
       children: (
         <Mobility 
+          questionnaire={questionnaire}
           responses={responses.mobility}
           onSave={(data) => saveResponses('mobility', data)}
         />
@@ -165,6 +184,7 @@ export default function Questionnaire() {
       label: 'Review & Submit',
       children: (
         <ReviewSubmit 
+          questionnaire={questionnaire}
           responses={responses}
           onFinalSubmit={() => {
             message.success('Assessment submitted successfully!');
@@ -185,6 +205,24 @@ export default function Questionnaire() {
         fontSize: '18px'
       }}>
         Loading your assessment...
+      </div>
+    );
+  }
+
+  if (!questionnaire) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column',
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        <div style={{ marginBottom: '20px' }}>❌ Failed to load questionnaire</div>
+        <Button onClick={() => window.location.reload()}>
+          Try Again
+        </Button>
       </div>
     );
   }

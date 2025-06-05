@@ -1,52 +1,37 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Select, Input, Space, Typography } from 'antd';
 import { MedicineBoxOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-export default function Medication({ responses, onSave }) {
-  const [localResponses, setLocalResponses] = useState({
-    currentMedications: { tags: [], text: '' },
-    goingWell: { tags: [], text: '' },
-    issues: { tags: [], text: '' },
-    questions: { tags: [], text: '' },
-    ...responses
-  });
+export default function Medication({ questionnaire, responses, onSave }) {
+  const [localResponses, setLocalResponses] = useState(responses || {});
+  const saveTimeoutRef = useRef(null);
 
   useEffect(() => {
-    setLocalResponses(prev => ({ ...prev, ...responses }));
+    setLocalResponses(responses || {});
   }, [responses]);
 
-  const suggestedTags = {
-    currentMedications: ["Calcium", "Aspirin", "Heart medicine", "Inhaler", "Diabetes medicine", "Vitamins", "Probiotics", "Herbal supplements"],
-    goingWell: ["More active", "Better sleep", "Improved appetite", "Stable condition", "No side effects"],
-    issues: ["Dizziness", "Nausea", "High cost", "Hard to manage", "Unsure effectiveness", "Side effects"],
-    questions: ["Do I need all these?", "Are my vaccines up to date?", "Can I get cheaper alternatives?", "Should we check labs?", "Who to call with questions?"]
-  };
-
-  const questions = [
-    {
-      key: 'currentMedications',
-      title: 'What medications do you take regularly or as needed? (include vitamins & supplements)',
-      tags: suggestedTags.currentMedications
-    },
-    {
-      key: 'goingWell',
-      title: "What's going well with your medications?",
-      tags: suggestedTags.goingWell
-    },
-    {
-      key: 'issues',
-      title: 'What issues are you having with your medications?',
-      tags: suggestedTags.issues
-    },
-    {
-      key: 'questions',
-      title: 'What questions or concerns do you want to ask your provider about your medications?',
-      tags: suggestedTags.questions
+  // Debounced save function - only triggers when localResponses actually changes
+  useEffect(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
     }
-  ];
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      onSave(localResponses);
+    }, 5000); // Save after 5 seconds of no changes
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [localResponses]); // Removed onSave from dependencies
+
+  // Get questions from questionnaire structure
+  const questions = questionnaire?.sections?.medication?.questions || {};
 
   const handleTagChange = (questionKey, selectedTags) => {
     const updated = {
@@ -57,7 +42,6 @@ export default function Medication({ responses, onSave }) {
       }
     };
     setLocalResponses(updated);
-    onSave(updated);
   };
 
   const handleTextChange = (questionKey, text) => {
@@ -69,7 +53,6 @@ export default function Medication({ responses, onSave }) {
       }
     };
     setLocalResponses(updated);
-    onSave(updated);
   };
 
   return (
@@ -91,9 +74,9 @@ export default function Medication({ responses, onSave }) {
       </div>
 
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        {questions.map((question, index) => (
+        {Object.entries(questions).map(([questionKey, question], index) => (
           <Card 
-            key={question.key}
+            key={questionKey}
             style={{ 
               marginBottom: '30px',
               border: '2px solid #e8e8e8',
@@ -102,7 +85,7 @@ export default function Medication({ responses, onSave }) {
             title={
               <div style={{ fontSize: '18px', fontWeight: '600', color: '#333' }}>
                 <MedicineBoxOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
-                {`${index + 1}. ${question.title}`}
+                {`${index + 1}. ${question.text}`}
               </div>
             }
           >
@@ -115,10 +98,10 @@ export default function Medication({ responses, onSave }) {
                   mode="multiple"
                   size="large"
                   placeholder="Choose from suggestions..."
-                  value={localResponses[question.key]?.tags || []}
-                  onChange={(values) => handleTagChange(question.key, values)}
+                  value={localResponses[questionKey]?.tags || []}
+                  onChange={(values) => handleTagChange(questionKey, values)}
                   style={{ width: '100%' }}
-                  options={question.tags.map(tag => ({ label: tag, value: tag }))}
+                  options={question.tags?.map(tag => ({ label: tag, value: tag })) || []}
                   maxTagCount="responsive"
                 />
               </div>
@@ -134,8 +117,8 @@ export default function Medication({ responses, onSave }) {
                     "Example: Lisinopril 10mg - once daily in morning\nVitamin D 1000 IU - once daily\nAspirin 81mg - as needed for headaches" :
                     "You can write anything else you'd like to share about this question..."
                   }
-                  value={localResponses[question.key]?.text || ''}
-                  onChange={(e) => handleTextChange(question.key, e.target.value)}
+                  value={localResponses[questionKey]?.text || ''}
+                  onChange={(e) => handleTextChange(questionKey, e.target.value)}
                   style={{ fontSize: '16px' }}
                 />
               </div>
