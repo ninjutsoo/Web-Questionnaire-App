@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Tabs, Button, Progress, message } from 'antd';
-import { HomeOutlined, LeftOutlined } from '@ant-design/icons';
+import { Tabs, Button, Progress, message, Layout, Menu, Drawer } from 'antd';
+import { HomeOutlined, LeftOutlined, MenuOutlined } from '@ant-design/icons';
 import { auth } from '../../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getQuestionnaire, getUserSession, saveSectionResponses } from '../../services/questionnaireService';
+import { useResponsive } from '../../hooks/useResponsive';
 import WhatMatters from './WhatMatters';
 import Medication from './Medication';
 import Mind from './Mind';
 import Mobility from './Mobility';
 import ReviewSubmit from './ReviewSubmit';
 
+const { Sider, Content } = Layout;
+
 export default function Questionnaire() {
   const navigate = useNavigate();
+  const deviceInfo = useResponsive();
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('matters');
   const [questionnaire, setQuestionnaire] = useState(null);
@@ -24,6 +28,7 @@ export default function Questionnaire() {
     mobility: {}
   });
   const [loading, setLoading] = useState(true);
+  const [mobileMenuVisible, setMobileMenuVisible] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -61,6 +66,8 @@ export default function Questionnaire() {
       
       if (sessionData) {
         setSessionId(sessionData.sessionId);
+        console.log('Session data loaded:', sessionData);
+        console.log('Session responses:', sessionData.data.responses);
         setResponses(sessionData.data.responses || {
           matters: {},
           medication: {},
@@ -74,6 +81,7 @@ export default function Questionnaire() {
       }
       
       console.log('Questionnaire initialized successfully');
+      console.log('Final responses state:', sessionData?.data?.responses);
     } catch (error) {
       console.error('Error initializing questionnaire:', error);
       message.error('Failed to load questionnaire. Please check your internet connection and try again.');
@@ -111,6 +119,24 @@ export default function Questionnaire() {
     const answered = Object.keys(sectionData).length;
     
     return totalQuestions > 0 ? Math.round((answered / totalQuestions) * 100) : 0;
+  };
+
+  const calculateOverallProgress = () => {
+    if (!questionnaire) return 0;
+    
+    let totalQuestions = 0;
+    let totalAnswered = 0;
+    
+    // Count questions and answers across all sections
+    Object.keys(questionnaire.sections).forEach(sectionKey => {
+      const sectionQuestions = questionnaire.sections[sectionKey]?.questions || {};
+      const sectionResponses = responses[sectionKey] || {};
+      
+      totalQuestions += Object.keys(sectionQuestions).length;
+      totalAnswered += Object.keys(sectionResponses).length;
+    });
+    
+    return totalQuestions > 0 ? Math.round((totalAnswered / totalQuestions) * 100) : 0;
   };
 
   const getSectionBaseColor = (tabKey) => {
@@ -227,9 +253,186 @@ export default function Questionnaire() {
     );
   }
 
+  // Mobile Layout (iPhone/Android)
+  if (deviceInfo.isMobile) {
+    return (
+      <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+        {/* Mobile Header */}
+        <div style={{ 
+          backgroundColor: 'white', 
+          padding: '15px 20px', 
+          borderBottom: '1px solid #e8e8e8',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          position: 'sticky',
+          top: 0,
+          zIndex: 100
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Button 
+              icon={<MenuOutlined />}
+              onClick={() => setMobileMenuVisible(true)}
+              size="large"
+              style={{ backgroundColor: '#1890ff', borderColor: '#1890ff', color: 'white' }}
+            />
+            
+            <h1 style={{ margin: 0, fontSize: '18px', color: '#1890ff', textAlign: 'center' }}>
+              4 Ms Assessment
+            </h1>
+            
+            <Button 
+              icon={<HomeOutlined />}
+              onClick={() => navigate('/home')}
+              size="large"
+              style={{ backgroundColor: '#1890ff', borderColor: '#1890ff', color: 'white' }}
+            />
+          </div>
+          
+          {/* Mobile Progress */}
+          <div style={{ marginTop: '15px' }}>
+            <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+              Overall Progress - {calculateOverallProgress()}% Complete
+            </div>
+            <Progress 
+              percent={calculateOverallProgress()} 
+              strokeColor="#1890ff"
+              size="small"
+            />
+          </div>
+        </div>
+
+        {/* Mobile Navigation Drawer */}
+        <Drawer
+          title="Sections"
+          placement="left"
+          onClose={() => setMobileMenuVisible(false)}
+          open={mobileMenuVisible}
+          styles={{ body: { padding: 0 } }}
+        >
+          <Menu
+            mode="vertical"
+            selectedKeys={[activeTab]}
+            onClick={({ key }) => {
+              setActiveTab(key);
+              setMobileMenuVisible(false);
+            }}
+            style={{ border: 'none' }}
+          >
+            {tabItems.map(item => (
+              <Menu.Item 
+                key={item.key}
+                style={{
+                  fontSize: '16px',
+                  fontWeight: '600',
+                  backgroundColor: item.key === activeTab ? getSectionBaseColor(item.key) : 'transparent',
+                  color: item.key === activeTab ? 'white' : '#333',
+                  margin: '8px',
+                  borderRadius: '8px',
+                  height: '60px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                {item.label}
+              </Menu.Item>
+            ))}
+          </Menu>
+        </Drawer>
+
+        {/* Mobile Content */}
+        <div style={{ padding: '20px 15px' }}>
+          {tabItems.find(tab => tab.key === activeTab)?.children}
+        </div>
+      </div>
+    );
+  }
+
+  // Tablet Layout (iPad)
+  if (deviceInfo.isTablet) {
+    return (
+      <Layout style={{ minHeight: '100vh' }}>
+        <Sider
+          width={300}
+          style={{
+            backgroundColor: 'white',
+            borderRight: '1px solid #e8e8e8',
+            boxShadow: '2px 0 4px rgba(0,0,0,0.1)'
+          }}
+        >
+          {/* Tablet Header */}
+          <div style={{ 
+            padding: '20px', 
+            borderBottom: '1px solid #e8e8e8',
+            textAlign: 'center'
+          }}>
+            <h2 style={{ margin: '0 0 10px 0', color: '#1890ff', fontSize: '20px' }}>
+              4 Ms Assessment
+            </h2>
+            <Button 
+              icon={<HomeOutlined />}
+              onClick={() => navigate('/home')}
+              style={{ backgroundColor: '#1890ff', borderColor: '#1890ff', color: 'white' }}
+            >
+              Back to Home
+            </Button>
+            
+            {/* Tablet Progress */}
+            <div style={{ marginTop: '20px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '8px' }}>
+                Overall Progress - {calculateOverallProgress()}% Complete
+              </div>
+              <Progress 
+                percent={calculateOverallProgress()} 
+                strokeColor="#1890ff"
+                size="small"
+              />
+            </div>
+          </div>
+
+          {/* Tablet Navigation */}
+          <Menu
+            mode="vertical"
+            selectedKeys={[activeTab]}
+            onClick={({ key }) => setActiveTab(key)}
+            style={{ border: 'none', padding: '20px 10px' }}
+          >
+            {tabItems.map(item => {
+              return (
+                <Menu.Item 
+                  key={item.key}
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: '600',
+                    backgroundColor: item.key === activeTab ? getSectionBaseColor(item.key) : '#f8f8f8',
+                    color: item.key === activeTab ? 'white' : '#333',
+                    margin: '8px 0',
+                    borderRadius: '12px',
+                    height: '60px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '15px 20px'
+                  }}
+                >
+                  <div>{item.label}</div>
+                </Menu.Item>
+              );
+            })}
+          </Menu>
+        </Sider>
+
+        <Layout>
+          <Content style={{ backgroundColor: '#f5f5f5', padding: '30px' }}>
+            {tabItems.find(tab => tab.key === activeTab)?.children}
+          </Content>
+        </Layout>
+      </Layout>
+    );
+  }
+
+  // Desktop Layout
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-      {/* Header */}
+      {/* Desktop Header */}
       <div style={{ 
         backgroundColor: 'white', 
         padding: '20px 40px', 
@@ -280,7 +483,7 @@ export default function Questionnaire() {
         </div>
       </div>
 
-      {/* Progress Bar for Current Tab */}
+      {/* Desktop Progress Bar */}
       <div style={{ 
         backgroundColor: 'white', 
         padding: '20px 40px',
@@ -288,18 +491,18 @@ export default function Questionnaire() {
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ marginBottom: '10px', fontSize: '16px', fontWeight: 'bold' }}>
-            {tabItems.find(tab => tab.key === activeTab)?.label} Progress
+            Overall Assessment Progress - {calculateOverallProgress()}% Complete
           </div>
           <Progress 
-            percent={calculateProgress(responses[activeTab] || {})} 
-            strokeColor={getSectionBaseColor(activeTab)}
+            percent={calculateOverallProgress()} 
+            strokeColor="#1890ff"
             size="default"
             style={{ fontSize: '14px' }}
           />
         </div>
       </div>
 
-      {/* Main Content */}
+      {/* Desktop Content */}
       <div style={{ 
         maxWidth: '1200px', 
         margin: '0 auto', 
