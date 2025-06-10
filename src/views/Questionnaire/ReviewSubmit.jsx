@@ -66,41 +66,6 @@ export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }
     }
   ];
 
-  const getSectionColors = (sectionKey, isAnswered) => {
-    const colorMap = {
-      matters: {
-        light: '#e6f7ff',      // Light blue for unanswered
-        dark: '#0050b3',       // Dark blue for answered
-        border: '#91d5ff',     // Light blue border for unanswered
-        darkBorder: '#1890ff', // Normal blue border for answered
-        text: '#722ed1'        // Text color
-      },
-      medication: {
-        light: '#f6ffed',      // Light green for unanswered  
-        dark: '#389e0d',       // Dark green for answered
-        border: '#b7eb8f',     // Light green border for unanswered
-        darkBorder: '#52c41a', // Normal green border for answered
-        text: '#00b96b'        // Text color
-      },
-      mind: {
-        light: '#f9f0ff',      // Light purple for unanswered
-        dark: '#531dab',       // Dark purple for answered
-        border: '#d3adf7',     // Light purple border for unanswered
-        darkBorder: '#722ed1', // Normal purple border for answered
-        text: '#9254de'        // Text color
-      },
-      mobility: {
-        light: '#fff2f0',      // Light red-orange for unanswered
-        dark: '#a8071a',       // Dark red for answered
-        border: '#ffccc7',     // Light red border for unanswered
-        darkBorder: '#ff4d4f', // Normal red border for answered
-        text: '#ff4d4f'        // Text color
-      }
-    };
-    
-    return colorMap[sectionKey] || colorMap.matters;
-  };
-
   const renderSectionSummary = (section) => {
     const sectionData = responses[section.key] || {};
     const summary = getSectionSummary(section.key, sectionData);
@@ -117,144 +82,93 @@ export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }
         headStyle={{
           textAlign: 'center',
           paddingLeft: '0px',
-          paddingRight: '0px',
-          backgroundColor: '#fafafa'
+          paddingRight: '0px'
         }}
         title={
           <div style={{ 
+            fontSize: '20px', 
+            fontWeight: '600', 
+            color: section.color,
             textAlign: 'center',
-            width: '100%'
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center'
           }}>
-            <div style={{
-              fontSize: '20px', 
-              fontWeight: '600', 
-              color: section.color,
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: '8px'
-            }}>
-              <span style={{ marginRight: '10px' }}>{section.icon}</span>
-              {section.title}
-            </div>
-            <div style={{
-              fontSize: '16px', 
+            <span style={{ marginRight: '10px' }}>{section.icon}</span>
+            {section.title}
+          </div>
+        }
+        extra={
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ 
+              fontSize: '18px', 
               fontWeight: 'bold', 
               color: getCompletionColor(summary.answered, summary.total)
             }}>
-              {summary.answered}/{summary.total} Answered ({percentage}% Complete)
+              {summary.answered}/{summary.total} Answered
+            </div>
+            <div style={{ fontSize: '14px', color: '#666' }}>
+              {percentage}% Complete
             </div>
           </div>
         }
       >
-        <Space direction="vertical" size="small" style={{ width: '100%' }}>
-          {Object.entries(questionnaire?.sections?.[section.key]?.questions || {}).map(([questionKey, question], index) => {
-            const answer = sectionData[questionKey];
-            const isAnswered = answer && (
-              (typeof answer === 'object' && ((answer.tags && answer.tags.length > 0) || (answer.text && answer.text.trim()))) ||
-              (typeof answer === 'number') ||
-              (typeof answer === 'string' && answer.trim())
-            );
-            
-            const colors = getSectionColors(section.key, isAnswered);
-            
-            return (
-              <div 
-                key={questionKey} 
-                style={{ 
-                  marginBottom: '15px', 
-                  padding: '12px', 
-                  backgroundColor: isAnswered ? colors.light : colors.light,
-                  borderRadius: '8px',
-                  border: `2px solid ${isAnswered ? colors.darkBorder : colors.border}`,
-                  position: 'relative',
-                  opacity: isAnswered ? 1 : 0.7
-                }}
-              >
-                {/* Status indicator */}
-                <div style={{
-                  position: 'absolute',
-                  top: '8px',
-                  right: '8px',
-                  fontSize: '16px'
-                }}>
-                  {isAnswered ? '✅' : '⭕'}
+        {Object.keys(sectionData).length === 0 ? (
+          <Text style={{ fontSize: '16px', color: '#999', fontStyle: 'italic' }}>
+            No responses yet
+          </Text>
+        ) : (
+          <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            {Object.entries(sectionData).map(([key, value]) => {
+              // Get the actual question text from the questionnaire structure
+              const questionText = questionnaire?.sections?.[section.key]?.questions?.[key]?.text || 
+                                 key.replace(/([A-Z])/g, ' $1').trim();
+              
+              return (
+                <div key={key} style={{ marginBottom: '15px', padding: '12px', backgroundColor: '#fafafa', borderRadius: '8px' }}>
+                  <Text strong style={{ fontSize: '15px', color: '#333', display: 'block', marginBottom: '8px' }}>
+                    {questionText}
+                  </Text>
+                  <div style={{ marginTop: '4px', paddingLeft: '16px' }}>
+                    {typeof value === 'object' && value !== null ? (
+                      <div>
+                        {value.tags && value.tags.length > 0 && (
+                          <div style={{ marginBottom: '6px' }}>
+                            {value.tags.map(tag => (
+                              <Tag key={tag} color="blue" style={{ marginBottom: '2px' }}>
+                                {tag}
+                              </Tag>
+                            ))}
+                          </div>
+                        )}
+                        {value.text && (
+                          <Paragraph 
+                            style={{ 
+                              fontSize: '14px', 
+                              margin: 0, 
+                              color: '#666',
+                              backgroundColor: '#f0f0f0',
+                              padding: '8px',
+                              borderRadius: '4px',
+                              fontStyle: 'italic'
+                            }}
+                          >
+                            "{value.text}"
+                          </Paragraph>
+                        )}
+                      </div>
+                    ) : (
+                      <Text style={{ fontSize: '16px', color: '#1890ff', fontWeight: '600' }}>
+                        {typeof value === 'number' ? `${value}%` : value}
+                      </Text>
+                    )}
+                  </div>
                 </div>
-                
-                {/* Question number and text */}
-                <Text strong style={{ 
-                  fontSize: '15px', 
-                  color: isAnswered ? colors.dark : colors.text, 
-                  display: 'block', 
-                  marginBottom: '8px',
-                  paddingRight: '30px'
-                }}>
-                  {index + 1}. {question.text}
-                </Text>
-                
-                {/* Answer content */}
-                <div style={{ marginTop: '4px', paddingLeft: '16px' }}>
-                  {isAnswered ? (
-                    <div>
-                      {typeof answer === 'object' && answer !== null ? (
-                        <div>
-                          {answer.tags && answer.tags.length > 0 && (
-                            <div style={{ marginBottom: '6px' }}>
-                              {answer.tags.map(tag => (
-                                <Tag 
-                                  key={tag} 
-                                  style={{ 
-                                    marginBottom: '2px',
-                                    backgroundColor: colors.darkBorder,
-                                    color: 'white',
-                                    border: 'none'
-                                  }}
-                                >
-                                  {tag}
-                                </Tag>
-                              ))}
-                            </div>
-                          )}
-                          {answer.text && (
-                            <Paragraph 
-                              style={{ 
-                                fontSize: '14px', 
-                                margin: 0, 
-                                color: '#666',
-                                backgroundColor: '#f0f0f0',
-                                padding: '8px',
-                                borderRadius: '4px',
-                                fontStyle: 'italic'
-                              }}
-                            >
-                              "{answer.text}"
-                            </Paragraph>
-                          )}
-                        </div>
-                      ) : (
-                        <Text style={{ fontSize: '16px', color: colors.dark, fontWeight: '600' }}>
-                          {typeof answer === 'number' ? `${answer}%` : answer}
-                        </Text>
-                      )}
-                    </div>
-                  ) : (
-                    <div style={{ 
-                      fontSize: '16px', 
-                      color: '#8c8c8c', 
-                      fontStyle: 'italic',
-                      padding: '8px',
-                      backgroundColor: '#f5f5f5',
-                      borderRadius: '4px',
-                      border: '1px dashed #d9d9d9'
-                    }}>
-                      Not answered yet - Click on "{section.title}" tab above to answer
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </Space>
+              );
+            })}
+          </Space>
+        )}
       </Card>
     );
   };
