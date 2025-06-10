@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, Button, Progress, message } from 'antd';
-import { HomeOutlined, LeftOutlined } from '@ant-design/icons';
+import { HomeOutlined, LeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { auth } from '../../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getQuestionnaire, getUserSession, saveSectionResponses } from '../../services/questionnaireService';
@@ -24,6 +24,12 @@ export default function Questionnaire() {
     mobility: {}
   });
   const [loading, setLoading] = useState(true);
+  
+  // Refs to access child component data
+  const whatMattersRef = useRef(null);
+  const medicationRef = useRef(null);
+  const mindRef = useRef(null);
+  const mobilityRef = useRef(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -82,22 +88,49 @@ export default function Questionnaire() {
     }
   };
 
-  const saveResponses = async (section, data) => {
-    if (!sessionId) return;
-    
+  // Simple function to update local responses (no automatic saving)
+  const updateResponses = (section, data) => {
     const updatedResponses = {
       ...responses,
       [section]: data
     };
-    
     setResponses(updatedResponses);
+  };
+
+  // Manual save function - only saves when user clicks save button
+  const handleSave = async () => {
+    if (!sessionId) {
+      message.error('No session found. Please refresh the page and try again.');
+      return;
+    }
     
     try {
-      await saveSectionResponses(sessionId, section, data);
-      // Silent save - no notification
+      message.loading('Saving your progress...', 1);
+      
+      // Collect current data from all child components
+      const currentData = {
+        matters: whatMattersRef.current?.getCurrentData() || {},
+        medication: medicationRef.current?.getCurrentData() || {},
+        mind: mindRef.current?.getCurrentData() || {},
+        mobility: mobilityRef.current?.getCurrentData() || {}
+      };
+      
+      const savePromises = Object.entries(currentData).map(([section, data]) => {
+        if (data && Object.keys(data).length > 0) {
+          return saveSectionResponses(sessionId, section, data);
+        }
+        return Promise.resolve();
+      });
+      
+      await Promise.all(savePromises);
+      
+      // Update local state after successful save
+      setResponses(currentData);
+      
+      message.success('All progress saved successfully!');
     } catch (error) {
-      console.error('Error saving responses:', error);
-      message.error('Failed to save progress');
+      console.error('Error saving progress:', error);
+      message.error('Failed to save progress. Please try again.');
     }
   };
 
@@ -140,9 +173,9 @@ export default function Questionnaire() {
       label: 'What Matters',
       children: (
         <WhatMatters 
+          ref={whatMattersRef}
           questionnaire={questionnaire}
           responses={responses.matters}
-          onSave={(data) => saveResponses('matters', data)}
         />
       )
     },
@@ -151,9 +184,9 @@ export default function Questionnaire() {
       label: 'Medication',
       children: (
         <Medication 
+          ref={medicationRef}
           questionnaire={questionnaire}
           responses={responses.medication}
-          onSave={(data) => saveResponses('medication', data)}
         />
       )
     },
@@ -162,9 +195,9 @@ export default function Questionnaire() {
       label: 'Mind',
       children: (
         <Mind 
+          ref={mindRef}
           questionnaire={questionnaire}
           responses={responses.mind}
-          onSave={(data) => saveResponses('mind', data)}
         />
       )
     },
@@ -173,9 +206,9 @@ export default function Questionnaire() {
       label: 'Mobility',
       children: (
         <Mobility 
+          ref={mobilityRef}
           questionnaire={questionnaire}
           responses={responses.mobility}
-          onSave={(data) => saveResponses('mobility', data)}
         />
       )
     },
@@ -267,16 +300,30 @@ export default function Questionnaire() {
             Health Assessment - 4 Ms
           </h1>
           
-          <Button 
-            icon={<HomeOutlined />}
-            onClick={() => navigate('/home')}
-            size="large"
-            style={{
-              backgroundColor: '#1890ff',
-              borderColor: '#1890ff',
-              color: 'white'
-            }}
-          />
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <Button 
+              icon={<SaveOutlined />}
+              onClick={handleSave}
+              size="large"
+              style={{
+                backgroundColor: '#52c41a',
+                borderColor: '#52c41a',
+                color: 'white'
+              }}
+            >
+              Save Progress
+            </Button>
+            <Button 
+              icon={<HomeOutlined />}
+              onClick={() => navigate('/home')}
+              size="large"
+              style={{
+                backgroundColor: '#1890ff',
+                borderColor: '#1890ff',
+                color: 'white'
+              }}
+            />
+          </div>
         </div>
       </div>
 

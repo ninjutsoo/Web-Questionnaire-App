@@ -16,13 +16,22 @@ import {
 } from "firebase/firestore";
 
 // Your web app's Firebase configuration
+// const firebaseConfig = {
+//   apiKey: "AIzaSyApmb-GGI3K4kR52uR6BbBCFnCaouneueE",
+//   authDomain: "web-questionnaire-app.firebaseapp.com",
+//   projectId: "web-questionnaire-app",
+//   storageBucket: "web-questionnaire-app.firebasestorage.app",
+//   messagingSenderId: "791650373498",
+//   appId: "1:791650373498:web:bda484f54c3a908da390c3"
+// };
+
 const firebaseConfig = {
-  apiKey: "AIzaSyApmb-GGI3K4kR52uR6BbBCFnCaouneueE",
-  authDomain: "web-questionnaire-app.firebaseapp.com",
-  projectId: "web-questionnaire-app",
-  storageBucket: "web-questionnaire-app.firebasestorage.app",
-  messagingSenderId: "791650373498",
-  appId: "1:791650373498:web:bda484f54c3a908da390c3"
+  apiKey: "AIzaSyCDy3nyxxCGGhj7jOpv4XrIZWqbqTsqis4",
+  authDomain: "web-app-new-efb66.firebaseapp.com",
+  projectId: "web-app-new-efb66",
+  storageBucket: "web-app-new-efb66.firebasestorage.app",
+  messagingSenderId: "699118860544",
+  appId: "1:699118860544:web:516f76ad2bbdad31115be5"
 };
 
 // Initialize Firebase

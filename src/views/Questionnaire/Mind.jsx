@@ -1,43 +1,64 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, Select, Input, Space, Typography, Slider, Row, Col } from 'antd';
-import { HeartOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button } from 'antd';
+import { HeartOutlined, AudioOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-export default function Mind({ questionnaire, responses, onSave }) {
+const Mind = forwardRef(({ questionnaire, responses }, ref) => {
   const [localResponses, setLocalResponses] = useState(responses || {});
+  const [isListening, setIsListening] = useState({});
+  const [recognition, setRecognition] = useState(null);
 
   useEffect(() => {
     setLocalResponses(responses || {});
   }, [responses]);
 
-  // Cleanup timeout on unmount
+  // Initialize speech recognition
   useEffect(() => {
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = false;
+      recognitionInstance.lang = 'en-US';
+      setRecognition(recognitionInstance);
+    }
   }, []);
 
-  // Get questions from questionnaire structure
-  const questions = questionnaire?.sections?.mind?.questions || {};
+  // Expose getCurrentData method to parent
+  useImperativeHandle(ref, () => ({
+    getCurrentData: () => localResponses
+  }));
 
-  // Use useRef for timeout to avoid re-render issues
-  const saveTimeoutRef = useRef(null);
-  
-  const debouncedSave = (data, delay = 5000) => {
-    // Clear existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
+  // Get questions from questionnaire structure and ensure consistent ordering
+  const questions = questionnaire?.sections?.mind?.questions || {};
+  const sortedQuestionEntries = Object.entries(questions).sort(([keyA], [keyB]) => {
+    // Custom order for mind section: sliders first, then text questions
+    const sliderOrder = ['happiness', 'memory', 'sleep'];
+    const textOrder = ['q4', 'q5', 'q6', 'q7'];
+    
+    const indexA = sliderOrder.indexOf(keyA);
+    const indexB = sliderOrder.indexOf(keyB);
+    
+    if (indexA !== -1 && indexB !== -1) {
+      return indexA - indexB;
     }
     
-    // Set new timeout
-    saveTimeoutRef.current = setTimeout(() => {
-      onSave(data);
-    }, delay);
-  };
+    if (indexA !== -1) return -1; // sliders come first
+    if (indexB !== -1) return 1;
+    
+    // For text questions, use numeric sorting
+    const numA = keyA.match(/\d+/)?.[0];
+    const numB = keyB.match(/\d+/)?.[0];
+    
+    if (numA && numB) {
+      return parseInt(numA) - parseInt(numB);
+    }
+    
+    // Fallback to alphabetical sorting
+    return keyA.localeCompare(keyB);
+  });
 
   const handleSliderChange = (key, value) => {
     const updated = {
@@ -45,7 +66,6 @@ export default function Mind({ questionnaire, responses, onSave }) {
       [key]: value
     };
     setLocalResponses(updated);
-    debouncedSave(updated, 1000); // Wait 1 second for sliders
   };
 
   const handleTagChange = (questionKey, selectedTags) => {
@@ -57,7 +77,6 @@ export default function Mind({ questionnaire, responses, onSave }) {
       }
     };
     setLocalResponses(updated);
-    debouncedSave(updated); // Wait 5 seconds for tags
   };
 
   const handleTextChange = (questionKey, text) => {
@@ -69,7 +88,33 @@ export default function Mind({ questionnaire, responses, onSave }) {
       }
     };
     setLocalResponses(updated);
-    debouncedSave(updated); // Wait 5 seconds for text
+  };
+
+  const startListening = (questionKey) => {
+    if (!recognition) {
+      alert('Speech recognition is not supported in your browser');
+      return;
+    }
+
+    setIsListening(prev => ({ ...prev, [questionKey]: true }));
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      const currentText = localResponses[questionKey]?.text || '';
+      const newText = currentText ? `${currentText} ${transcript}` : transcript;
+      handleTextChange(questionKey, newText);
+      setIsListening(prev => ({ ...prev, [questionKey]: false }));
+    };
+
+    recognition.onerror = () => {
+      setIsListening(prev => ({ ...prev, [questionKey]: false }));
+    };
+
+    recognition.onend = () => {
+      setIsListening(prev => ({ ...prev, [questionKey]: false }));
+    };
+
+    recognition.start();
   };
 
   const getHappinessLabel = (value) => {
@@ -162,9 +207,25 @@ export default function Mind({ questionnaire, responses, onSave }) {
             </div>
             
             <div>
-              <Text strong style={{ fontSize: '16px', marginBottom: '8px', display: 'block' }}>
-                Additional thoughts or details:
-              </Text>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <Text strong style={{ fontSize: '16px' }}>
+                  Additional thoughts or details:
+                </Text>
+                {recognition && (
+                  <Button
+                    icon={<AudioOutlined />}
+                    onClick={() => startListening(questionKey)}
+                    loading={isListening[questionKey]}
+                    style={{
+                      backgroundColor: isListening[questionKey] ? '#ff4d4f' : '#722ed1',
+                      borderColor: isListening[questionKey] ? '#ff4d4f' : '#722ed1',
+                      color: 'white'
+                    }}
+                  >
+                    {isListening[questionKey] ? 'Listening...' : 'Speak'}
+                  </Button>
+                )}
+              </div>
               <TextArea
                 size="large"
                 rows={4}
@@ -200,7 +261,7 @@ export default function Mind({ questionnaire, responses, onSave }) {
       </div>
 
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        {Object.entries(questions).map(([questionKey, question], index) => 
+        {sortedQuestionEntries.map(([questionKey, question], index) => 
           renderQuestion(questionKey, question, index)
         )}
       </Space>
@@ -214,9 +275,11 @@ export default function Mind({ questionnaire, responses, onSave }) {
         border: '1px solid #d3adf7'
       }}>
         <Text style={{ fontSize: '16px', color: '#531dab' }}>
-          🧠 Your mental health is just as important as your physical health. We're here to support you.
+          🧠 Your mental health is just as important as your physical health. Remember to click "Save Progress" to save your responses. We're here to support you.
         </Text>
       </div>
     </div>
   );
-} 
+});
+
+export default Mind; 
