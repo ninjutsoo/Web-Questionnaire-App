@@ -5,10 +5,7 @@ import { HomeOutlined, LeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { auth } from '../../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getQuestionnaire, getUserSession, saveSectionResponses } from '../../services/questionnaireService';
-import WhatMatters from './WhatMatters';
-import Medication from './Medication';
-import Mind from './Mind';
-import Mobility from './Mobility';
+import FourMSection from './4msSection';
 import ReviewSubmit from './ReviewSubmit';
 
 export default function Questionnaire() {
@@ -24,6 +21,7 @@ export default function Questionnaire() {
     mobility: {}
   });
   const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   
   // Refs to access child component data
   const whatMattersRef = useRef(null);
@@ -134,16 +132,76 @@ export default function Questionnaire() {
     }
   };
 
-  const calculateProgress = (sectionData) => {
-    if (!questionnaire || !sectionData || typeof sectionData !== 'object') {
+  const getCurrentSectionData = (sectionKey) => {
+    // Get current live data from child components (including unsaved changes)
+    switch(sectionKey) {
+      case 'matters':
+        return whatMattersRef.current?.getCurrentData() || responses.matters || {};
+      case 'medication':
+        return medicationRef.current?.getCurrentData() || responses.medication || {};
+      case 'mind':
+        return mindRef.current?.getCurrentData() || responses.mind || {};
+      case 'mobility':
+        return mobilityRef.current?.getCurrentData() || responses.mobility || {};
+      default:
+        return {};
+    }
+  };
+
+  const calculateProgress = (sectionKey) => {
+    if (!questionnaire || !sectionKey) {
       return 0;
     }
     
-    const sectionQuestions = questionnaire.sections[activeTab]?.questions || {};
+    const sectionQuestions = questionnaire.sections[sectionKey]?.questions || {};
     const totalQuestions = Object.keys(sectionQuestions).length;
-    const answered = Object.keys(sectionData).length;
     
-    return totalQuestions > 0 ? Math.round((answered / totalQuestions) * 100) : 0;
+    if (totalQuestions === 0) return 0;
+    
+    const sectionData = getCurrentSectionData(sectionKey);
+    let answered = 0;
+    
+    Object.values(sectionData).forEach(value => {
+      if (typeof value === 'object' && value !== null) {
+        // Tag + text questions - count as answered if has tags OR text
+        if ((value.tags && value.tags.length > 0) || (value.text && value.text.trim())) {
+          answered++;
+        }
+      } else if (typeof value === 'number' || (typeof value === 'string' && value.trim())) {
+        // Slider or text questions - count if not empty
+        answered++;
+      }
+    });
+    
+    return Math.round((answered / totalQuestions) * 100);
+  };
+
+  const calculateOverallProgress = () => {
+    if (!questionnaire) return 0;
+    
+    const sections = ['matters', 'medication', 'mind', 'mobility'];
+    let totalAnswered = 0;
+    let totalQuestions = 0;
+    
+    sections.forEach(sectionKey => {
+      const sectionQuestions = questionnaire.sections[sectionKey]?.questions || {};
+      const sectionTotal = Object.keys(sectionQuestions).length;
+      totalQuestions += sectionTotal;
+      
+      const currentData = getCurrentSectionData(sectionKey);
+      
+      Object.values(currentData).forEach(value => {
+        if (typeof value === 'object' && value !== null) {
+          if ((value.tags && value.tags.length > 0) || (value.text && value.text.trim())) {
+            totalAnswered++;
+          }
+        } else if (typeof value === 'number' || (typeof value === 'string' && value.trim())) {
+          totalAnswered++;
+        }
+      });
+    });
+    
+    return totalQuestions > 0 ? Math.round((totalAnswered / totalQuestions) * 100) : 0;
   };
 
   const getSectionBaseColor = (tabKey) => {
@@ -159,7 +217,7 @@ export default function Questionnaire() {
 
   const getTabColor = (tabKey) => {
     const sectionData = responses[tabKey] || {};
-    const progress = calculateProgress(sectionData);
+    const progress = calculateProgress(tabKey);
     
     if (progress === 0) return '#f0f0f0';
     if (progress < 50) return '#ff7875';
@@ -167,15 +225,22 @@ export default function Questionnaire() {
     return getSectionBaseColor(tabKey);
   };
 
+  // Function to trigger progress updates when local data changes
+  const triggerProgressUpdate = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   const tabItems = [
     {
       key: 'matters',
       label: 'What Matters',
       children: (
-        <WhatMatters 
+        <FourMSection 
           ref={whatMattersRef}
+          section="matters"
           questionnaire={questionnaire}
           responses={responses.matters}
+          onLocalChange={triggerProgressUpdate}
         />
       )
     },
@@ -183,10 +248,12 @@ export default function Questionnaire() {
       key: 'medication',
       label: 'Medication',
       children: (
-        <Medication 
+        <FourMSection 
           ref={medicationRef}
+          section="medication"
           questionnaire={questionnaire}
           responses={responses.medication}
+          onLocalChange={triggerProgressUpdate}
         />
       )
     },
@@ -194,10 +261,12 @@ export default function Questionnaire() {
       key: 'mind',
       label: 'Mind',
       children: (
-        <Mind 
+        <FourMSection 
           ref={mindRef}
+          section="mind"
           questionnaire={questionnaire}
           responses={responses.mind}
+          onLocalChange={triggerProgressUpdate}
         />
       )
     },
@@ -205,10 +274,12 @@ export default function Questionnaire() {
       key: 'mobility',
       label: 'Mobility',
       children: (
-        <Mobility 
+        <FourMSection 
           ref={mobilityRef}
+          section="mobility"
           questionnaire={questionnaire}
           responses={responses.mobility}
+          onLocalChange={triggerProgressUpdate}
         />
       )
     },
@@ -219,10 +290,7 @@ export default function Questionnaire() {
         <ReviewSubmit 
           questionnaire={questionnaire}
           responses={responses}
-          onFinalSubmit={() => {
-            message.success('Assessment submitted successfully!');
-            navigate('/home');
-          }}
+          onSave={handleSave}
         />
       )
     }
@@ -335,10 +403,10 @@ export default function Questionnaire() {
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ marginBottom: '10px', fontSize: '16px', fontWeight: 'bold' }}>
-            {tabItems.find(tab => tab.key === activeTab)?.label} Progress
+            {activeTab === 'review' ? 'Overall Assessment Progress' : `${tabItems.find(tab => tab.key === activeTab)?.label} Progress`}
           </div>
           <Progress 
-            percent={calculateProgress(responses[activeTab] || {})} 
+            percent={activeTab === 'review' ? calculateOverallProgress() : calculateProgress(activeTab)} 
             strokeColor={getSectionBaseColor(activeTab)}
             size="default"
             style={{ fontSize: '14px' }}
@@ -378,7 +446,14 @@ export default function Questionnaire() {
                 textAlign: 'center',
                 opacity: item.key === activeTab ? 1 : 0.7
               }}>
-                {item.label}
+                <div>{item.label}</div>
+                <div style={{ 
+                  fontSize: '12px', 
+                  marginTop: '2px',
+                  opacity: 0.9 
+                }}>
+                  {item.key === 'review' ? `${calculateOverallProgress()}% Overall` : `${calculateProgress(item.key)}% Complete`}
+                </div>
               </div>
             )
           }))}

@@ -1,14 +1,60 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button } from 'antd';
-import { HeartOutlined, AudioOutlined } from '@ant-design/icons';
+import { HeartOutlined, CarOutlined, MedicineBoxOutlined, StarOutlined, AudioOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-const Mind = forwardRef(({ questionnaire, responses }, ref) => {
+// Section configuration
+const SECTION_CONFIG = {
+  mind: {
+    title: "🧠 Your Mental Well-being",
+    description: "Tell us about your thoughts, feelings, and mental health. We want to understand how you're doing emotionally.",
+    icon: HeartOutlined,
+    color: '#722ed1',
+    backgroundColor: '#f9f0ff',
+    borderColor: '#d3adf7',
+    tipText: "Taking care of your mental health is just as important as physical health. Don't forget to click 'Save Progress' to save your responses.",
+    tipColor: '#722ed1'
+  },
+  mobility: {
+    title: "🚶‍♀️ How You Move Around and Stay Active",
+    description: "Tell us about your mobility and movement. We want to help you stay active and independent.",
+    icon: CarOutlined,
+    color: '#fa541c',
+    backgroundColor: '#fff2e8',
+    borderColor: '#ffbb96',
+    tipText: "Staying active helps maintain your independence and improves your overall health. Don't forget to click 'Save Progress' to save your mobility information.",
+    tipColor: '#d46b08'
+  },
+  medication: {
+    title: "💊 Your Medications and Health Management",
+    description: "Tell us about your medications and how you manage your health. We want to ensure you're taking care of yourself properly.",
+    icon: MedicineBoxOutlined,
+    color: '#1890ff',
+    backgroundColor: '#e6f7ff',
+    borderColor: '#91d5ff',
+    tipText: "Proper medication management is crucial for your health. Don't forget to click 'Save Progress' to save your medication information.",
+    tipColor: '#096dd9'
+  },
+  matters: {
+    title: "⭐ What Matters Most to You",
+    description: "Tell us about your priorities and what's important in your life. We want to understand your goals and preferences.",
+    icon: StarOutlined,
+    color: '#52c41a',
+    backgroundColor: '#f6ffed',
+    borderColor: '#b7eb8f',
+    tipText: "Understanding what matters to you helps us provide better care. Don't forget to click 'Save Progress' to save your preferences.",
+    tipColor: '#389e0d'
+  }
+};
+
+const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalChange }, ref) => {
   const [localResponses, setLocalResponses] = useState(responses || {});
   const [isListening, setIsListening] = useState({});
   const [recognition, setRecognition] = useState(null);
+
+  const config = SECTION_CONFIG[section];
 
   useEffect(() => {
     setLocalResponses(responses || {});
@@ -32,23 +78,23 @@ const Mind = forwardRef(({ questionnaire, responses }, ref) => {
   }));
 
   // Get questions from questionnaire structure and ensure consistent ordering
-  const questions = questionnaire?.sections?.mind?.questions || {};
+  const questions = questionnaire?.sections?.[section]?.questions || {};
   const sortedQuestionEntries = Object.entries(questions).sort(([keyA], [keyB]) => {
     // Custom order for mind section: sliders first, then text questions
-    const sliderOrder = ['happiness', 'memory', 'sleep'];
-    const textOrder = ['q4', 'q5', 'q6', 'q7'];
-    
-    const indexA = sliderOrder.indexOf(keyA);
-    const indexB = sliderOrder.indexOf(keyB);
-    
-    if (indexA !== -1 && indexB !== -1) {
-      return indexA - indexB;
+    if (section === 'mind') {
+      const sliderOrder = ['happiness', 'memory', 'sleep'];
+      const indexA = sliderOrder.indexOf(keyA);
+      const indexB = sliderOrder.indexOf(keyB);
+      
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
     }
     
-    if (indexA !== -1) return -1; // sliders come first
-    if (indexB !== -1) return 1;
-    
-    // For text questions, use numeric sorting
+    // For all sections, handle numeric sorting for q1, q2, q3, etc.
     const numA = keyA.match(/\d+/)?.[0];
     const numB = keyB.match(/\d+/)?.[0];
     
@@ -60,12 +106,13 @@ const Mind = forwardRef(({ questionnaire, responses }, ref) => {
     return keyA.localeCompare(keyB);
   });
 
-  const handleSliderChange = (key, value) => {
+  const handleSliderChange = (questionKey, value) => {
     const updated = {
       ...localResponses,
-      [key]: value
+      [questionKey]: value
     };
     setLocalResponses(updated);
+    if (onLocalChange) onLocalChange();
   };
 
   const handleTagChange = (questionKey, selectedTags) => {
@@ -77,6 +124,7 @@ const Mind = forwardRef(({ questionnaire, responses }, ref) => {
       }
     };
     setLocalResponses(updated);
+    if (onLocalChange) onLocalChange();
   };
 
   const handleTextChange = (questionKey, text) => {
@@ -88,6 +136,7 @@ const Mind = forwardRef(({ questionnaire, responses }, ref) => {
       }
     };
     setLocalResponses(updated);
+    if (onLocalChange) onLocalChange();
   };
 
   const startListening = (questionKey) => {
@@ -117,22 +166,6 @@ const Mind = forwardRef(({ questionnaire, responses }, ref) => {
     recognition.start();
   };
 
-  const getHappinessLabel = (value) => {
-    if (value <= 20) return "Mostly Unhappy";
-    if (value <= 40) return "Sometimes Unhappy";
-    if (value <= 60) return "Mixed";
-    if (value <= 80) return "Generally Happy";
-    return "Mostly Happy";
-  };
-
-  const getWorryLabel = (value) => {
-    if (value <= 20) return "Not Worried";
-    if (value <= 40) return "Slightly Worried";
-    if (value <= 60) return "Somewhat Worried";
-    if (value <= 80) return "Quite Worried";
-    return "Very Worried";
-  };
-
   const renderQuestion = (questionKey, question, index) => {
     if (question.type === 'slider') {
       return (
@@ -140,12 +173,12 @@ const Mind = forwardRef(({ questionnaire, responses }, ref) => {
           key={questionKey}
           style={{ 
             marginBottom: '30px',
-            border: '2px solid #e8e8e8',
+            border: `2px solid ${config.borderColor}`,
             borderRadius: '12px'
           }}
           title={
             <div style={{ fontSize: '18px', fontWeight: '600', color: '#333' }}>
-              <HeartOutlined style={{ marginRight: '8px', color: '#722ed1' }} />
+              <config.icon style={{ marginRight: '8px', color: config.color }} />
               {`${index + 1}. ${question.text}`}
             </div>
           }
@@ -159,14 +192,14 @@ const Mind = forwardRef(({ questionnaire, responses }, ref) => {
                   value={localResponses[questionKey] || 50}
                   onChange={(value) => handleSliderChange(questionKey, value)}
                   tooltip={{ formatter: (value) => `${value}%` }}
-                  trackStyle={{ backgroundColor: '#722ed1', height: 8 }}
-                  handleStyle={{ borderColor: '#722ed1', borderWidth: 3, height: 24, width: 24 }}
+                  trackStyle={{ backgroundColor: config.color, height: 8 }}
+                  handleStyle={{ borderColor: config.color, borderWidth: 3, height: 24, width: 24 }}
                   railStyle={{ height: 8 }}
                 />
               </div>
             </Col>
             <Col span={6}>
-              <div style={{ textAlign: 'center', fontSize: '18px', fontWeight: 'bold', color: '#722ed1' }}>
+              <div style={{ textAlign: 'center', fontSize: '18px', fontWeight: 'bold', color: config.color }}>
                 {localResponses[questionKey] || 50}%
               </div>
             </Col>
@@ -179,12 +212,12 @@ const Mind = forwardRef(({ questionnaire, responses }, ref) => {
           key={questionKey}
           style={{ 
             marginBottom: '30px',
-            border: '2px solid #e8e8e8',
+            border: `2px solid ${config.borderColor}`,
             borderRadius: '12px'
           }}
           title={
             <div style={{ fontSize: '18px', fontWeight: '600', color: '#333' }}>
-              <HeartOutlined style={{ marginRight: '8px', color: '#722ed1' }} />
+              <config.icon style={{ marginRight: '8px', color: config.color }} />
               {`${index + 1}. ${question.text}`}
             </div>
           }
@@ -217,8 +250,8 @@ const Mind = forwardRef(({ questionnaire, responses }, ref) => {
                     onClick={() => startListening(questionKey)}
                     loading={isListening[questionKey]}
                     style={{
-                      backgroundColor: isListening[questionKey] ? '#ff4d4f' : '#722ed1',
-                      borderColor: isListening[questionKey] ? '#ff4d4f' : '#722ed1',
+                      backgroundColor: isListening[questionKey] ? '#ff4d4f' : config.color,
+                      borderColor: isListening[questionKey] ? '#ff4d4f' : config.color,
                       color: 'white'
                     }}
                   >
@@ -247,16 +280,16 @@ const Mind = forwardRef(({ questionnaire, responses }, ref) => {
       <div style={{ 
         textAlign: 'center', 
         marginBottom: '40px',
-        backgroundColor: '#9254de',
+        backgroundColor: config.backgroundColor,
         padding: '30px',
         borderRadius: '12px',
-        color: 'white'
+        color: config.color
       }}>
-        <Title level={2} style={{ color: 'white', marginBottom: '10px' }}>
-          🧠 Your Mood and Mental Sharpness
+        <Title level={2} style={{ color: config.color, marginBottom: '10px' }}>
+          {config.title}
         </Title>
-        <Text style={{ fontSize: '16px', color: 'white' }}>
-          Help us understand how you're feeling mentally and emotionally. This helps us provide better care.
+        <Text style={{ fontSize: '16px', color: config.color }}>
+          {config.description}
         </Text>
       </div>
 
@@ -270,16 +303,16 @@ const Mind = forwardRef(({ questionnaire, responses }, ref) => {
         textAlign: 'center', 
         marginTop: '40px', 
         padding: '20px',
-        backgroundColor: '#f9f0ff',
+        backgroundColor: config.backgroundColor,
         borderRadius: '8px',
-        border: '1px solid #d3adf7'
+        border: `1px solid ${config.borderColor}`
       }}>
-        <Text style={{ fontSize: '16px', color: '#531dab' }}>
-          🧠 Your mental health is just as important as your physical health. Remember to click "Save Progress" to save your responses. We're here to support you.
+        <Text style={{ fontSize: '16px', color: config.tipColor }}>
+          {config.tipText}
         </Text>
       </div>
     </div>
   );
 });
 
-export default Mind; 
+export default FourMSection; 

@@ -14,11 +14,12 @@ export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }
     let answered = 0;
     Object.values(sectionData).forEach(value => {
       if (typeof value === 'object' && value !== null) {
-        // Tag + text questions
-        if (value.tags && value.tags.length > 0) answered++;
-        else if (value.text && value.text.trim()) answered++;
+        // Tag + text questions - count as answered if has tags OR text
+        if ((value.tags && value.tags.length > 0) || (value.text && value.text.trim())) {
+          answered++;
+        }
       } else if (typeof value === 'number' || (typeof value === 'string' && value.trim())) {
-        // Slider or text questions
+        // Slider or text questions - count if not empty
         answered++;
       }
     });
