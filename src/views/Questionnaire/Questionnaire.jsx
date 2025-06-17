@@ -333,7 +333,7 @@ export default function Questionnaire() {
       {/* Header */}
       <div style={{ 
         backgroundColor: 'white', 
-        padding: '20px 40px', 
+        padding: '15px',
         borderBottom: '1px solid #e8e8e8',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
@@ -342,74 +342,60 @@ export default function Questionnaire() {
           justifyContent: 'space-between', 
           alignItems: 'center',
           maxWidth: '1200px',
-          margin: '0 auto'
+          margin: '0 auto',
+          gap: '10px'
         }}>
-          <Button 
-            icon={<LeftOutlined />}
-            onClick={() => navigate('/home')}
-            size="large"
-            style={{ 
-              fontSize: '16px',
-              backgroundColor: '#1890ff',
-              borderColor: '#1890ff',
-              color: 'white'
-            }}
-          >
-            Back to Home
-          </Button>
-          
-          <h1 style={{ 
-            margin: 0, 
-            fontSize: '28px', 
-            color: '#1890ff',
-            textAlign: 'center',
-            flex: 1
+          <div style={{ 
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
           }}>
-            Health Assessment - 4 Ms
-          </h1>
-          
-          <div style={{ display: 'flex', gap: '10px' }}>
             <Button 
-              icon={<SaveOutlined />}
-              onClick={handleSave}
-              size="large"
-              style={{
-                backgroundColor: '#52c41a',
-                borderColor: '#52c41a',
-                color: 'white'
-              }}
-            >
-              Save Progress
-            </Button>
-            <Button 
-              icon={<HomeOutlined />}
+              icon={<LeftOutlined />}
               onClick={() => navigate('/home')}
-              size="large"
-              style={{
-                backgroundColor: '#1890ff',
-                borderColor: '#1890ff',
-                color: 'white'
+              style={{ 
+                padding: '4px 8px',
+                height: 'auto'
               }}
             />
+            <div style={{ 
+              fontSize: 'clamp(18px, 4vw, 24px)', 
+              fontWeight: 'bold',
+              color: '#1890ff'
+            }}>
+              Health Assessment
+            </div>
+          </div>
+          <div style={{ 
+            display: 'flex',
+            gap: '8px'
+          }}>
+            <Button 
+              type="primary"
+              onClick={handleSave}
+              style={{ 
+                padding: '4px 12px',
+                height: 'auto'
+              }}
+            >
+              Submit
+            </Button>
           </div>
         </div>
       </div>
 
-      {/* Progress Bar for Current Tab */}
+      {/* Progress Bar */}
       <div style={{ 
-        backgroundColor: 'white', 
-        padding: '20px 40px',
+        backgroundColor: 'white',
+        padding: '10px',
         borderBottom: '1px solid #e8e8e8'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <div style={{ marginBottom: '10px', fontSize: '16px', fontWeight: 'bold' }}>
-            {activeTab === 'review' ? 'Overall Assessment Progress' : `${tabItems.find(tab => tab.key === activeTab)?.label} Progress`}
-          </div>
           <Progress 
             percent={activeTab === 'review' ? calculateOverallProgress() : calculateProgress(activeTab)} 
             strokeColor={getSectionBaseColor(activeTab)}
-            size="default"
-            style={{ fontSize: '14px' }}
+            size="small"
+            showInfo={false}
           />
         </div>
       </div>
@@ -418,8 +404,10 @@ export default function Questionnaire() {
       <div style={{ 
         maxWidth: '1200px', 
         margin: '0 auto', 
-        padding: '40px',
-        minHeight: 'calc(100vh - 200px)'
+        padding: '15px',
+        minHeight: 'calc(100vh - 200px)',
+        width: '100%',
+        boxSizing: 'border-box'
       }}>
         <Tabs
           activeKey={activeTab}
@@ -429,31 +417,28 @@ export default function Questionnaire() {
           style={{
             backgroundColor: 'white',
             borderRadius: '8px',
-            padding: '20px',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
+            padding: '10px',
+            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+            width: '100%'
           }}
           items={tabItems.map(item => ({
             ...item,
             label: (
               <div style={{ 
-                padding: '8px 16px',
-                fontSize: '16px',
+                padding: '6px 10px',
+                fontSize: 'clamp(14px, 3vw, 16px)',
                 fontWeight: '600',
                 backgroundColor: getSectionBaseColor(item.key),
                 borderRadius: '6px',
                 color: 'white',
-                minWidth: '120px',
+                minWidth: '80px',
                 textAlign: 'center',
-                opacity: item.key === activeTab ? 1 : 0.7
+                opacity: item.key === activeTab ? 1 : 0.7,
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
               }}>
-                <div>{item.label}</div>
-                <div style={{ 
-                  fontSize: '12px', 
-                  marginTop: '2px',
-                  opacity: 0.9 
-                }}>
-                  {item.key === 'review' ? `${calculateOverallProgress()}% Overall` : `${calculateProgress(item.key)}% Complete`}
-                </div>
+                {item.label}
               </div>
             )
           }))}

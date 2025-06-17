@@ -172,34 +172,48 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
         <Card 
           key={questionKey}
           style={{ 
-            marginBottom: '30px',
+            marginBottom: '15px',
             border: `2px solid ${config.borderColor}`,
-            borderRadius: '12px'
+            borderRadius: '12px',
+            width: '100%'
           }}
           title={
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#333' }}>
+            <div style={{ 
+              fontSize: 'clamp(14px, 3vw, 16px)', 
+              fontWeight: '600', 
+              color: '#333',
+              lineHeight: '1.4',
+              whiteSpace: 'normal',
+              wordBreak: 'break-word'
+            }}>
               <config.icon style={{ marginRight: '8px', color: config.color }} />
               {`${index + 1}. ${question.text}`}
             </div>
           }
         >
-          <Row gutter={24}>
-            <Col span={18}>
-              <div style={{ padding: '20px 0' }}>
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={18}>
+              <div style={{ padding: '10px 0' }}>
                 <Slider
                   min={question.min || 0}
                   max={question.max || 100}
                   value={localResponses[questionKey] || 50}
                   onChange={(value) => handleSliderChange(questionKey, value)}
                   tooltip={{ formatter: (value) => `${value}%` }}
-                  trackStyle={{ backgroundColor: config.color, height: 8 }}
-                  handleStyle={{ borderColor: config.color, borderWidth: 3, height: 24, width: 24 }}
-                  railStyle={{ height: 8 }}
+                  trackStyle={{ backgroundColor: config.color, height: 6 }}
+                  handleStyle={{ borderColor: config.color, borderWidth: 2, height: 20, width: 20 }}
+                  railStyle={{ height: 6 }}
                 />
               </div>
             </Col>
-            <Col span={6}>
-              <div style={{ textAlign: 'center', fontSize: '18px', fontWeight: 'bold', color: config.color }}>
+            <Col xs={24} sm={6}>
+              <div style={{ 
+                textAlign: 'center', 
+                fontSize: 'clamp(16px, 4vw, 18px)', 
+                fontWeight: 'bold', 
+                color: config.color,
+                padding: '5px 0'
+              }}>
                 {localResponses[questionKey] || 50}%
               </div>
             </Col>
@@ -211,12 +225,20 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
         <Card 
           key={questionKey}
           style={{ 
-            marginBottom: '30px',
+            marginBottom: '15px',
             border: `2px solid ${config.borderColor}`,
-            borderRadius: '12px'
+            borderRadius: '12px',
+            width: '100%'
           }}
           title={
-            <div style={{ fontSize: '18px', fontWeight: '600', color: '#333' }}>
+            <div style={{ 
+              fontSize: 'clamp(14px, 3vw, 16px)', 
+              fontWeight: '600', 
+              color: '#333',
+              lineHeight: '1.4',
+              whiteSpace: 'normal',
+              wordBreak: 'break-word'
+            }}>
               <config.icon style={{ marginRight: '8px', color: config.color }} />
               {`${index + 1}. ${question.text}`}
             </div>
@@ -224,13 +246,17 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
         >
           <Space direction="vertical" size="middle" style={{ width: '100%' }}>
             <div>
-              <Text strong style={{ fontSize: '16px', marginBottom: '8px', display: 'block' }}>
-                Select what applies to you:
+              <Text strong style={{ 
+                fontSize: 'clamp(14px, 3vw, 16px)', 
+                marginBottom: '8px', 
+                display: 'block' 
+              }}>
+                Select what applies:
               </Text>
               <Select
                 mode="multiple"
                 size="large"
-                placeholder="Choose from suggestions..."
+                placeholder="Choose options..."
                 value={localResponses[questionKey]?.tags || []}
                 onChange={(values) => handleTagChange(questionKey, values)}
                 style={{ width: '100%' }}
@@ -240,9 +266,18 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
             </div>
             
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <Text strong style={{ fontSize: '16px' }}>
-                  Additional thoughts or details:
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center', 
+                marginBottom: '8px',
+                flexWrap: 'wrap',
+                gap: '8px'
+              }}>
+                <Text strong style={{ 
+                  fontSize: 'clamp(14px, 3vw, 16px)'
+                }}>
+                  Additional details:
                 </Text>
                 {recognition && (
                   <Button
@@ -250,22 +285,25 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
                     onClick={() => startListening(questionKey)}
                     loading={isListening[questionKey]}
                     style={{
+                      padding: '4px 8px',
+                      height: 'auto',
                       backgroundColor: isListening[questionKey] ? '#ff4d4f' : config.color,
                       borderColor: isListening[questionKey] ? '#ff4d4f' : config.color,
                       color: 'white'
                     }}
-                  >
-                    {isListening[questionKey] ? 'Listening...' : 'Speak'}
-                  </Button>
+                  />
                 )}
               </div>
               <TextArea
                 size="large"
-                rows={4}
-                placeholder="You can write anything else you'd like to share about this question..."
+                rows={3}
+                placeholder="Add any additional thoughts..."
                 value={localResponses[questionKey]?.text || ''}
                 onChange={(e) => handleTextChange(questionKey, e.target.value)}
-                style={{ fontSize: '16px' }}
+                style={{ 
+                  fontSize: 'clamp(14px, 3vw, 16px)',
+                  width: '100%'
+                }}
               />
             </div>
           </Space>
@@ -276,24 +314,33 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
   };
 
   return (
-    <div style={{ padding: '20px' }}>
+    <div style={{ padding: '10px' }}>
       <div style={{ 
         textAlign: 'center', 
-        marginBottom: '40px',
+        marginBottom: '20px',
         backgroundColor: config.backgroundColor,
-        padding: '30px',
+        padding: '15px',
         borderRadius: '12px',
         color: config.color
       }}>
-        <Title level={2} style={{ color: config.color, marginBottom: '10px' }}>
+        <Title level={2} style={{ 
+          color: config.color, 
+          marginBottom: '8px',
+          fontSize: 'clamp(1.25rem, 4vw, 1.75rem)',
+          lineHeight: '1.3'
+        }}>
           {config.title}
         </Title>
-        <Text style={{ fontSize: '16px', color: config.color }}>
+        <Text style={{ 
+          fontSize: 'clamp(13px, 3vw, 15px)', 
+          color: config.color,
+          lineHeight: '1.4'
+        }}>
           {config.description}
         </Text>
       </div>
 
-      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
         {sortedQuestionEntries.map(([questionKey, question], index) => 
           renderQuestion(questionKey, question, index)
         )}
@@ -301,13 +348,17 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
 
       <div style={{ 
         textAlign: 'center', 
-        marginTop: '40px', 
-        padding: '20px',
+        marginTop: '20px', 
+        padding: '12px',
         backgroundColor: config.backgroundColor,
         borderRadius: '8px',
         border: `1px solid ${config.borderColor}`
       }}>
-        <Text style={{ fontSize: '16px', color: config.tipColor }}>
+        <Text style={{ 
+          fontSize: 'clamp(13px, 3vw, 15px)', 
+          color: config.tipColor,
+          lineHeight: '1.4'
+        }}>
           {config.tipText}
         </Text>
       </div>
