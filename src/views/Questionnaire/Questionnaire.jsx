@@ -231,32 +231,32 @@ export default function Questionnaire() {
   };
 
   const tabItems = [
-    {
-      key: 'matters',
-      label: 'What Matters',
-      children: (
-        <FourMSection 
-          ref={whatMattersRef}
-          section="matters"
-          questionnaire={questionnaire}
-          responses={responses.matters}
-          onLocalChange={triggerProgressUpdate}
-        />
-      )
-    },
-    {
-      key: 'medication',
-      label: 'Medication',
-      children: (
-        <FourMSection 
-          ref={medicationRef}
-          section="medication"
-          questionnaire={questionnaire}
-          responses={responses.medication}
-          onLocalChange={triggerProgressUpdate}
-        />
-      )
-    },
+    // {
+    //   key: 'matters',
+    //   label: 'What Matters',
+    //   children: (
+    //     <FourMSection 
+    //       ref={whatMattersRef}
+    //       section="matters"
+    //       questionnaire={questionnaire}
+    //       responses={responses.matters}
+    //       onLocalChange={triggerProgressUpdate}
+    //     />
+    //   )
+    // },
+    // {
+    //   key: 'medication',
+    //   label: 'Medication',
+    //   children: (
+    //     <FourMSection 
+    //       ref={medicationRef}
+    //       section="medication"
+    //       questionnaire={questionnaire}
+    //       responses={responses.medication}
+    //       onLocalChange={triggerProgressUpdate}
+    //     />
+    //   )
+    // },
     {
       key: 'mind',
       label: 'Mind',
@@ -282,18 +282,18 @@ export default function Questionnaire() {
           onLocalChange={triggerProgressUpdate}
         />
       )
-    },
-    {
-      key: 'review',
-      label: 'Review & Submit',
-      children: (
-        <ReviewSubmit 
-          questionnaire={questionnaire}
-          responses={responses}
-          onSave={handleSave}
-        />
-      )
     }
+    // {
+    //   key: 'review',
+    //   label: 'Review & Submit',
+    //   children: (
+    //     <ReviewSubmit 
+    //       questionnaire={questionnaire}
+    //       responses={responses}
+    //       onSave={handleSave}
+    //     />
+    //   )
+    // }
   ];
 
   if (loading) {
