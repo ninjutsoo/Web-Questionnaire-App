@@ -1,7 +1,7 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button } from 'antd';
 import { HeartOutlined, CarOutlined, MedicineBoxOutlined, StarOutlined } from '@ant-design/icons';
-// import { AudioOutlined } from '@ant-design/icons';
+import { AudioOutlined } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -52,8 +52,8 @@ const SECTION_CONFIG = {
 
 const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalChange }, ref) => {
   const [localResponses, setLocalResponses] = useState(responses || {});
-  // const [isListening, setIsListening] = useState({});
-  // const [recognition, setRecognition] = useState(null);
+  const [isListening, setIsListening] = useState({});
+  const [recognition, setRecognition] = useState(null);
 
   const config = SECTION_CONFIG[section];
 
@@ -129,43 +129,43 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
   };
 
   // Initialize speech recognition
-  // useEffect(() => {
-  //   if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-  //     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  //     const recognitionInstance = new SpeechRecognition();
-  //     recognitionInstance.continuous = false;
-  //     recognitionInstance.interimResults = false;
-  //     recognitionInstance.lang = 'en-US';
-  //     setRecognition(recognitionInstance);
-  //   }
-  // }, []);
+  useEffect(() => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognitionInstance = new SpeechRecognition();
+      recognitionInstance.continuous = false;
+      recognitionInstance.interimResults = false;
+      recognitionInstance.lang = 'en-US';
+      setRecognition(recognitionInstance);
+    }
+  }, []);
 
-  // const startListening = (questionKey) => {
-  //   if (!recognition) {
-  //     alert('Speech recognition is not supported in your browser');
-  //     return;
-  //   }
+  const startListening = (questionKey) => {
+    if (!recognition) {
+      alert('Speech recognition is not supported in your browser');
+      return;
+    }
 
-  //   setIsListening(prev => ({ ...prev, [questionKey]: true }));
+    setIsListening(prev => ({ ...prev, [questionKey]: true }));
 
-  //   recognition.onresult = (event) => {
-  //     const transcript = event.results[0][0].transcript;
-  //     const currentText = localResponses[questionKey]?.text || '';
-  //     const newText = currentText ? `${currentText} ${transcript}` : transcript;
-  //     handleTextChange(questionKey, newText);
-  //     setIsListening(prev => ({ ...prev, [questionKey]: false }));
-  //   };
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      const currentText = localResponses[questionKey]?.text || '';
+      const newText = currentText ? `${currentText} ${transcript}` : transcript;
+      handleTextChange(questionKey, newText);
+      setIsListening(prev => ({ ...prev, [questionKey]: false }));
+    };
 
-  //   recognition.onerror = () => {
-  //     setIsListening(prev => ({ ...prev, [questionKey]: false }));
-  //   };
+    recognition.onerror = () => {
+      setIsListening(prev => ({ ...prev, [questionKey]: false }));
+    };
 
-  //   recognition.onend = () => {
-  //     setIsListening(prev => ({ ...prev, [questionKey]: false }));
-  //   };
+    recognition.onend = () => {
+      setIsListening(prev => ({ ...prev, [questionKey]: false }));
+    };
 
-  //   recognition.start();
-  // };
+    recognition.start();
+  };
 
   const renderQuestion = (questionKey, question, index) => {
     if (question.type === 'slider') {
@@ -280,7 +280,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
                 }}>
                   Additional details:
                 </Text>
-                {/* {recognition && (
+                {recognition && (
                   <Button
                     icon={<AudioOutlined />}
                     onClick={() => startListening(questionKey)}
@@ -293,7 +293,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
                       color: 'white'
                     }}
                   />
-                )} */}
+                )}
               </div>
               <TextArea
                 size="large"
