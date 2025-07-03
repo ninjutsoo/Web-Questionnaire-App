@@ -2,6 +2,7 @@ import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'rea
 import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button } from 'antd';
 import { HeartOutlined, CarOutlined, MedicineBoxOutlined, StarOutlined } from '@ant-design/icons';
 import { AudioOutlined } from '@ant-design/icons';
+import SpeechReader from '../../components/SpeechReader';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -185,10 +186,14 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
               color: '#333',
               lineHeight: '1.4',
               whiteSpace: 'normal',
-              wordBreak: 'break-word'
+              wordBreak: 'break-word',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
             }}>
               <config.icon style={{ marginRight: '8px', color: config.color }} />
-              {`${index + 1}. ${question.text}`}
+              <span>{`${index + 1}. ${question.text}`}</span>
+              <SpeechReader text={question.text} />
             </div>
           }
         >
@@ -238,10 +243,14 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
               color: '#333',
               lineHeight: '1.4',
               whiteSpace: 'normal',
-              wordBreak: 'break-word'
+              wordBreak: 'break-word',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
             }}>
               <config.icon style={{ marginRight: '8px', color: config.color }} />
-              {`${index + 1}. ${question.text}`}
+              <span>{`${index + 1}. ${question.text}`}</span>
+              <SpeechReader text={question.text} />
             </div>
           }
         >
