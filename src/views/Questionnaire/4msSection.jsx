@@ -1,8 +1,9 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button } from 'antd';
 import { HeartOutlined, CarOutlined, MedicineBoxOutlined, StarOutlined } from '@ant-design/icons';
-import { AudioOutlined } from '@ant-design/icons';
+import { AudioOutlined, QrcodeOutlined } from '@ant-design/icons';
 import SpeechReader from '../../components/SpeechReader';
+import MedicationScanner from '../../components/MedicationScanner';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -16,7 +17,7 @@ const SECTION_CONFIG = {
     color: '#722ed1',
     backgroundColor: '#f9f0ff',
     borderColor: '#d3adf7',
-    tipText: "Taking care of your mental health is just as important as physical health. Don't forget to click 'Save Progress' to save your responses.",
+    tipText: "Taking care of your mental health is just as important as physical health. Don't forget to click 'Submit' to save your responses.",
     tipColor: '#722ed1'
   },
   mobility: {
@@ -26,7 +27,7 @@ const SECTION_CONFIG = {
     color: '#fa541c',
     backgroundColor: '#fff2e8',
     borderColor: '#ffbb96',
-    tipText: "Staying active helps maintain your independence and improves your overall health. Don't forget to click 'Save Progress' to save your mobility information.",
+    tipText: "Staying active helps maintain your independence and improves your overall health. Don't forget to click 'Submit' to save your mobility information.",
     tipColor: '#d46b08'
   },
   medication: {
@@ -36,7 +37,7 @@ const SECTION_CONFIG = {
     color: '#1890ff',
     backgroundColor: '#e6f7ff',
     borderColor: '#91d5ff',
-    tipText: "Proper medication management is crucial for your health. Don't forget to click 'Save Progress' to save your medication information.",
+    tipText: "Proper medication management is crucial for your health. Don't forget to click 'Submit' to save your medication information.",
     tipColor: '#096dd9'
   },
   matters: {
@@ -46,7 +47,7 @@ const SECTION_CONFIG = {
     color: '#52c41a',
     backgroundColor: '#f6ffed',
     borderColor: '#b7eb8f',
-    tipText: "Understanding what matters to you helps us provide better care. Don't forget to click 'Save Progress' to save your preferences.",
+    tipText: "Understanding what matters to you helps us provide better care. Don't forget to click 'Submit' to save your preferences.",
     tipColor: '#389e0d'
   }
 };
@@ -55,6 +56,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
   const [localResponses, setLocalResponses] = useState(responses || {});
   const [isListening, setIsListening] = useState({});
   const [recognition, setRecognition] = useState(null);
+  const [scannerVisible, setScannerVisible] = useState(false);
 
   const config = SECTION_CONFIG[section];
 
@@ -127,6 +129,13 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
     };
     setLocalResponses(updated);
     if (onLocalChange) onLocalChange();
+  };
+
+  const handleMedicationScanned = (scannedText) => {
+    // Add the scanned medication to the text field
+    const currentText = localResponses.q1?.text || '';
+    const newText = currentText ? `${currentText}\n${scannedText}` : scannedText;
+    handleTextChange('q1', newText);
   };
 
   // Initialize speech recognition
@@ -289,20 +298,37 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
                 }}>
                   Additional details:
                 </Text>
-                {recognition && (
-                  <Button
-                    icon={<AudioOutlined />}
-                    onClick={() => startListening(questionKey)}
-                    loading={isListening[questionKey]}
-                    style={{
-                      padding: '4px 8px',
-                      height: 'auto',
-                      backgroundColor: isListening[questionKey] ? '#ff4d4f' : config.color,
-                      borderColor: isListening[questionKey] ? '#ff4d4f' : config.color,
-                      color: 'white'
-                    }}
-                  />
-                )}
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {/* QR Scanner button - only show for medication section, first question */}
+                  {section === 'medication' && questionKey === 'q1' && (
+                    <Button
+                      icon={<QrcodeOutlined />}
+                      onClick={() => setScannerVisible(true)}
+                      style={{
+                        padding: '4px 8px',
+                        height: 'auto',
+                        backgroundColor: config.color,
+                        borderColor: config.color,
+                        color: 'white'
+                      }}
+                      title="Scan medication QR code"
+                    />
+                  )}
+                  {recognition && (
+                    <Button
+                      icon={<AudioOutlined />}
+                      onClick={() => startListening(questionKey)}
+                      loading={isListening[questionKey]}
+                      style={{
+                        padding: '4px 8px',
+                        height: 'auto',
+                        backgroundColor: isListening[questionKey] ? '#ff4d4f' : config.color,
+                        borderColor: isListening[questionKey] ? '#ff4d4f' : config.color,
+                        color: 'white'
+                      }}
+                    />
+                  )}
+                </div>
               </div>
               <TextArea
                 size="large"
@@ -369,11 +395,18 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
           color: config.tipColor,
           lineHeight: '1.4'
         }}>
-          {config.tipText}
-        </Text>
-      </div>
+                  {config.tipText}
+      </Text>
     </div>
-  );
+
+    {/* QR Scanner Modal */}
+    <MedicationScanner
+      visible={scannerVisible}
+      onClose={() => setScannerVisible(false)}
+      onMedScanned={handleMedicationScanned}
+    />
+  </div>
+);
 });
 
 export default FourMSection; 
