@@ -76,15 +76,8 @@ export default function Migration() {
   };
 
   return (
-    <div style={{ padding: '40px', maxWidth: '800px', margin: '0 auto' }}>
-      <Button 
-        onClick={() => navigate('/home')}
-        style={{ marginBottom: '20px' }}
-      >
-        ← Back to Home
-      </Button>
-
-      <Title level={2}>Data Migration Tool</Title>
+    <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <Title level={2} style={{ marginBottom: '20px' }}>Data Migration Tool</Title>
       
       <Alert
         message="Migration Purpose"
@@ -95,7 +88,7 @@ export default function Migration() {
 
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {/* Preview Section */}
-        <Card title="Step 1: Preview Migration Data">
+        <Card title="Step 1: Preview Migration Data" style={{ borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
           <Paragraph>
             Check what data will be migrated before running the actual migration.
           </Paragraph>
@@ -131,7 +124,7 @@ export default function Migration() {
         </Card>
 
         {/* Migration Section */}
-        <Card title="Step 2: Run Migration">
+        <Card title="Step 2: Run Migration" style={{ borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
           <Alert
             message="Important"
             description="This will move data from Users collection to the new Answers collection and remove old questionnaire data from Users. Make sure you've updated your Firebase security rules first!"
@@ -152,7 +145,7 @@ export default function Migration() {
         </Card>
 
         {/* Verification Section */}
-        <Card title="Step 3: Verify Migration">
+        <Card title="Step 3: Verify Migration" style={{ borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
           <Paragraph>
             Verify that the migration completed successfully.
           </Paragraph>

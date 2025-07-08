@@ -1,6 +1,6 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button } from 'antd';
-import { HeartOutlined, CarOutlined, MedicineBoxOutlined, StarOutlined } from '@ant-design/icons';
+import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button, Alert } from 'antd';
+import { HeartOutlined, CarOutlined, MedicineBoxOutlined, StarOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { AudioOutlined, QrcodeOutlined } from '@ant-design/icons';
 import SpeechReader from '../../components/SpeechReader';
 import MedicationScanner from '../../components/MedicationScanner';
@@ -86,6 +86,12 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
       if (indexB !== -1) return 1;
     }
     
+    // Custom order for mobility section: mobilityType first, then other questions
+    if (section === 'mobility') {
+      if (keyA === 'mobilityType') return -1;
+      if (keyB === 'mobilityType') return 1;
+    }
+    
     // For all sections, handle numeric sorting for q1, q2, q3, etc.
     const numA = keyA.match(/\d+/)?.[0];
     const numB = keyB.match(/\d+/)?.[0];
@@ -126,6 +132,15 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
         ...localResponses[questionKey],
         text: text
       }
+    };
+    setLocalResponses(updated);
+    if (onLocalChange) onLocalChange();
+  };
+
+  const handleMobilityTypeChange = (questionKey, value) => {
+    const updated = {
+      ...localResponses,
+      [questionKey]: value
     };
     setLocalResponses(updated);
     if (onLocalChange) onLocalChange();
@@ -233,6 +248,87 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
               </div>
             </Col>
           </Row>
+        </Card>
+      );
+    } else if (question.type === 'mobility_type') {
+      const selectedType = localResponses[questionKey];
+      const tips = question.tips?.[selectedType];
+      
+      return (
+        <Card 
+          key={questionKey}
+          style={{ 
+            marginBottom: '15px',
+            border: `2px solid ${config.borderColor}`,
+            borderRadius: '12px',
+            width: '100%'
+          }}
+          title={
+            <div style={{ 
+              fontSize: 'clamp(14px, 3vw, 16px)', 
+              fontWeight: '600', 
+              color: '#333',
+              lineHeight: '1.4',
+              whiteSpace: 'normal',
+              wordBreak: 'break-word',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8
+            }}>
+              <config.icon style={{ marginRight: '8px', color: config.color }} />
+              <span>{`${index + 1}. ${question.text}`}</span>
+              <SpeechReader text={question.text} />
+            </div>
+          }
+        >
+          <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+            <div>
+              <Text strong style={{ 
+                fontSize: 'clamp(14px, 3vw, 16px)', 
+                marginBottom: '8px', 
+                display: 'block' 
+              }}>
+                Select your mobility type:
+              </Text>
+              <Select
+                size="large"
+                placeholder="Choose how you get around..."
+                value={selectedType}
+                onChange={(value) => handleMobilityTypeChange(questionKey, value)}
+                style={{ width: '100%' }}
+                options={question.options?.map(option => ({ label: option, value: option })) || []}
+              />
+            </div>
+            
+            {tips && (
+              <Alert
+                message={
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <InfoCircleOutlined style={{ color: config.color }} />
+                    <span style={{ fontWeight: 'bold' }}>{tips.title}</span>
+                  </div>
+                }
+                description={
+                  <div style={{ marginTop: 8 }}>
+                    <Text style={{ fontSize: 'clamp(13px, 3vw, 15px)', lineHeight: '1.4' }}>
+                      {tips.content}
+                    </Text>
+                    <div style={{ marginTop: 8, padding: 8, backgroundColor: config.backgroundColor, borderRadius: 4 }}>
+                      <Text style={{ fontSize: 'clamp(12px, 3vw, 14px)', color: config.color, fontStyle: 'italic' }}>
+                        💡 {tips.details}
+                      </Text>
+                    </div>
+                  </div>
+                }
+                type="info"
+                showIcon={false}
+                style={{ 
+                  border: `1px solid ${config.borderColor}`,
+                  backgroundColor: config.backgroundColor
+                }}
+              />
+            )}
+          </Space>
         </Card>
       );
     } else if (question.type === 'tag_text') {

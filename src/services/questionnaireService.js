@@ -10,7 +10,15 @@ export const getQuestionnaire = async () => {
     
     if (docSnap.exists()) {
       console.log('Questionnaire loaded from Firebase successfully');
-      return docSnap.data();
+      const questionnaireData = docSnap.data();
+      
+      // Check if we need to update with new mobilityType question
+      if (!questionnaireData.sections?.mobility?.questions?.mobilityType) {
+        console.log('Updating existing questionnaire with new mobility question...');
+        return await updateQuestionnaireWithMobilityType();
+      }
+      
+      return questionnaireData;
     } else {
       console.log('Questionnaire not found, creating default...');
       // Create default questionnaire if it doesn't exist
@@ -47,6 +55,33 @@ export const getQuestionnaire = async () => {
           },
           mobility: {
             questions: {
+              mobilityType: { 
+                text: "How do you normally get around?", 
+                type: "mobility_type", 
+                options: ["Bedrest", "Walker", "Wheelchair", "Independent"],
+                tips: {
+                  "Bedrest": {
+                    title: "Bedrest Safety Tips",
+                    content: "Turn reminders every two hours and a \"Why Turn\" section with a description of the importance of turning to prevent bed sores",
+                    details: "Regular turning helps prevent pressure ulcers (bed sores) and improves circulation. Set reminders to change position every 2 hours."
+                  },
+                  "Walker": {
+                    title: "Walker Safety Tips", 
+                    content: "When standing up make sure you have another person in the room with you to reduce the fall risk. Before standing up, sit at the edge of the bed and or chair, make sure you are not experiencing any dizziness.",
+                    details: "Always have someone nearby when getting up. Sit at the edge first, check for dizziness, then stand slowly with support."
+                  },
+                  "Wheelchair": {
+                    title: "Wheelchair Exercise Tips",
+                    content: "Once in the chair try a couple of arm raises, side twist, and knee/ toe raises",
+                    details: "Regular movement helps maintain strength and flexibility. Try arm raises, side twists, and knee/toe raises while seated."
+                  },
+                  "Independent": {
+                    title: "Independent Movement Safety Tips",
+                    content: "When standing up make sure you have another person in the room with you to reduce the fall risk. Before standing up, sit at the edge of the bed and or chair, make sure you are not experiencing any dizziness.",
+                    details: "Even when moving independently, it's safer to have someone nearby. Always check for dizziness before standing."
+                  }
+                }
+              },
               q1: { text: "What mobility challenges do you face?", type: "tag_text", tags: ["Walking", "Stairs", "Balance", "Standing", "Getting Up", "Pain"] },
               q2: { text: "What is your current exercise routine?", type: "tag_text", tags: ["Daily Walk", "Gym", "Swimming", "Yoga", "Physical Therapy", "None"] },
               q3: { text: "Do you use any mobility aids?", type: "tag_text", tags: ["Cane", "Walker", "Wheelchair", "Grab Bars", "Ramp", "None"] },
@@ -107,6 +142,33 @@ const getFallbackQuestionnaire = () => {
       },
       mobility: {
         questions: {
+          mobilityType: { 
+            text: "How do you normally get around?", 
+            type: "mobility_type", 
+            options: ["Bedrest", "Walker", "Wheelchair", "Independent"],
+            tips: {
+              "Bedrest": {
+                title: "Bedrest Safety Tips",
+                content: "Turn reminders every two hours and a \"Why Turn\" section with a description of the importance of turning to prevent bed sores",
+                details: "Regular turning helps prevent pressure ulcers (bed sores) and improves circulation. Set reminders to change position every 2 hours."
+              },
+              "Walker": {
+                title: "Walker Safety Tips", 
+                content: "When standing up make sure you have another person in the room with you to reduce the fall risk. Before standing up, sit at the edge of the bed and or chair, make sure you are not experiencing any dizziness.",
+                details: "Always have someone nearby when getting up. Sit at the edge first, check for dizziness, then stand slowly with support."
+              },
+              "Wheelchair": {
+                title: "Wheelchair Exercise Tips",
+                content: "Once in the chair try a couple of arm raises, side twist, and knee/ toe raises",
+                details: "Regular movement helps maintain strength and flexibility. Try arm raises, side twists, and knee/toe raises while seated."
+              },
+              "Independent": {
+                title: "Independent Movement Safety Tips",
+                content: "When standing up make sure you have another person in the room with you to reduce the fall risk. Before standing up, sit at the edge of the bed and or chair, make sure you are not experiencing any dizziness.",
+                details: "Even when moving independently, it's safer to have someone nearby. Always check for dizziness before standing."
+              }
+            }
+          },
           q1: { text: "What mobility challenges do you face?", type: "tag_text", tags: ["Walking", "Stairs", "Balance", "Standing", "Getting Up", "Pain"] },
           q2: { text: "What is your current exercise routine?", type: "tag_text", tags: ["Daily Walk", "Gym", "Swimming", "Yoga", "Physical Therapy", "None"] },
           q3: { text: "Do you use any mobility aids?", type: "tag_text", tags: ["Cane", "Walker", "Wheelchair", "Grab Bars", "Ramp", "None"] },
@@ -196,8 +258,6 @@ export const getUserSession = async (userId) => {
   }
 };
 
-
-
 // Save response to a question
 export const saveResponse = async (sessionId, section, questionId, answer) => {
   try {
@@ -259,5 +319,160 @@ export const getSessionData = async (sessionId) => {
   } catch (error) {
     console.error('Error getting session data:', error);
     throw error;
+  }
+};
+
+// Update existing questionnaire with new mobility question
+export const updateQuestionnaireWithMobilityType = async () => {
+  try {
+    console.log('Updating questionnaire with new mobility type question...');
+    const docRef = doc(db, 'Questions', '4ms_health');
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      const existingData = docSnap.data();
+      
+      // Check if mobilityType question already exists
+      if (!existingData.sections?.mobility?.questions?.mobilityType) {
+        console.log('Adding mobilityType question to existing questionnaire...');
+        
+        // Add the new mobilityType question to the beginning of mobility questions
+        const updatedMobilityQuestions = {
+          mobilityType: { 
+            text: "How do you normally get around?", 
+            type: "mobility_type", 
+            options: ["Bedrest", "Walker", "Wheelchair", "Independent"],
+            tips: {
+              "Bedrest": {
+                title: "Bedrest Safety Tips",
+                content: "Turn reminders every two hours and a \"Why Turn\" section with a description of the importance of turning to prevent bed sores",
+                details: "Regular turning helps prevent pressure ulcers (bed sores) and improves circulation. Set reminders to change position every 2 hours."
+              },
+              "Walker": {
+                title: "Walker Safety Tips", 
+                content: "When standing up make sure you have another person in the room with you to reduce the fall risk. Before standing up, sit at the edge of the bed and or chair, make sure you are not experiencing any dizziness.",
+                details: "Always have someone nearby when getting up. Sit at the edge first, check for dizziness, then stand slowly with support."
+              },
+              "Wheelchair": {
+                title: "Wheelchair Exercise Tips",
+                content: "Once in the chair try a couple of arm raises, side twist, and knee/ toe raises",
+                details: "Regular movement helps maintain strength and flexibility. Try arm raises, side twists, and knee/toe raises while seated."
+              },
+              "Independent": {
+                title: "Independent Movement Safety Tips",
+                content: "When standing up make sure you have another person in the room with you to reduce the fall risk. Before standing up, sit at the edge of the bed and or chair, make sure you are not experiencing any dizziness.",
+                details: "Even when moving independently, it's safer to have someone nearby. Always check for dizziness before standing."
+              }
+            }
+          },
+          ...existingData.sections.mobility.questions
+        };
+        
+        const updatedQuestionnaire = {
+          ...existingData,
+          sections: {
+            ...existingData.sections,
+            mobility: {
+              ...existingData.sections.mobility,
+              questions: updatedMobilityQuestions
+            }
+          },
+          updatedAt: new Date()
+        };
+        
+        await setDoc(docRef, updatedQuestionnaire);
+        console.log('Questionnaire updated successfully with mobilityType question');
+        return updatedQuestionnaire;
+      } else {
+        console.log('mobilityType question already exists in questionnaire');
+        return existingData;
+      }
+    } else {
+      console.log('No existing questionnaire found, creating new one...');
+      return await getQuestionnaire(); // This will create the default with mobilityType
+    }
+  } catch (error) {
+    console.error('Error updating questionnaire:', error);
+    // Return fallback questionnaire if update fails
+    return getFallbackQuestionnaire();
+  }
+};
+
+// Get user questionnaire data for AI context
+export const getUserQuestionnaireContext = async (userId) => {
+  try {
+    console.log('Getting questionnaire context for user:', userId);
+    
+    // Get user session data
+    const sessionId = `${userId}_4ms_health`;
+    const sessionData = await getSessionData(sessionId);
+    
+    if (!sessionData || !sessionData.responses) {
+      console.log('No questionnaire data found for user');
+      return null;
+    }
+    
+    // Get questionnaire structure to map question IDs to text
+    const questionnaire = await getQuestionnaire();
+    
+    // Format the responses for AI context
+    const context = {
+      userId: userId,
+      completedSections: [],
+      responses: {}
+    };
+    
+    const sections = ['matters', 'medication', 'mind', 'mobility'];
+    
+    sections.forEach(sectionKey => {
+      const sectionResponses = sessionData.responses[sectionKey] || {};
+      const sectionQuestions = questionnaire?.sections?.[sectionKey]?.questions || {};
+      
+      // Only include sections that have answered questions
+      const answeredQuestions = Object.entries(sectionResponses).filter(([questionId, response]) => {
+        if (!response) return false;
+        
+        if (typeof response === 'object' && response !== null) {
+          // Tag + text questions - count as answered if has tags OR text
+          return (response.tags && response.tags.length > 0) || (response.text && response.text.trim());
+        } else if (typeof response === 'number' || (typeof response === 'string' && response.trim())) {
+          // Slider or text questions - count if not empty
+          return true;
+        }
+        return false;
+      });
+      
+      if (answeredQuestions.length > 0) {
+        context.completedSections.push(sectionKey);
+        context.responses[sectionKey] = {};
+        
+        answeredQuestions.forEach(([questionId, response]) => {
+          const questionText = sectionQuestions[questionId]?.text || questionId;
+          
+          let formattedResponse = '';
+          if (typeof response === 'object' && response !== null) {
+            if (response.tags && response.tags.length > 0) {
+              formattedResponse = `Selected: ${response.tags.join(', ')}`;
+            }
+            if (response.text && response.text.trim()) {
+              formattedResponse += formattedResponse ? ` | Additional notes: ${response.text}` : response.text;
+            }
+          } else if (typeof response === 'number') {
+            formattedResponse = `Rating: ${response}/10`;
+          } else if (typeof response === 'string') {
+            formattedResponse = response;
+          }
+          
+          context.responses[sectionKey][questionText] = formattedResponse;
+        });
+      }
+    });
+    
+    console.log('Questionnaire context prepared:', context.completedSections.length, 'sections completed');
+    return context;
+    
+  } catch (error) {
+    console.error('Error getting questionnaire context:', error);
+    return null;
   }
 }; 

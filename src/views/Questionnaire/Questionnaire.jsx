@@ -329,85 +329,43 @@ export default function Questionnaire() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
-      {/* Header */}
-      <div style={{ 
-        backgroundColor: 'white', 
-        padding: '15px',
-        borderBottom: '1px solid #e8e8e8',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          maxWidth: '1200px',
-          margin: '0 auto',
-          gap: '10px'
-        }}>
-          <div style={{ 
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
-          }}>
-            <Button 
-              icon={<LeftOutlined />}
-              onClick={() => navigate('/home')}
-              style={{ 
-                padding: '4px 8px',
-                height: 'auto'
-              }}
-            />
-            <div style={{ 
-              fontSize: 'clamp(18px, 4vw, 24px)', 
-              fontWeight: 'bold',
-              color: '#1890ff'
-            }}>
-              Health Assessment
-            </div>
-          </div>
-          <div style={{ 
-            display: 'flex',
-            gap: '8px'
-          }}>
-            <Button 
-              type="primary"
-              onClick={handleSave}
-              style={{ 
-                padding: '4px 12px',
-                height: 'auto'
-              }}
-            >
-              Submit
-            </Button>
-          </div>
-        </div>
-      </div>
-
+    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
       {/* Progress Bar */}
       <div style={{ 
         backgroundColor: 'white',
-        padding: '10px',
-        borderBottom: '1px solid #e8e8e8'
+        padding: '15px',
+        borderRadius: '8px',
+        marginBottom: '20px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-          <Progress 
-            percent={activeTab === 'review' ? calculateOverallProgress() : calculateProgress(activeTab)} 
-            strokeColor={getSectionBaseColor(activeTab)}
-            size="small"
-            showInfo={false}
-          />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
+            Health Assessment Progress
+          </div>
+          <Button 
+            type="primary"
+            onClick={handleSave}
+            icon={<SaveOutlined />}
+          >
+            Submit
+          </Button>
         </div>
+        <Progress 
+          percent={activeTab === 'review' ? calculateOverallProgress() : calculateProgress(activeTab)} 
+          strokeColor={getSectionBaseColor(activeTab)}
+          size="small"
+          showInfo={true}
+          format={(percent) => `${percent}% Complete`}
+        />
       </div>
 
       {/* Main Content */}
       <div style={{ 
-        maxWidth: '1200px', 
-        margin: '0 auto', 
-        padding: '15px',
-        minHeight: 'calc(100vh - 200px)',
-        width: '100%',
-        boxSizing: 'border-box'
+        backgroundColor: 'white',
+        borderRadius: '8px',
+        padding: '20px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        minHeight: 'calc(100vh - 200px)'
       }}>
         <Tabs
           activeKey={activeTab}
@@ -415,23 +373,19 @@ export default function Questionnaire() {
           size="large"
           type="card"
           style={{
-            backgroundColor: 'white',
-            borderRadius: '8px',
-            padding: '10px',
-            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
             width: '100%'
           }}
           items={tabItems.map(item => ({
             ...item,
             label: (
               <div style={{ 
-                padding: '6px 10px',
-                fontSize: 'clamp(14px, 3vw, 16px)',
+                padding: '8px 16px',
+                fontSize: '16px',
                 fontWeight: '600',
                 backgroundColor: getSectionBaseColor(item.key),
                 borderRadius: '6px',
                 color: 'white',
-                minWidth: '80px',
+                minWidth: '100px',
                 textAlign: 'center',
                 opacity: item.key === activeTab ? 1 : 0.7,
                 whiteSpace: 'nowrap',
