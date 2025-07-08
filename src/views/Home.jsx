@@ -170,7 +170,6 @@ export default function Home() {
             <div style={{ marginBottom: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                 <Text strong>Matters</Text>
-                <Text>75%</Text>
               </div>
               <Progress percent={75} strokeColor="#1890ff" />
             </div>
@@ -179,7 +178,6 @@ export default function Home() {
             <div style={{ marginBottom: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                 <Text strong>Medication</Text>
-                <Text>60%</Text>
               </div>
               <Progress percent={60} strokeColor="#52c41a" />
             </div>
@@ -188,7 +186,6 @@ export default function Home() {
             <div style={{ marginBottom: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                 <Text strong>Mind</Text>
-                <Text>90%</Text>
               </div>
               <Progress percent={90} strokeColor="#722ed1" />
             </div>
@@ -197,7 +194,6 @@ export default function Home() {
             <div style={{ marginBottom: "20px" }}>
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
                 <Text strong>Mobility</Text>
-                <Text>85%</Text>
               </div>
               <Progress percent={85} strokeColor="#fa8c16" />
             </div>
