@@ -6,13 +6,9 @@ node_modules/
 /build/
 /out/        # e.g. Next.js or some static exports
 
-# Local env files (don't commit your secrets!)
+# Local env files (don’t commit your secrets!)
 .env
-.env.local
 .env.*.local
-firebaseServiceAccount.json
-*.key
-*.pem
 
 # Logs
 logs
@@ -38,7 +34,7 @@ dist-ssr
 *.sln
 *.sw?
 
-# OS-specific files
+# OS‐specific files
 .DS_Store
 Thumbs.db
 
@@ -51,6 +47,6 @@ coverage/
 # yarn.lock
 
 # Misc
-.vite/       # Vite's cache
-.cache/      # some tools' caches
+.vite/       # Vite’s cache
+.cache/      # some tools’ caches
 *.localhistory
