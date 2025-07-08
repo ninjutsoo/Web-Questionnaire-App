@@ -23,18 +23,19 @@ app.post('/api/chat', async (req, res) => {
     
     // Build personalized system prompt based on user context
     let systemPrompt = `
-You are a helpful AI health assistant for elderly users.
+You are a kind, caring AI health assistant helping an elderly person.
 
-CRITICAL FORMAT REQUIREMENTS - YOU MUST FOLLOW THESE EXACTLY:
-• Answer in EXACTLY 3-5 bullet points
-• Each bullet point must be ONE SINGLE SENTENCE only
-• NO sub-bullets, NO paragraphs, NO long explanations
-• Use plain, everyday language
-• NO medical jargon or complex terms
-• Each bullet should start with a simple action or fact
+FORMAT RULES – FOLLOW THESE EXACTLY:
+• Give up to 5 bullet points depending on the user's needs, use all 5 when needed, otherwise, shorter answers are preferred.
+• Each bullet must be one short, clear sentence.
+• Do not use long sentences, sub-bullets, or paragraphs.
+• Use simple, everyday words that a grandparent would understand.
+• Try to use emojies as much as possible.
+• Do not use medical jargon or technical terms.
+• Start each bullet with a clear action or fact and bold it.
+• Be warm, respectful, and supportive — never sound cold or robotic.
 
-REMEMBER: ONE SENTENCE PER BULLET, NO SUB-BULLETS, KEEP IT SHORT AND SIMPLE.
-IF YOU DON'T FOLLOW THIS FORMAT EXACTLY, YOU ARE FAILING THE TASK.
+REMEMBER: Short, clear, and kind — every time.
 `;
     
     if (userContext && userContext.completedSections && userContext.completedSections.length > 0) {
@@ -51,11 +52,9 @@ IF YOU DON'T FOLLOW THIS FORMAT EXACTLY, YOU ARE FAILING THE TASK.
       systemPrompt += '\n\nWhen providing advice, consider this person\'s specific health situation, concerns, and needs. Tailor your recommendations to their mobility level, medication concerns, mental health status, and what matters most to them. Be empathetic and supportive while providing practical, actionable advice.';
     }
     
-    // Log the system prompt and user context for debugging
+    // Log the system prompt for debugging (do not log userContext separately)
     console.log('==== SYSTEM PROMPT SENT TO AI ====');
     console.log(systemPrompt);
-    console.log('==== USER CONTEXT SENT TO AI ====');
-    console.log(JSON.stringify(userContext, null, 2));
     
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',

@@ -289,22 +289,22 @@ const AIChatbot = () => {
                 {isUser ? 'You' : 'AI Assistant'}
               </Text>
             </div>
-            <div style={{ fontSize: '14px' }}>
+            <div style={{ fontSize: isUser ? '18px' : '18px', textAlign: isUser ? 'right' : 'left', lineHeight: '1.8', paddingLeft: isUser ? 0 : 8, paddingTop: 2, paddingBottom: 2 }}>
               {isUser ? (
                 message.content
               ) : (
                 <ReactMarkdown
                   components={{
-                    h1: ({node, ...props}) => <h1 style={{fontSize: '18px', fontWeight: 'bold', margin: '8px 0'}} {...props} />,
-                    h2: ({node, ...props}) => <h2 style={{fontSize: '16px', fontWeight: 'bold', margin: '8px 0'}} {...props} />,
-                    h3: ({node, ...props}) => <h3 style={{fontSize: '15px', fontWeight: 'bold', margin: '6px 0'}} {...props} />,
-                    h4: ({node, ...props}) => <h4 style={{fontSize: '14px', fontWeight: 'bold', margin: '6px 0'}} {...props} />,
+                    h1: ({node, ...props}) => <h1 style={{fontSize: '20px', fontWeight: 'bold', margin: '8px 0'}} {...props} />,
+                    h2: ({node, ...props}) => <h2 style={{fontSize: '18px', fontWeight: 'bold', margin: '8px 0'}} {...props} />,
+                    h3: ({node, ...props}) => <h3 style={{fontSize: '17px', fontWeight: 'bold', margin: '6px 0'}} {...props} />,
+                    h4: ({node, ...props}) => <h4 style={{fontSize: '16px', fontWeight: 'bold', margin: '6px 0'}} {...props} />,
                     strong: ({node, ...props}) => <strong style={{fontWeight: 'bold'}} {...props} />,
                     em: ({node, ...props}) => <em style={{fontStyle: 'italic'}} {...props} />,
-                    ul: ({node, ...props}) => <ul style={{margin: '8px 0', paddingLeft: '20px'}} {...props} />,
-                    ol: ({node, ...props}) => <ol style={{margin: '8px 0', paddingLeft: '20px'}} {...props} />,
-                    li: ({node, ...props}) => <li style={{margin: '4px 0'}} {...props} />,
-                    p: ({node, ...props}) => <p style={{margin: '8px 0'}} {...props} />,
+                    ul: ({node, ...props}) => <ul style={{margin: '12px 0', paddingLeft: '24px'}} {...props} />,
+                    ol: ({node, ...props}) => <ol style={{margin: '12px 0', paddingLeft: '24px'}} {...props} />,
+                    li: ({node, ...props}) => <li style={{margin: '8px 0', fontSize: '18px', textAlign: 'left'}} {...props} />,
+                    p: ({node, ...props}) => <p style={{margin: '10px 0'}} {...props} />,
                     blockquote: ({node, ...props}) => (
                       <blockquote style={{
                         borderLeft: '3px solid #1890ff',
@@ -321,7 +321,7 @@ const AIChatbot = () => {
                           padding: '2px 4px',
                           borderRadius: '3px',
                           fontFamily: 'monospace',
-                          fontSize: '13px'
+                          fontSize: '15px'
                         }} {...props} />
                       ) : (
                         <pre style={{
