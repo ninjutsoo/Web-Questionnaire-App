@@ -1,9 +1,13 @@
 import { initializeApp } from "firebase/app";
 import {
   getAuth,
-  GoogleAuthProvider,
   sendPasswordResetEmail,
   updatePassword,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  updateProfile,
+  GoogleAuthProvider
 } from "firebase/auth";
 import {
   getFirestore,
@@ -13,32 +17,28 @@ import {
   getDocs,
   setDoc,
   doc,
+  getDoc,
+  updateDoc
 } from "firebase/firestore";
 
-// Your web app's Firebase configuration
-// const firebaseConfig = {
-//   apiKey: "AIzaSyApmb-GGI3K4kR52uR6BbBCFnCaouneueE",
-//   authDomain: "web-questionnaire-app.firebaseapp.com",
-//   projectId: "web-questionnaire-app",
-//   storageBucket: "web-questionnaire-app.firebasestorage.app",
-//   messagingSenderId: "791650373498",
-//   appId: "1:791650373498:web:bda484f54c3a908da390c3"
-// };
-
+// Firebase config should come from environment variables for security
+// NEVER commit your keys to source control. Use .env and .gitignore.
 const firebaseConfig = {
-  apiKey: "AIzaSyCDy3nyxxCGGhj7jOpv4XrIZWqbqTsqis4",
-  authDomain: "web-app-new-efb66.firebaseapp.com",
-  projectId: "web-app-new-efb66",
-  storageBucket: "web-app-new-efb66.firebasestorage.app",
-  messagingSenderId: "699118860544",
-  appId: "1:699118860544:web:516f76ad2bbdad31115be5"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
 // Initialize Firebase
 export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const googleProvider = new GoogleAuthProvider();
 export const db = getFirestore(app);
+export const googleProvider = new GoogleAuthProvider();
+export { sendPasswordResetEmail, updatePassword, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, updateProfile };
+export { collection, getDocs, doc, getDoc, setDoc, updateDoc };
 
 // Firestore helper: check if a field value is unique (returns true if no existing doc)
 export async function isUnique(field, value) {
