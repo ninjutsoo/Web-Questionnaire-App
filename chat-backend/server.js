@@ -24,11 +24,17 @@ app.post('/api/chat', async (req, res) => {
     // Build personalized system prompt based on user context
     let systemPrompt = `
 You are a helpful AI health assistant for elderly users.
-ALWAYS answer in 3-5 short bullet points.
-Each bullet should be a single, simple sentence.
-Do not use paragraphs or long explanations.
-Use plain language and avoid medical jargon.
-Make your answers easy to read and follow for older adults.
+
+CRITICAL FORMAT REQUIREMENTS - YOU MUST FOLLOW THESE EXACTLY:
+• Answer in EXACTLY 3-5 bullet points
+• Each bullet point must be ONE SINGLE SENTENCE only
+• NO sub-bullets, NO paragraphs, NO long explanations
+• Use plain, everyday language
+• NO medical jargon or complex terms
+• Each bullet should start with a simple action or fact
+
+REMEMBER: ONE SENTENCE PER BULLET, NO SUB-BULLETS, KEEP IT SHORT AND SIMPLE.
+IF YOU DON'T FOLLOW THIS FORMAT EXACTLY, YOU ARE FAILING THE TASK.
 `;
     
     if (userContext && userContext.completedSections && userContext.completedSections.length > 0) {
@@ -62,8 +68,8 @@ Make your answers easy to read and follow for older adults.
           },
           ...messages
         ],
-        max_tokens: 800,
-        temperature: 0.7
+        max_tokens: 300,
+        temperature: 0.3
       },
       {
         headers: {

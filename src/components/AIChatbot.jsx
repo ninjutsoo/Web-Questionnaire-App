@@ -10,6 +10,15 @@ const { TextArea } = Input;
 const { Title, Text } = Typography;
 
 const AIChatbot = () => {
+  // Initial assistant message
+  const initialMessages = [
+    {
+      role: 'assistant',
+      content: 'Hello! I\'m your AI health assistant. I\'m here to help you with health-related questions, provide information, or just chat. How can I assist you today? 💙',
+      timestamp: new Date()
+    }
+  ];
+
   const [messages, setMessages] = useState(() => {
     // Load from localStorage on mount
     const saved = localStorage.getItem('aiChatMessages');
@@ -19,22 +28,10 @@ const AIChatbot = () => {
         // Convert timestamp strings back to Date objects
         return parsed.map(msg => ({ ...msg, timestamp: new Date(msg.timestamp) }));
       } catch {
-        return [
-          {
-            role: 'assistant',
-            content: 'Hello! I\'m your AI health assistant. I\'m here to help you with health-related questions, provide information, or just chat. How can I assist you today? 💙',
-            timestamp: new Date()
-          }
-        ];
+        return initialMessages;
       }
     }
-    return [
-      {
-        role: 'assistant',
-        content: 'Hello! I\'m your AI health assistant. I\'m here to help you with health-related questions, provide information, or just chat. How can I assist you today? 💙',
-        timestamp: new Date()
-      }
-    ];
+    return initialMessages;
   });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -154,12 +151,9 @@ const AIChatbot = () => {
     setError(null);
 
     try {
-      // Prepare context for AI
+      // Prepare context for AI - let backend handle system prompt
       let contextMessage = '';
-      let systemPrompt = '';
       if (userQuestionnaireData && userQuestionnaireData.completedSections.length > 0) {
-        systemPrompt = `\nYou are a helpful AI health assistant for elderly users.\nALWAYS answer in 3-5 short bullet points.\nEach bullet should be a single, simple sentence.\nDo not use paragraphs or long explanations.\nUse plain language and avoid medical jargon.\nMake your answers easy to read and follow for older adults.\n`;
-        systemPrompt += `\n\nIMPORTANT: You are a medical advisor for an elderly person who has completed a health assessment. Use the following information about this person to provide personalized, relevant advice:`;
         contextMessage = `\n\n**User's Health Assessment Context:**\n`;
         contextMessage += `This person has completed the following sections of their health assessment: ${userQuestionnaireData.completedSections.join(', ')}.\n\n`;
         Object.entries(userQuestionnaireData.responses).forEach(([section, questions]) => {
@@ -169,12 +163,11 @@ const AIChatbot = () => {
           });
           contextMessage += '\n';
         });
-      } else {
-        systemPrompt = `\nYou are a helpful AI health assistant for elderly users.\nALWAYS answer in 3-5 short bullet points.\nEach bullet should be a single, simple sentence.\nDo not use paragraphs or long explanations.\nUse plain language and avoid medical jargon.\nMake your answers easy to read and follow for older adults.\n`;
       }
-      // DEBUG: Log the system prompt and context sent to the AI
-      console.log('DEBUG: System prompt sent to AI:', systemPrompt);
-      console.log('DEBUG: Context sent to AI:', userQuestionnaireData);
+      
+      // DEBUG: Log what we're sending to backend
+      console.log('DEBUG: Sending to backend - messages:', messages);
+      console.log('DEBUG: Sending to backend - userContext:', userQuestionnaireData);
 
       const response = await axios.post('http://localhost:5001/api/chat', {
         messages: [
@@ -183,6 +176,15 @@ const AIChatbot = () => {
         ],
         userContext: userQuestionnaireData
       });
+
+      // Log debug information from backend
+      if (response.data.debug) {
+        console.log('🔧 BACKEND DEBUG INFO:');
+        console.log('Model:', response.data.debug.model);
+        console.log('Max Tokens:', response.data.debug.maxTokens);
+        console.log('Temperature:', response.data.debug.temperature);
+        console.log('System Prompt (first 500 chars):', response.data.debug.systemPrompt);
+      }
 
       const aiResponse = {
         role: 'assistant',
@@ -355,6 +357,12 @@ const AIChatbot = () => {
     );
   };
 
+  // New Chat handler
+  const handleNewChat = () => {
+    setMessages(initialMessages);
+    localStorage.removeItem('aiChatMessages');
+  };
+
   return (
     <div style={{ 
       maxWidth: '1000px', 
@@ -362,6 +370,12 @@ const AIChatbot = () => {
       padding: '0',
       minHeight: 'calc(100vh - 112px)'
     }}>
+      {/* New Chat Button */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
+        <Button onClick={handleNewChat} type="default" danger>
+          New Chat
+        </Button>
+      </div>
       {/* Chat Container */}
       <Card
         style={{
