@@ -329,7 +329,7 @@ export default function Questionnaire() {
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative' }}>
       {/* Progress Bar */}
       <div style={{ 
         backgroundColor: 'white',
@@ -342,13 +342,6 @@ export default function Questionnaire() {
           <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
             Health Assessment Progress
           </div>
-          <Button 
-            type="primary"
-            onClick={handleSave}
-            icon={<SaveOutlined />}
-          >
-            Submit
-          </Button>
         </div>
         <Progress 
           percent={activeTab === 'review' ? calculateOverallProgress() : calculateProgress(activeTab)} 
@@ -398,6 +391,33 @@ export default function Questionnaire() {
           }))}
         />
       </div>
+
+      {/* Sticky Submit Button (not on review tab) */}
+      {activeTab !== 'review' && (
+        <Button
+          type="primary"
+          icon={<SaveOutlined />}
+          onClick={handleSave}
+          style={{
+            position: 'fixed',
+            right: 32,
+            bottom: 32,
+            zIndex: 1000,
+            boxShadow: '0 4px 24px rgba(24, 144, 255, 0.18)',
+            borderRadius: '50%',
+            width: 64,
+            height: 64,
+            fontSize: 28,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #1890ff 0%, #52c41a 100%)',
+            border: 'none',
+            transition: 'box-shadow 0.2s',
+          }}
+          title="Save Progress"
+        />
+      )}
     </div>
   );
 } 

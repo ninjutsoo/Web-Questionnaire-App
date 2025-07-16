@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, Input, Button, Typography, Space, Avatar, Spin, Alert, Divider, Tag } from 'antd';
-import { SendOutlined, RobotOutlined, UserOutlined, MessageOutlined, HeartOutlined, AudioOutlined, AudioMutedOutlined } from '@ant-design/icons';
+import { SendOutlined, RobotOutlined, UserOutlined, MessageOutlined, HeartOutlined, AudioOutlined, AudioMutedOutlined, ReloadOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 import { auth } from '../services/firebase';
 import { getUserQuestionnaireContext } from '../services/questionnaireService';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -40,14 +42,15 @@ const AIChatbot = () => {
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState(null);
   const messagesEndRef = useRef(null);
-  const [suggestions] = useState([
-    "What are some good exercises for seniors?",
-    "How can I improve my sleep quality?",
-    "What foods are good for heart health?",
-    "How can I manage stress better?",
-    "What are the benefits of walking daily?",
-    "How can I stay mentally active?"
-  ]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+
+  // Save suggestions to localStorage cache whenever they change
+  useEffect(() => {
+    if (suggestions.length > 0) {
+      localStorage.setItem('aiQuickQuestions', JSON.stringify(suggestions));
+    }
+  }, [suggestions]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -130,10 +133,227 @@ const AIChatbot = () => {
     };
   }, []);
 
+  // Load saved quick questions from Firebase
+  const loadSavedQuickQuestions = async (userId) => {
+    console.log('🔍 loadSavedQuickQuestions called for userId:', userId);
+    try {
+      // First, try to load from localStorage cache for instant display
+      const saved = localStorage.getItem('aiQuickQuestions');
+      console.log('🔍 localStorage cache:', saved);
+      
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setSuggestions(parsed);
+            console.log('✅ Loaded cached quick questions for instant display:', parsed);
+          }
+        } catch (parseError) {
+          console.error('❌ Error parsing cached questions:', parseError);
+        }
+      }
+      
+      const sessionId = `${userId}_4ms_health`;
+      console.log('🔍 Checking Firebase document:', sessionId);
+      const docRef = doc(db, 'Answers', sessionId);
+      const docSnap = await getDoc(docRef);
+      
+      console.log('🔍 Firebase document exists:', docSnap.exists());
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        console.log('🔍 Firebase data:', data);
+        
+        if (data.quickQuestions && Array.isArray(data.quickQuestions) && data.quickQuestions.length > 0) {
+          // Check if Firebase data is newer than cache
+          const cacheTimestamp = localStorage.getItem('aiQuickQuestionsTimestamp');
+          const firebaseTimestamp = data.quickQuestionsUpdatedAt;
+          
+          console.log('🔍 Cache timestamp:', cacheTimestamp);
+          console.log('🔍 Firebase timestamp:', firebaseTimestamp);
+          
+          // Check if cached questions are the default ones
+          const defaultQuestions = [
+            "What are some good exercises for seniors?",
+            "How can I improve my sleep quality?",
+            "What foods are good for heart health?",
+            "How can I manage stress better?",
+            "How can I stay mentally active?"
+          ];
+          
+          const cachedQuestions = JSON.parse(localStorage.getItem('aiQuickQuestions') || '[]');
+          const isCachedDefault = JSON.stringify(cachedQuestions.sort()) === JSON.stringify(defaultQuestions.sort());
+          
+          if (!cacheTimestamp || new Date(firebaseTimestamp) >= new Date(cacheTimestamp) || isCachedDefault) {
+            setSuggestions(data.quickQuestions);
+            localStorage.setItem('aiQuickQuestions', JSON.stringify(data.quickQuestions));
+            localStorage.setItem('aiQuickQuestionsTimestamp', firebaseTimestamp);
+            console.log('✅ Loaded quick questions from Firebase:', data.quickQuestions);
+            if (isCachedDefault) {
+              console.log('✅ Overriding default cached questions with Firebase data');
+            }
+          } else {
+            console.log('✅ Using cached quick questions (Firebase data is older)');
+          }
+          return;
+        } else {
+          console.log('⚠️ Firebase document exists but no quickQuestions found');
+        }
+      } else {
+        console.log('⚠️ Firebase document does not exist');
+      }
+      
+      // Only set defaults if we don't have any cached questions
+      if (!saved || !localStorage.getItem('aiQuickQuestions')) {
+        console.log('No saved quick questions found, using defaults');
+        const defaultQuestions = [
+          "What are some good exercises for seniors?",
+          "How can I improve my sleep quality?",
+          "What foods are good for heart health?",
+          "How can I manage stress better?",
+          "How can I stay mentally active?"
+        ];
+        setSuggestions(defaultQuestions);
+        // Save defaults to cache so they persist
+        localStorage.setItem('aiQuickQuestions', JSON.stringify(defaultQuestions));
+        localStorage.setItem('aiQuickQuestionsTimestamp', new Date().toISOString());
+      } else {
+        console.log('✅ Using existing cached questions');
+      }
+    } catch (error) {
+      console.error('❌ Error loading saved quick questions:', error);
+      // Only set defaults if we don't have any cached questions
+      if (!localStorage.getItem('aiQuickQuestions')) {
+        const defaultQuestions = [
+          "What are some good exercises for seniors?",
+          "How can I improve my sleep quality?",
+          "What foods are good for heart health?",
+          "How can I manage stress better?",
+          "How can I stay mentally active?"
+        ];
+        setSuggestions(defaultQuestions);
+        // Save defaults to cache so they persist
+        localStorage.setItem('aiQuickQuestions', JSON.stringify(defaultQuestions));
+        localStorage.setItem('aiQuickQuestionsTimestamp', new Date().toISOString());
+      }
+    }
+  };
+
+  // Save quick questions to Firebase
+  const saveQuickQuestions = async (userId, questions) => {
+    console.log('💾 saveQuickQuestions called for userId:', userId);
+    console.log('💾 Questions to save:', questions);
+    try {
+      const sessionId = `${userId}_4ms_health`;
+      const docRef = doc(db, 'Answers', sessionId);
+      const timestamp = new Date().toISOString();
+      
+      console.log('💾 Saving to Firebase document:', sessionId);
+      console.log('💾 Timestamp:', timestamp);
+      
+      await setDoc(docRef, {
+        quickQuestions: questions,
+        quickQuestionsUpdatedAt: timestamp
+      }, { merge: true });
+      
+      // Update cache timestamp
+      localStorage.setItem('aiQuickQuestionsTimestamp', timestamp);
+      // Also save to localStorage cache for immediate access
+      localStorage.setItem('aiQuickQuestions', JSON.stringify(questions));
+      console.log('✅ Saved quick questions to Firebase and cache:', questions);
+    } catch (error) {
+      console.error('❌ Error saving quick questions:', error);
+      console.error('❌ Error details:', error.message);
+    }
+  };
+
+  // Fetch saved quick questions from backend on load
+  useEffect(() => {
+    const fetchSavedQuickQuestions = async () => {
+      console.log('🔄 useEffect triggered - userQuestionnaireData changed');
+      console.log('📊 userQuestionnaireData:', userQuestionnaireData);
+      console.log('📊 userQuestionnaireData.userId:', userQuestionnaireData?.userId);
+      
+      setSuggestionsLoading(true);
+      
+      if (userQuestionnaireData && userQuestionnaireData.userId) {
+        console.log('✅ Loading saved questions for user:', userQuestionnaireData.userId);
+        await loadSavedQuickQuestions(userQuestionnaireData.userId);
+      } else if (userQuestionnaireData === null) {
+        // Only set defaults if userQuestionnaireData is explicitly null (not loading)
+        console.log('⚠️ No user data available, setting default questions');
+        setSuggestions([
+          "What are some good exercises for seniors?",
+          "How can I improve my sleep quality?",
+          "What foods are good for heart health?",
+          "How can I manage stress better?",
+          "How can I stay mentally active?"
+        ]);
+      } else {
+        console.log('⏳ User data is still loading, waiting...');
+        // Don't set anything if userQuestionnaireData is undefined (still loading)
+      }
+      
+      setSuggestionsLoading(false);
+    };
+    
+    fetchSavedQuickQuestions();
+    // eslint-disable-next-line
+  }, [userQuestionnaireData]);
+
   // Save messages to localStorage on every change
   useEffect(() => {
     localStorage.setItem('aiChatMessages', JSON.stringify(messages));
   }, [messages]);
+
+  // Save suggestions to localStorage cache whenever they change
+  useEffect(() => {
+    if (suggestions.length > 0) {
+      localStorage.setItem('aiQuickQuestions', JSON.stringify(suggestions));
+      console.log('✅ Auto-saved suggestions to cache:', suggestions);
+    }
+  }, [suggestions]);
+
+  const fetchQuickQuestions = async () => {
+    console.log('🔄 fetchQuickQuestions called');
+    console.log('📊 userQuestionnaireData:', userQuestionnaireData);
+    console.log('📊 userQuestionnaireData.userId:', userQuestionnaireData?.userId);
+    setSuggestionsLoading(true);
+    try {
+      const res = await axios.post('http://localhost:5001/api/quick-questions', {
+        userContext: userQuestionnaireData
+      });
+      console.log('✅ Quick questions response:', res.data);
+      if (res.data && Array.isArray(res.data.questions)) {
+        const newQuestions = res.data.questions;
+        console.log('✅ Setting new suggestions:', newQuestions);
+        setSuggestions(newQuestions);
+        console.log('✅ Updated suggestions:', newQuestions);
+        
+        // Save to Firebase and cache
+        if (userQuestionnaireData && userQuestionnaireData.userId) {
+          console.log('💾 Saving to Firebase for user:', userQuestionnaireData.userId);
+          await saveQuickQuestions(userQuestionnaireData.userId, newQuestions);
+        } else {
+          console.log('⚠️ No user data available, saving to cache only');
+          // If no user data, still save to localStorage cache
+          localStorage.setItem('aiQuickQuestions', JSON.stringify(newQuestions));
+          localStorage.setItem('aiQuickQuestionsTimestamp', new Date().toISOString());
+          console.log('✅ Saved quick questions to cache only:', newQuestions);
+        }
+      } else {
+        console.log('⚠️ Invalid response format, keeping current questions');
+        console.log('⚠️ Response data:', res.data);
+        // Don't change suggestions if response is invalid
+      }
+    } catch (err) {
+      console.error('❌ Error fetching quick questions:', err);
+      console.error('❌ Error details:', err.message);
+      // Don't change suggestions on error - keep current ones
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
 
   const sendMessage = async (messageContent = null) => {
     const content = messageContent || input.trim();
@@ -497,6 +717,18 @@ const AIChatbot = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <MessageOutlined />
             <span>Quick Questions</span>
+            <Button
+              icon={<ReloadOutlined spin={suggestionsLoading} />}
+              size="small"
+              style={{ marginLeft: 8, border: 'none', background: 'none', color: '#1890ff' }}
+              onClick={() => {
+                console.log('🔄 Refresh button clicked!');
+                fetchQuickQuestions();
+              }}
+              loading={suggestionsLoading}
+              aria-label="Refresh quick questions"
+              title="Refresh quick questions"
+            />
           </div>
         }
         style={{
@@ -506,21 +738,30 @@ const AIChatbot = () => {
         }}
       >
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-          {suggestions.map((suggestion, index) => (
-            <Tag
-              key={index}
-              color="blue"
-              style={{
-                cursor: 'pointer',
-                padding: '4px 12px',
-                borderRadius: '16px',
-                fontSize: '13px'
-              }}
-              onClick={() => sendMessage(suggestion)}
-            >
-              {suggestion}
-            </Tag>
-          ))}
+          {suggestionsLoading ? (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+              <Spin size="small" />
+              <Text type="secondary">Loading your personalized questions...</Text>
+            </div>
+          ) : suggestions.length === 0 ? (
+            <Text type="secondary">No quick questions available. Try asking a question!</Text>
+          ) : (
+            suggestions.map((suggestion, index) => (
+              <Tag
+                key={index}
+                color="blue"
+                style={{
+                  cursor: 'pointer',
+                  padding: '4px 12px',
+                  borderRadius: '16px',
+                  fontSize: '13px'
+                }}
+                onClick={() => sendMessage(suggestion)}
+              >
+                {suggestion}
+              </Tag>
+            ))
+          )}
         </div>
       </Card>
 
