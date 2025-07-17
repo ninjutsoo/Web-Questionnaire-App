@@ -40,7 +40,11 @@ FORMAT RULES — FOLLOW THESE:
 Your goal is to be clear, caring, and easy to follow — just like a helpful friend or family member would be.
 `;
 
-    
+    // Add location to system prompt if present
+    if (userContext && userContext.location) {
+      systemPrompt += `\n\nThe person is currently located at: ${userContext.location}`;
+    }
+
     if (userContext && userContext.completedSections && userContext.completedSections.length > 0) {
       systemPrompt += '\n\nIMPORTANT: You are a medical advisor for an elderly person who has completed a health assessment. Use the following information about this person to provide personalized, relevant advice:';
       
@@ -135,14 +139,19 @@ app.post('/api/quick-questions', async (req, res) => {
     console.log('🔄 Quick Questions request received');
     console.log('📊 User context:', userContext);
     
-    let prompt = `You are a helpful AI assistant. Based on the following user's health questionnaire answers, generate exactly 5 short, helpful questions that someone with this context would benefit from asking an AI health assistant.
+    let prompt = `You are a helpful AI assistant. Based on the following user's health questionnaire answers, generate exactly 10 short, helpful questions that someone with this context would benefit from asking an AI health assistant.
 
-IMPORTANT: Return ONLY a JSON array of 5 strings (the questions). Do not include any other text, explanations, or formatting.
+IMPORTANT: Return ONLY a JSON array of 10 strings (the questions). Do not include any other text, explanations, or formatting.
 
 Example format:
-["Question 1?", "Question 2?", "Question 3?", "Question 4?", "Question 5?"]
+["Question 1?", "Question 2?", ..., "Question 10?"]
 
 User's health assessment data:`;
+    
+    // Add location to quick questions prompt if present
+    if (userContext && userContext.location) {
+      prompt += `\n\nThe person is currently located at: ${userContext.location}`;
+    }
     
     if (userContext && userContext.responses) {
       Object.entries(userContext.responses).forEach(([section, questions]) => {
@@ -155,7 +164,7 @@ User's health assessment data:`;
       prompt += '\n(No answers yet)';
     }
     
-    prompt += '\n\nGenerate 5 relevant questions based on this context:';
+    prompt += '\n\nGenerate 10 relevant questions based on this context:';
     
     console.log('📝 Sending prompt to AI:', prompt);
     
@@ -166,7 +175,7 @@ User's health assessment data:`;
         messages: [
           { role: 'system', content: prompt }
         ],
-        max_tokens: 300,
+        max_tokens: 400,
         temperature: 0.5
       },
       {
@@ -206,7 +215,7 @@ User's health assessment data:`;
         .filter(line => line.includes('?') || line.startsWith('"') || line.startsWith('-'))
         .map(line => {
           // Remove quotes, dashes, numbers, etc.
-          return line.replace(/^["\-\d\.\s]+/, '').replace(/["\s]+$/, '');
+          return line.replace(/^\["\-\d\.\s]+/, '').replace(/["\s]+$/, '');
         })
         .filter(line => line.length > 10 && line.length < 100);
       
@@ -217,10 +226,18 @@ User's health assessment data:`;
           "How can I improve my sleep quality?",
           "What foods are good for heart health?",
           "How can I manage stress better?",
-          "How can I stay mentally active?"
+          "How can I stay mentally active?",
+          "What are some ways to stay socially connected?",
+          "How can I safely increase my physical activity?",
+          "What are some tips for managing medications?",
+          "How can I improve my memory?",
+          "What are some healthy snacks for seniors?"
         ];
       }
     }
+    
+    // Only return up to 10 questions
+    questions = questions.slice(0, 10);
     
     console.log('📤 Sending questions to frontend:', questions);
     res.json({ questions });
@@ -231,7 +248,12 @@ User's health assessment data:`;
       "How can I improve my sleep quality?",
       "What foods are good for heart health?",
       "How can I manage stress better?",
-      "How can I stay mentally active?"
+      "How can I stay mentally active?",
+      "What are some ways to stay socially connected?",
+      "How can I safely increase my physical activity?",
+      "What are some tips for managing medications?",
+      "How can I improve my memory?",
+      "What are some healthy snacks for seniors?"
     ] });
   }
 });

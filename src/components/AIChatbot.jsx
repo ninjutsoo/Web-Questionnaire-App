@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Card, Input, Button, Typography, Space, Avatar, Spin, Alert, Divider, Tag } from 'antd';
-import { SendOutlined, RobotOutlined, UserOutlined, MessageOutlined, HeartOutlined, AudioOutlined, AudioMutedOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Card, Input, Button, Typography, Space, Avatar, Spin, Alert, Divider, Tag, Switch, Tooltip } from 'antd';
+import { SendOutlined, RobotOutlined, UserOutlined, MessageOutlined, HeartOutlined, AudioOutlined, AudioMutedOutlined, ReloadOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 import { auth } from '../services/firebase';
@@ -44,6 +44,10 @@ const AIChatbot = () => {
   const messagesEndRef = useRef(null);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
+  const [locationEnabled, setLocationEnabled] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationError, setLocationError] = useState(null);
+  const [locationText, setLocationText] = useState('');
 
   // Save suggestions to localStorage cache whenever they change
   useEffect(() => {
@@ -314,46 +318,51 @@ const AIChatbot = () => {
     }
   }, [suggestions]);
 
-  const fetchQuickQuestions = async () => {
-    console.log('🔄 fetchQuickQuestions called');
-    console.log('📊 userQuestionnaireData:', userQuestionnaireData);
-    console.log('📊 userQuestionnaireData.userId:', userQuestionnaireData?.userId);
-    setSuggestionsLoading(true);
-    try {
-      const res = await axios.post('http://localhost:5001/api/quick-questions', {
-        userContext: userQuestionnaireData
-      });
-      console.log('✅ Quick questions response:', res.data);
-      if (res.data && Array.isArray(res.data.questions)) {
-        const newQuestions = res.data.questions;
-        console.log('✅ Setting new suggestions:', newQuestions);
-        setSuggestions(newQuestions);
-        console.log('✅ Updated suggestions:', newQuestions);
-        
-        // Save to Firebase and cache
-        if (userQuestionnaireData && userQuestionnaireData.userId) {
-          console.log('💾 Saving to Firebase for user:', userQuestionnaireData.userId);
-          await saveQuickQuestions(userQuestionnaireData.userId, newQuestions);
-        } else {
-          console.log('⚠️ No user data available, saving to cache only');
-          // If no user data, still save to localStorage cache
-          localStorage.setItem('aiQuickQuestions', JSON.stringify(newQuestions));
-          localStorage.setItem('aiQuickQuestionsTimestamp', new Date().toISOString());
-          console.log('✅ Saved quick questions to cache only:', newQuestions);
-        }
-      } else {
-        console.log('⚠️ Invalid response format, keeping current questions');
-        console.log('⚠️ Response data:', res.data);
-        // Don't change suggestions if response is invalid
-      }
-    } catch (err) {
-      console.error('❌ Error fetching quick questions:', err);
-      console.error('❌ Error details:', err.message);
-      // Don't change suggestions on error - keep current ones
-    } finally {
-      setSuggestionsLoading(false);
+  // Location retrieval and reverse geocoding
+  const fetchLocation = async () => {
+    setLocationLoading(true);
+    setLocationError(null);
+    setLocationText('');
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser.');
+      setLocationLoading(false);
+      return;
     }
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const { latitude, longitude } = position.coords;
+      try {
+        // Use OpenStreetMap Nominatim for reverse geocoding
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
+        const data = await response.json();
+        // Compose a readable address
+        let address = data.display_name;
+        // Optionally, format with city, state, country, postcode, etc.
+        if (data.address) {
+          const a = data.address;
+          address = [a.road, a.suburb, a.city, a.state, a.postcode, a.country]
+            .filter(Boolean)
+            .join(', ');
+        }
+        setLocationText(address);
+      } catch (err) {
+        setLocationError('Failed to retrieve address.');
+      }
+      setLocationLoading(false);
+    }, (err) => {
+      setLocationError('Unable to retrieve your location.');
+      setLocationLoading(false);
+    });
   };
+
+  useEffect(() => {
+    if (locationEnabled) {
+      fetchLocation();
+    } else {
+      setLocationText('');
+      setLocationError(null);
+    }
+    // eslint-disable-next-line
+  }, [locationEnabled]);
 
   const sendMessage = async (messageContent = null) => {
     const content = messageContent || input.trim();
@@ -385,16 +394,21 @@ const AIChatbot = () => {
         });
       }
       
+      // Add location to user context
+      const userContextWithLocation = {
+        ...userQuestionnaireData,
+        location: locationText || undefined
+      };
       // DEBUG: Log what we're sending to backend
       console.log('DEBUG: Sending to backend - messages:', messages);
-      console.log('DEBUG: Sending to backend - userContext:', userQuestionnaireData);
+      console.log('DEBUG: Sending to backend - userContext:', userContextWithLocation);
 
       const response = await axios.post('http://localhost:5001/api/chat', {
         messages: [
           ...messages, 
           newMessage
         ],
-        userContext: userQuestionnaireData
+        userContext: userContextWithLocation
       });
 
       // Log debug information from backend
@@ -591,11 +605,44 @@ const AIChatbot = () => {
       minHeight: 'calc(100vh - 112px)'
     }}>
       {/* New Chat Button */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px' }}>
-        <Button onClick={handleNewChat} type="default" danger>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px', gap: 12 }}>
+        <Tooltip title={locationEnabled ? (locationText ? `Location: ${locationText}` : 'Location enabled') : 'Enable location for better suggestions'}>
+          <Button
+            type={locationEnabled ? 'primary' : 'default'}
+            icon={<EnvironmentOutlined style={{ color: locationEnabled ? '#1890ff' : '#aaa' }} />}
+            onClick={() => setLocationEnabled(!locationEnabled)}
+            loading={locationLoading}
+            style={{
+              borderColor: locationEnabled ? '#1890ff' : '#d9d9d9',
+              color: locationEnabled ? '#1890ff' : '#888',
+              background: locationEnabled ? 'rgba(24,144,255,0.08)' : 'white',
+              fontWeight: 500,
+              height: 40,
+              borderRadius: 8,
+              padding: '0 18px',
+              display: 'flex',
+              alignItems: 'center',
+              transition: 'all 0.2s',
+              boxShadow: locationEnabled ? '0 0 0 2px #e6f7ff' : undefined
+            }}
+          >
+            {locationEnabled ? 'Location ON' : 'Location OFF'}
+          </Button>
+        </Tooltip>
+        <Button onClick={handleNewChat} type="default" danger style={{
+          height: 40,
+          borderRadius: 8,
+          padding: '0 18px',
+          fontWeight: 500,
+          display: 'flex',
+          alignItems: 'center',
+        }}>
           New Chat
         </Button>
       </div>
+      {locationError && (
+        <Alert message="Location Error" description={locationError} type="warning" showIcon style={{ marginBottom: 8 }} />
+      )}
       {/* Chat Container */}
       <Card
         style={{
@@ -734,33 +781,65 @@ const AIChatbot = () => {
         style={{
           borderRadius: '12px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          marginBottom: '20px'
+          marginBottom: '20px',
+          maxWidth: '900px',
+          marginLeft: 'auto',
+          marginRight: 'auto',
         }}
       >
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        <div className="questions-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+          gap: '18px',
+          minHeight: '48px',
+          justifyItems: 'center',
+          alignItems: 'center',
+        }}>
           {suggestionsLoading ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-              <Spin size="small" />
-              <Text type="secondary">Loading your personalized questions...</Text>
-            </div>
+            Array.from({ length: 6 }).map((_, idx) => (
+              <div key={idx} style={{ height: 48, minWidth: 180, borderRadius: 16, background: '#f0f0f0', animation: 'fadeIn 0.8s', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                <Spin size="small" />
+              </div>
+            ))
           ) : suggestions.length === 0 ? (
             <Text type="secondary">No quick questions available. Try asking a question!</Text>
           ) : (
-            suggestions.map((suggestion, index) => (
-              <Tag
-                key={index}
-                color="blue"
-                style={{
-                  cursor: 'pointer',
-                  padding: '4px 12px',
-                  borderRadius: '16px',
-                  fontSize: '13px'
-                }}
-                onClick={() => sendMessage(suggestion)}
-              >
-                {suggestion}
-              </Tag>
-            ))
+            suggestions
+              .slice(0, 10)
+              .sort((a, b) => a.length - b.length)
+              .slice(0, 6)
+              .map((suggestion, index) => {
+                // Clean up extra quotes and trailing commas
+                let cleanSuggestion = suggestion
+                  .replace(/^\s*"/, '') // remove leading quote
+                  .replace(/",?\s*$/, '') // remove trailing quote and optional comma
+                  .replace(/,$/, '') // remove trailing comma if any
+                  .trim();
+                return (
+                  <Tag
+                    key={index}
+                    color="blue"
+                    style={{
+                      cursor: 'pointer',
+                      padding: '10px 18px',
+                      borderRadius: '16px',
+                      fontSize: '15px',
+                      whiteSpace: 'normal',
+                      wordBreak: 'break-word',
+                      textAlign: 'center',
+                      minHeight: 48,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      width: '100%',
+                      boxSizing: 'border-box',
+                    }}
+                    onClick={() => sendMessage(cleanSuggestion)}
+                  >
+                    {cleanSuggestion}
+                  </Tag>
+                );
+              })
           )}
         </div>
       </Card>
