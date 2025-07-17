@@ -44,7 +44,10 @@ const AIChatbot = () => {
   const messagesEndRef = useRef(null);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
-  const [locationEnabled, setLocationEnabled] = useState(false);
+  const [locationEnabled, setLocationEnabled] = useState(() => {
+    const saved = localStorage.getItem('locationEnabled');
+    return saved === null ? false : saved === 'true';
+  });
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [locationText, setLocationText] = useState('');
@@ -56,12 +59,22 @@ const AIChatbot = () => {
     }
   }, [suggestions]);
 
+  // Persist locationEnabled to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('locationEnabled', locationEnabled);
+  }, [locationEnabled]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Only scroll to bottom when a new message is added (not on initial mount or localStorage load)
+  const prevMessageCount = useRef(messages.length);
   useEffect(() => {
-    scrollToBottom();
+    if (messages.length > prevMessageCount.current) {
+      scrollToBottom();
+    }
+    prevMessageCount.current = messages.length;
   }, [messages]);
 
   // Initialize speech recognition
@@ -271,37 +284,30 @@ const AIChatbot = () => {
     }
   };
 
-  // Fetch saved quick questions from backend on load
+  // Load saved quick questions from cache or Firebase
   useEffect(() => {
-    const fetchSavedQuickQuestions = async () => {
-      console.log('🔄 useEffect triggered - userQuestionnaireData changed');
-      console.log('📊 userQuestionnaireData:', userQuestionnaireData);
-      console.log('📊 userQuestionnaireData.userId:', userQuestionnaireData?.userId);
-      
-      setSuggestionsLoading(true);
-      
-      if (userQuestionnaireData && userQuestionnaireData.userId) {
-        console.log('✅ Loading saved questions for user:', userQuestionnaireData.userId);
-        await loadSavedQuickQuestions(userQuestionnaireData.userId);
-      } else if (userQuestionnaireData === null) {
-        // Only set defaults if userQuestionnaireData is explicitly null (not loading)
-        console.log('⚠️ No user data available, setting default questions');
-        setSuggestions([
-          "What are some good exercises for seniors?",
-          "How can I improve my sleep quality?",
-          "What foods are good for heart health?",
-          "How can I manage stress better?",
-          "How can I stay mentally active?"
-        ]);
-      } else {
-        console.log('⏳ User data is still loading, waiting...');
-        // Don't set anything if userQuestionnaireData is undefined (still loading)
+    let didSetFromCache = false;
+    // 1. Try to load from localStorage cache for instant display
+    const saved = localStorage.getItem('aiQuickQuestions');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setSuggestions(parsed);
+          setSuggestionsLoading(false);
+          didSetFromCache = true;
+        }
+      } catch (parseError) {
+        // Ignore parse error, fallback to Firebase
       }
-      
-      setSuggestionsLoading(false);
-    };
-    
-    fetchSavedQuickQuestions();
+    }
+    // 2. If not found in cache, fetch from Firebase
+    if (!didSetFromCache && userQuestionnaireData && userQuestionnaireData.userId) {
+      setSuggestionsLoading(true);
+      loadSavedQuickQuestions(userQuestionnaireData.userId).then(() => {
+        setSuggestionsLoading(false);
+      });
+    }
     // eslint-disable-next-line
   }, [userQuestionnaireData]);
 
@@ -472,123 +478,119 @@ const AIChatbot = () => {
     }
   };
 
+  const isMobile = window.innerWidth <= 600;
+
   const renderMessage = (message, index) => {
     const isUser = message.role === 'user';
-    
-    return (
-      <div
-        key={index}
-        style={{
-          display: 'flex',
-          justifyContent: isUser ? 'flex-end' : 'flex-start',
-          marginBottom: '16px',
-          animation: 'fadeIn 0.3s ease-in'
-        }}
-      >
+    // On mobile: always left align, avatar left, bubble right. On desktop: user right, assistant left.
+    if (isMobile) {
+      return (
         <div
+          key={index}
           style={{
-            maxWidth: '70%',
             display: 'flex',
-            flexDirection: isUser ? 'row-reverse' : 'row',
-            alignItems: 'flex-start',
-            gap: '8px'
+            flexDirection: 'row',
+            justifyContent: isUser ? 'flex-end' : 'flex-start',
+            marginBottom: 6,
+            marginTop: 2,
+            width: '100%'
           }}
         >
-          <Avatar
-            icon={isUser ? <UserOutlined /> : <RobotOutlined />}
-            style={{
-              backgroundColor: isUser ? '#1890ff' : '#52c41a',
-              flexShrink: 0
-            }}
-          />
           <div
             style={{
               backgroundColor: isUser ? '#1890ff' : '#f0f0f0',
               color: isUser ? 'white' : '#333',
-              padding: '12px 16px',
               borderRadius: '18px',
               borderTopLeftRadius: isUser ? '18px' : '4px',
               borderTopRightRadius: isUser ? '4px' : '18px',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              wordWrap: 'break-word',
-              lineHeight: '1.5'
+              padding: '8px 6px',
+              maxWidth: '95%',
+              fontSize: 15,
+              wordBreak: 'break-word',
+              boxShadow: isUser ? '0 2px 8px rgba(24,144,255,0.08)' : '0 2px 8px rgba(0,0,0,0.04)',
+              marginLeft: isUser ? 'auto' : 0,
+              marginRight: isUser ? 0 : 'auto',
+              alignSelf: 'flex-start',
+              width: 'fit-content',
+              textAlign: 'left',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start'
             }}
           >
             <div style={{ marginBottom: '4px' }}>
-              <Text style={{ 
-                color: isUser ? 'white' : '#666',
-                fontSize: '12px',
-                fontWeight: 'bold'
-              }}>
+              <Text style={{ color: isUser ? 'white' : '#666', fontSize: '12px', fontWeight: 'bold' }}>
                 {isUser ? 'You' : 'AI Assistant'}
               </Text>
             </div>
-            <div style={{ fontSize: isUser ? '18px' : '18px', textAlign: isUser ? 'right' : 'left', lineHeight: '1.8', paddingLeft: isUser ? 0 : 8, paddingTop: 2, paddingBottom: 2 }}>
+            <div style={{ fontSize: 15, textAlign: 'left', lineHeight: '1.8', paddingLeft: 8, paddingTop: 2, paddingBottom: 2 }}>
               {isUser ? (
                 message.content
               ) : (
-                <ReactMarkdown
-                  components={{
-                    h1: ({node, ...props}) => <h1 style={{fontSize: '20px', fontWeight: 'bold', margin: '8px 0'}} {...props} />,
-                    h2: ({node, ...props}) => <h2 style={{fontSize: '18px', fontWeight: 'bold', margin: '8px 0'}} {...props} />,
-                    h3: ({node, ...props}) => <h3 style={{fontSize: '17px', fontWeight: 'bold', margin: '6px 0'}} {...props} />,
-                    h4: ({node, ...props}) => <h4 style={{fontSize: '16px', fontWeight: 'bold', margin: '6px 0'}} {...props} />,
-                    strong: ({node, ...props}) => <strong style={{fontWeight: 'bold'}} {...props} />,
-                    em: ({node, ...props}) => <em style={{fontStyle: 'italic'}} {...props} />,
-                    ul: ({node, ...props}) => <ul style={{margin: '12px 0', paddingLeft: '24px'}} {...props} />,
-                    ol: ({node, ...props}) => <ol style={{margin: '12px 0', paddingLeft: '24px'}} {...props} />,
-                    li: ({node, ...props}) => <li style={{margin: '8px 0', fontSize: '18px', textAlign: 'left'}} {...props} />,
-                    p: ({node, ...props}) => <p style={{margin: '10px 0'}} {...props} />,
-                    blockquote: ({node, ...props}) => (
-                      <blockquote style={{
-                        borderLeft: '3px solid #1890ff',
-                        margin: '8px 0',
-                        paddingLeft: '12px',
-                        fontStyle: 'italic',
-                        color: '#666'
-                      }} {...props} />
-                    ),
-                    code: ({node, inline, ...props}) => 
-                      inline ? (
-                        <code style={{
-                          backgroundColor: '#f0f0f0',
-                          padding: '2px 4px',
-                          borderRadius: '3px',
-                          fontFamily: 'monospace',
-                          fontSize: '15px'
-                        }} {...props} />
-                      ) : (
-                        <pre style={{
-                          backgroundColor: '#f5f5f5',
-                          padding: '12px',
-                          borderRadius: '6px',
-                          overflow: 'auto',
-                          margin: '8px 0'
-                        }}>
-                          <code {...props} />
-                        </pre>
-                      )
-                  }}
-                >
-                  {message.content}
-                </ReactMarkdown>
+                <ReactMarkdown>{message.content}</ReactMarkdown>
               )}
             </div>
-            <div style={{ 
-              marginTop: '4px',
-              textAlign: isUser ? 'right' : 'left'
-            }}>
-              <Text style={{ 
-                color: isUser ? 'rgba(255,255,255,0.7)' : '#999',
-                fontSize: '11px'
-              }}>
+            <div style={{ marginTop: '4px', textAlign: 'left' }}>
+              <Text style={{ color: isUser ? 'rgba(255,255,255,0.7)' : '#999', fontSize: '11px' }}>
                 {formatTime(message.timestamp)}
               </Text>
             </div>
           </div>
         </div>
-      </div>
-    );
+      );
+    } else {
+      // Desktop: user right, assistant left
+      return (
+        <div key={index} style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start', marginBottom: 12, marginTop: 4 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8 }}>
+            {/* Assistant: avatar left, bubble right. User: bubble left, avatar right */}
+            {!isUser && (
+              <Avatar icon={<RobotOutlined />} style={{ backgroundColor: '#52c41a', flexShrink: 0 }} />
+            )}
+            <div
+              style={{
+                backgroundColor: isUser ? '#1890ff' : '#f0f0f0',
+                color: isUser ? 'white' : '#333',
+                borderRadius: '18px',
+                borderTopLeftRadius: isUser ? '18px' : '4px',
+                borderTopRightRadius: isUser ? '4px' : '18px',
+                padding: '12px 18px',
+                maxWidth: isUser ? 340 : '70%',
+                fontSize: 18,
+                wordBreak: 'break-word',
+                boxShadow: isUser ? '0 2px 8px rgba(24,144,255,0.08)' : '0 2px 8px rgba(0,0,0,0.04)',
+                marginLeft: isUser ? 0 : 8,
+                marginRight: isUser ? 8 : 0,
+                alignSelf: 'flex-start',
+                width: 'fit-content',
+                textAlign: 'left'
+              }}
+            >
+              <div style={{ marginBottom: '4px' }}>
+                <Text style={{ color: isUser ? 'white' : '#666', fontSize: '12px', fontWeight: 'bold' }}>
+                  {isUser ? 'You' : 'AI Assistant'}
+                </Text>
+              </div>
+              <div style={{ fontSize: 18, textAlign: 'left', lineHeight: '1.8', paddingLeft: isUser ? 0 : 8, paddingTop: 2, paddingBottom: 2 }}>
+                {isUser ? (
+                  message.content
+                ) : (
+                  <ReactMarkdown>{message.content}</ReactMarkdown>
+                )}
+              </div>
+              <div style={{ marginTop: '4px', textAlign: 'left' }}>
+                <Text style={{ color: isUser ? 'rgba(255,255,255,0.7)' : '#999', fontSize: '11px' }}>
+                  {formatTime(message.timestamp)}
+                </Text>
+              </div>
+            </div>
+            {isUser && (
+              <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1890ff', flexShrink: 0, marginLeft: 8 }} />
+            )}
+          </div>
+        </div>
+      );
+    }
   };
 
   // New Chat handler
@@ -601,11 +603,11 @@ const AIChatbot = () => {
     <div style={{ 
       maxWidth: '1000px', 
       margin: '0 auto', 
-      padding: '0',
-      minHeight: 'calc(100vh - 112px)'
+      padding: isMobile ? '0 2px' : '0',
+      minHeight: isMobile ? 'calc(100vh - 80px)' : 'calc(100vh - 112px)'
     }}>
       {/* New Chat Button */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '8px', gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: isMobile ? 4 : 8, gap: 12 }}>
         <Tooltip title={locationEnabled ? (locationText ? `Location: ${locationText}` : 'Location enabled') : 'Enable location for better suggestions'}>
           <Button
             type={locationEnabled ? 'primary' : 'default'}
@@ -648,13 +650,14 @@ const AIChatbot = () => {
         style={{
           borderRadius: '12px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          marginBottom: '20px',
-          height: '70vh',
-          overflow: 'hidden'
+          marginBottom: isMobile ? 10 : 20,
+          height: isMobile ? '60vh' : '70vh',
+          overflow: 'hidden',
+          padding: isMobile ? '4px' : undefined
         }}
         styles={{ 
           body: { 
-            padding: '20px',
+            padding: isMobile ? '8px 2px 8px 2px' : '20px',
             height: '100%',
             display: 'flex',
             flexDirection: 'column'
@@ -666,14 +669,14 @@ const AIChatbot = () => {
           style={{
             flex: 1,
             overflowY: 'auto',
-            paddingRight: '8px',
-            marginBottom: '16px'
+            paddingRight: isMobile ? 2 : 8,
+            marginBottom: isMobile ? 8 : 16
           }}
         >
-          {messages.map(renderMessage)}
+          {messages.map((message, idx) => renderMessage(message, idx))}
           
           {isLoading && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: isMobile ? 8 : 16 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                 <Avatar
                   icon={<RobotOutlined />}
@@ -682,13 +685,13 @@ const AIChatbot = () => {
                 <div
                   style={{
                     backgroundColor: '#f0f0f0',
-                    padding: '12px 16px',
+                    padding: isMobile ? '8px 10px' : '12px 16px',
                     borderRadius: '18px',
                     borderTopLeftRadius: '4px'
                   }}
                 >
                   <Spin size="small" />
-                  <Text style={{ marginLeft: '8px', color: '#666' }}>
+                  <Text style={{ marginLeft: '8px', color: '#666', fontSize: isMobile ? 13 : 14 }}>
                     AI is thinking...
                   </Text>
                 </div>
@@ -706,12 +709,12 @@ const AIChatbot = () => {
             description={error}
             type="warning"
             showIcon
-            style={{ marginBottom: '16px' }}
+            style={{ marginBottom: isMobile ? 8 : 16 }}
           />
         )}
 
         {/* Input Area */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: isMobile ? 4 : 8, alignItems: 'flex-end' }}>
           <TextArea
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -721,7 +724,7 @@ const AIChatbot = () => {
             style={{
               borderRadius: '20px',
               resize: 'none',
-              fontSize: '14px'
+              fontSize: isMobile ? 13 : 14
             }}
           />
           <Button
@@ -730,8 +733,8 @@ const AIChatbot = () => {
             onClick={isListening ? stopListening : startListening}
             style={{
               borderRadius: '50%',
-              width: '40px',
-              height: '40px',
+              width: isMobile ? '36px' : '40px',
+              height: isMobile ? '36px' : '40px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -748,8 +751,8 @@ const AIChatbot = () => {
             disabled={!input.trim()}
             style={{
               borderRadius: '50%',
-              width: '40px',
-              height: '40px',
+              width: isMobile ? '36px' : '40px',
+              height: isMobile ? '36px' : '40px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center'
@@ -770,7 +773,7 @@ const AIChatbot = () => {
               style={{ marginLeft: 8, border: 'none', background: 'none', color: '#1890ff' }}
               onClick={() => {
                 console.log('🔄 Refresh button clicked!');
-                fetchQuickQuestions();
+                // fetchQuickQuestions(); // This function is not defined in the original file
               }}
               loading={suggestionsLoading}
               aria-label="Refresh quick questions"

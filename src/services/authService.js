@@ -9,6 +9,7 @@ import {
   signInWithPopup,
   updateProfile,
   signOut,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import {
   getFirestore,
@@ -308,4 +309,18 @@ export function watchAuthState(onChange) {
 export async function signOutUser() {
   await auth.signOut();
   _currentUser = null;
+}
+
+/**
+ * Sends a password reset email to the given email address using Firebase Auth.
+ * @param {string} email
+ * @returns {Promise<{ success: boolean, message?: string }>}
+ */
+export async function sendPasswordReset(email) {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
 }

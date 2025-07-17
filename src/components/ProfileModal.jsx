@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, Button, message } from 'antd';
-import { updateProfile, updateEmail } from 'firebase/auth';
+import { updateProfile, updateEmail, sendEmailVerification } from 'firebase/auth';
 import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 
@@ -51,9 +51,13 @@ const ProfileModal = ({ open, onClose, user }) => {
       if (displayName && displayName !== user.displayName) {
         await updateProfile(auth.currentUser, { displayName });
       }
-      // Update email
+      // Update email with verification
       if (values.email && values.email !== user.email) {
-        await updateEmail(auth.currentUser, values.email);
+        // Send verification email to the new address
+        await sendEmailVerification(auth.currentUser, { url: window.location.origin });
+        message.info('A verification email has been sent to your new address. Please verify it before changing your email.');
+        setLoading(false);
+        return;
       }
       // Update phone in Firestore
       const userDocRef = doc(db, 'Users', user.uid);

@@ -446,18 +446,20 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
   };
 
   return (
-    <div style={{ padding: '10px' }}>
+    <div style={{ padding: '2vw', maxWidth: '100vw', margin: 0 }}>
       <div style={{ 
         textAlign: 'center', 
-        marginBottom: '20px',
+        marginBottom: '16px',
         backgroundColor: config.backgroundColor,
-        padding: '15px',
-        borderRadius: '12px',
-        color: config.color
+        padding: '10px 4vw',
+        borderRadius: '10px',
+        color: config.color,
+        marginLeft: '-2vw',
+        marginRight: '-2vw',
       }}>
         <Title level={2} style={{ 
           color: config.color, 
-          marginBottom: '8px',
+          marginBottom: '6px',
           fontSize: 'clamp(1.25rem, 4vw, 1.75rem)',
           lineHeight: '1.3'
         }}>
@@ -472,7 +474,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
         </Text>
       </div>
 
-      <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+      <Space direction="vertical" size="small" style={{ width: '100%' }}>
         {sortedQuestionEntries.map(([questionKey, question], index) => 
           renderQuestion(questionKey, question, index)
         )}
@@ -480,29 +482,31 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
 
       <div style={{ 
         textAlign: 'center', 
-        marginTop: '20px', 
-        padding: '12px',
+        marginTop: '16px', 
+        padding: '10px 4vw',
         backgroundColor: config.backgroundColor,
         borderRadius: '8px',
-        border: `1px solid ${config.borderColor}`
+        border: `1px solid ${config.borderColor}`,
+        marginLeft: '-2vw',
+        marginRight: '-2vw',
       }}>
         <Text style={{ 
           fontSize: 'clamp(13px, 3vw, 15px)', 
           color: config.tipColor,
           lineHeight: '1.4'
         }}>
-                  {config.tipText}
-      </Text>
-    </div>
+          {config.tipText}
+        </Text>
+      </div>
 
-    {/* QR Scanner Modal */}
-    <MedicationScanner
-      visible={scannerVisible}
-      onClose={() => setScannerVisible(false)}
-      onMedScanned={handleMedicationScanned}
-    />
-  </div>
-);
+      {/* QR Scanner Modal */}
+      <MedicationScanner
+        visible={scannerVisible}
+        onClose={() => setScannerVisible(false)}
+        onMedScanned={handleMedicationScanned}
+      />
+    </div>
+  );
 });
 
 export default FourMSection; 
