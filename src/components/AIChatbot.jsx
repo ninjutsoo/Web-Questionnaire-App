@@ -51,6 +51,7 @@ const AIChatbot = () => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [locationError, setLocationError] = useState(null);
   const [locationText, setLocationText] = useState('');
+  const [displayedSuggestions, setDisplayedSuggestions] = useState([]);
 
   // Save suggestions to localStorage cache whenever they change
   useEffect(() => {
@@ -63,6 +64,22 @@ const AIChatbot = () => {
   useEffect(() => {
     localStorage.setItem('locationEnabled', locationEnabled);
   }, [locationEnabled]);
+
+  // Add a utility to pick 6 random questions from the suggestions array
+  function getRandomSubset(arr, n) {
+    if (!Array.isArray(arr)) return [];
+    const shuffled = arr.slice().sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, n);
+  }
+
+  // Whenever suggestions change, pick 6 random ones to display
+  useEffect(() => {
+    if (suggestions.length > 0) {
+      setDisplayedSuggestions(getRandomSubset(suggestions, 6));
+    } else {
+      setDisplayedSuggestions([]);
+    }
+  }, [suggestions]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -599,6 +616,38 @@ const AIChatbot = () => {
     localStorage.removeItem('aiChatMessages');
   };
 
+  const fetchQuickQuestions = async () => {
+    if (!userQuestionnaireData || !userQuestionnaireData.userId) {
+      console.warn('No user context available for quick questions');
+      return;
+    }
+    setSuggestionsLoading(true);
+    try {
+      // Call backend to generate new quick questions
+      const response = await axios.post('http://localhost:5001/api/quick-questions', {
+        userContext: userQuestionnaireData
+      });
+      let questions = response.data.questions || [];
+      // Fallback if backend returns nothing
+      if (!Array.isArray(questions) || questions.length === 0) {
+        questions = [
+          "What are some good exercises for seniors?",
+          "How can I improve my sleep quality?",
+          "What foods are good for heart health?",
+          "How can I manage stress better?",
+          "How can I stay mentally active?"
+        ];
+      }
+      setSuggestions(questions);
+      // Save to Firebase and cache
+      await saveQuickQuestions(userQuestionnaireData.userId, questions);
+      setSuggestionsLoading(false);
+    } catch (error) {
+      console.error('❌ Error generating quick questions:', error);
+      setSuggestionsLoading(false);
+    }
+  };
+
   return (
     <div style={{ 
       maxWidth: '1000px', 
@@ -773,7 +822,7 @@ const AIChatbot = () => {
               style={{ marginLeft: 8, border: 'none', background: 'none', color: '#1890ff' }}
               onClick={() => {
                 console.log('🔄 Refresh button clicked!');
-                // fetchQuickQuestions(); // This function is not defined in the original file
+                fetchQuickQuestions();
               }}
               loading={suggestionsLoading}
               aria-label="Refresh quick questions"
@@ -804,45 +853,41 @@ const AIChatbot = () => {
                 <Spin size="small" />
               </div>
             ))
-          ) : suggestions.length === 0 ? (
+          ) : displayedSuggestions.length === 0 ? (
             <Text type="secondary">No quick questions available. Try asking a question!</Text>
           ) : (
-            suggestions
-              .slice(0, 10)
-              .sort((a, b) => a.length - b.length)
-              .slice(0, 6)
-              .map((suggestion, index) => {
-                // Clean up extra quotes and trailing commas
-                let cleanSuggestion = suggestion
-                  .replace(/^\s*"/, '') // remove leading quote
-                  .replace(/",?\s*$/, '') // remove trailing quote and optional comma
-                  .replace(/,$/, '') // remove trailing comma if any
-                  .trim();
-                return (
-                  <Tag
-                    key={index}
-                    color="blue"
-                    style={{
-                      cursor: 'pointer',
-                      padding: '10px 18px',
-                      borderRadius: '16px',
-                      fontSize: '15px',
-                      whiteSpace: 'normal',
-                      wordBreak: 'break-word',
-                      textAlign: 'center',
-                      minHeight: 48,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      width: '100%',
-                      boxSizing: 'border-box',
-                    }}
-                    onClick={() => sendMessage(cleanSuggestion)}
-                  >
-                    {cleanSuggestion}
-                  </Tag>
-                );
-              })
+            displayedSuggestions.map((suggestion, index) => {
+              // Clean up extra quotes and trailing commas
+              let cleanSuggestion = suggestion
+                .replace(/^\s*"/, '') // remove leading quote
+                .replace(/",?\s*$/, '') // remove trailing quote and optional comma
+                .replace(/,$/, '') // remove trailing comma if any
+                .trim();
+              return (
+                <Tag
+                  key={index}
+                  color="blue"
+                  style={{
+                    cursor: 'pointer',
+                    padding: '10px 18px',
+                    borderRadius: '16px',
+                    fontSize: '15px',
+                    whiteSpace: 'normal',
+                    wordBreak: 'break-word',
+                    textAlign: 'center',
+                    minHeight: 48,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    boxSizing: 'border-box',
+                  }}
+                  onClick={() => sendMessage(cleanSuggestion)}
+                >
+                  {cleanSuggestion}
+                </Tag>
+              );
+            })
           )}
         </div>
       </Card>
