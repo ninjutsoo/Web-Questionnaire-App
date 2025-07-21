@@ -2,10 +2,96 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
+const sgMail = require("@sendgrid/mail");
+
+admin.initializeApp();
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+// Example tips for each transport method
+const transportTips = {
+  Bedrest: [
+    "Regular turning helps prevent pressure ulcers (bed sores) and improves circulation. Set reminders to change position every 2 hours.",
+    "Keep skin clean and dry to prevent sores.",
+    "Ask for help to change positions safely."
+  ],
+  Walker: [
+    "Always have someone nearby when getting up.",
+    "Sit at the edge first, check for dizziness, then stand slowly with support.",
+    "Use your walker for balance and support at all times."
+  ],
+  Wheelchair: [
+    "Regular movement helps maintain strength and flexibility. Try arm raises, side twists, and knee/toe raises while seated.",
+    "Check your wheelchair's brakes before transferring.",
+    "Keep pathways clear to avoid accidents."
+  ],
+  Independent: [
+    "Even when moving independently, it's safer to have someone nearby.",
+    "Always check for dizziness before standing.",
+    "Take your time and avoid rushing."
+  ]
+};
+
+// Scheduled function to send daily tips
+// exports.sendDailyTransportTips = functions.pubsub.schedule('every day 08:00').timeZone('America/New_York').onRun(async (context) => {
+//   const usersSnapshot = await admin.firestore().collection('User').where('caregiverNotify', '==', true).get();
+//
+//   const sendPromises = [];
+//
+//   usersSnapshot.forEach(doc => {
+//     const user = doc.data();
+//     const caregiverEmail = user.caregiverEmail;
+//     const method = user.transportMethod || user.mobilityType; // fallback to either field
+//     if (!caregiverEmail || !method || !transportTips[method]) return;
+//
+//     // Pick a random tip for variety
+//     const tips = transportTips[method];
+//     const tip = tips[Math.floor(Math.random() * tips.length)];
+//
+//     const msg = {
+//       to: caregiverEmail,
+//       from: "your_verified_email@example.com", // TODO: Replace with your verified sender
+//       subject: "Daily Mobility Tip for Your Care Recipient",
+//       text: `Here is a daily tip for their mobility type (${method}):\n\n${tip}`,
+//     };
+//     sendPromises.push(sgMail.send(msg));
+//   });
+//
+//   await Promise.all(sendPromises);
+//   return null;
+// });
 
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// Endpoint to send a tip email to the caregiver immediately
+app.post('/send-caregiver-tip', async (req, res) => {
+  const { caregiverEmail, mobilityType } = req.body;
+  console.log('Received caregiverEmail:', caregiverEmail);
+  console.log('Received mobilityType:', mobilityType);
+  if (!caregiverEmail || !mobilityType || !transportTips[mobilityType]) {
+    console.log('Invalid input:', req.body);
+    return res.status(400).json({ error: 'Missing or invalid caregiverEmail or mobilityType' });
+  }
+  const tips = transportTips[mobilityType];
+  const tip = tips[Math.floor(Math.random() * tips.length)];
+  const msg = {
+    to: caregiverEmail,
+    from: "mohammad.a.roshani@gmail.com",
+    subject: "Mobility Tip for Your Care Recipient",
+    text: `Here is a tip for their mobility type (${mobilityType}):\n\n${tip}`,
+  };
+  try {
+    const sgRes = await sgMail.send(msg);
+    console.log('SendGrid response:', sgRes);
+    res.json({ success: true, message: `Tip email sent to ${caregiverEmail}` });
+  } catch (err) {
+    console.error('SendGrid error:', err.response?.body || err.message || err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
@@ -23,21 +109,17 @@ app.post('/api/chat', async (req, res) => {
     
     // Build personalized system prompt based on user context
     let systemPrompt = `
-You are a kind and supportive AI assistant helping an elderly person with their health and daily questions.
+You are a kind, supportive AI assistant for an elderly person with health and daily questions.
 
-FORMAT RULES — FOLLOW THESE:
-• Always answer in a warm, friendly, and respectful tone.
-• Use **simple, everyday language** that's easy for older adults to understand.
-• **Avoid medical jargon** and complicated terms.
-• Use **emojis when helpful**, but not in every sentence.
-• Your answer should feel **natural, not robotic**:
-  – Use **Less than 5 short bullet points** if the answer has multiple steps or tips.
-  – If a quick reply works better, **use just 1–2 sentences**.
-• Keep each bullet or sentence **short and clear**—don't use sub-bullets or long paragraphs.
-• **Bold key actions or facts** at the start of each bullet when using bullets.
-• ❗️**Do NOT start the answer with any general or motivational sentence. Jump right into the advice.** (e.g., avoid phrases like "It's important to stay active…" or "Let's talk about...")
-
-Your goal is to be clear, caring, and easy to follow — just like a helpful friend or family member would be.
+RESPONSE RULES — FOLLOW THESE:
+• Be concise: keep your answer under 200 tokens.
+• Use simple, everyday language. Avoid medical jargon.
+• Use 1–2 short sentences if possible, or up to 5 short bullet points if needed.
+• Each bullet: start with a bolded key action/fact, keep it under 15 words.
+• Use emojis only if helpful, not in every sentence.
+• Do NOT start with general/motivational phrases. Jump right into advice.
+• No sub-bullets, no long paragraphs.
+• Be warm, friendly, and clear — like a helpful friend.
 `;
 
     // Add location to system prompt if present
@@ -66,7 +148,7 @@ Your goal is to be clear, caring, and easy to follow — just like a helpful fri
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: 'deepseek/deepseek-chat-v3-0324:free',
+        model: 'deepseek/deepseek-r1:free',
         messages: [
           { 
             role: 'system', 
@@ -74,7 +156,7 @@ Your goal is to be clear, caring, and easy to follow — just like a helpful fri
           },
           ...messages
         ],
-        max_tokens: 300,
+        // max_tokens: 400,
         temperature: 0.3
       },
       {
@@ -92,6 +174,10 @@ Your goal is to be clear, caring, and easy to follow — just like a helpful fri
     const assistantMessage = response.data.choices[0]?.message?.content || 
                             'I apologize, but I couldn\'t generate a response at the moment.';
 
+    // Log the model's output (assistant's message)
+    console.log('==== MODEL OUTPUT FROM AI ====');
+    console.log(assistantMessage);
+    
     res.json({
       choices: [{
         message: {
@@ -171,12 +257,12 @@ User's health assessment data:`;
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: 'deepseek/deepseek-chat-v3-0324:free',
+        model: 'deepseek/deepseek-r1:free',
         messages: [
           { role: 'system', content: prompt }
         ],
-        max_tokens: 400,
-        temperature: 0.5
+        // max_tokens: 400,
+        temperature: 0.3
       },
       {
         headers: {
@@ -255,6 +341,31 @@ User's health assessment data:`;
       "How can I improve my memory?",
       "What are some healthy snacks for seniors?"
     ] });
+  }
+});
+
+// Test endpoint for sending a notification email locally
+app.get('/test-send-email', async (req, res) => {
+  const email = req.query.email;
+  const method = req.query.method || 'Bedrest';
+  if (!email || !transportTips[method]) {
+    return res.status(400).json({ error: 'Missing or invalid email/method' });
+  }
+  const tips = transportTips[method];
+  const tip = tips[Math.floor(Math.random() * tips.length)];
+  const msg = {
+    to: email,
+    from: "mohammad.a.roshani@gmail.com",
+    subject: "Your Daily Transportation Tip (Test)",
+    text: `Here is your daily tip for getting around by ${method}:\n\n${tip}`,
+  };
+  try {
+    const sgRes = await sgMail.send(msg);
+    console.log('SendGrid response:', sgRes);
+    res.json({ success: true, message: `Test email sent to ${email}` });
+  } catch (err) {
+    console.error('SendGrid error:', err.response?.body || err.message || err);
+    res.status(500).json({ error: err.message });
   }
 });
 

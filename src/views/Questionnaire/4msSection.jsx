@@ -1,9 +1,11 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button, Alert } from 'antd';
+import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button, Alert, Checkbox } from 'antd';
 import { HeartOutlined, CarOutlined, MedicineBoxOutlined, StarOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { AudioOutlined, QrcodeOutlined } from '@ant-design/icons';
 import SpeechReader from '../../components/SpeechReader';
 import MedicationScanner from '../../components/MedicationScanner';
+import { message } from 'antd';
+import axios from 'axios';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -146,10 +148,27 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
     if (onLocalChange) onLocalChange();
   };
 
-  const handleMedicationScanned = (scannedText) => {
-    // Add the scanned medication to the text field
+  const handleMedicationScanned = (scannedValue) => {
+    // If scannedValue is an object, format it nicely
+    let displayText = '';
+    if (typeof scannedValue === 'object' && scannedValue !== null) {
+      // Show key fields if present
+      const { brandName, genericName, manufacturer, dosageForm, strength, upc, ndc } = scannedValue;
+      displayText = [
+        brandName && `Brand: ${brandName}`,
+        genericName && `Generic: ${genericName}`,
+        manufacturer && `Manufacturer: ${manufacturer}`,
+        dosageForm && `Form: ${dosageForm}`,
+        strength && `Strength: ${strength}`,
+        ndc && `NDC: ${ndc}`,
+        upc && `UPC: ${upc}`
+      ].filter(Boolean).join(' | ');
+      if (!displayText) displayText = JSON.stringify(scannedValue, null, 2);
+    } else {
+      displayText = scannedValue;
+    }
     const currentText = localResponses.q1?.text || '';
-    const newText = currentText ? `${currentText}\n${scannedText}` : scannedText;
+    const newText = currentText ? `${currentText}\n${displayText}` : displayText;
     handleTextChange('q1', newText);
   };
 
@@ -253,7 +272,32 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
     } else if (question.type === 'mobility_type') {
       const selectedType = localResponses[questionKey];
       const tips = question.tips?.[selectedType];
-      
+      const caregiverEmail = localResponses.caregiverEmail || '';
+      const [sending, setSending] = useState(false);
+
+      const handleSendCaregiverTip = async () => {
+        if (!caregiverEmail || !selectedType) {
+          message.error('Please enter a caregiver email and select a mobility type.');
+          return;
+        }
+        setSending(true);
+        try {
+          const res = await axios.post('http://localhost:5001/send-caregiver-tip', {
+            caregiverEmail,
+            mobilityType: selectedType
+          });
+          if (res.data.success) {
+            message.success('Tip email sent to caregiver!');
+          } else {
+            message.error(res.data.error || 'Failed to send email.');
+          }
+        } catch (err) {
+          message.error(err.response?.data?.error || err.message || 'Failed to send email.');
+        } finally {
+          setSending(false);
+        }
+      };
+
       return (
         <Card 
           key={questionKey}
@@ -299,7 +343,24 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
                 options={question.options?.map(option => ({ label: option, value: option })) || []}
               />
             </div>
-            
+            <Input
+              type="email"
+              placeholder="Caregiver's email address"
+              value={caregiverEmail}
+              onChange={e => {
+                setLocalResponses({ ...localResponses, caregiverEmail: e.target.value });
+                if (onLocalChange) onLocalChange();
+              }}
+              style={{ width: '100%' }}
+            />
+            <Button
+              type="primary"
+              loading={sending}
+              onClick={handleSendCaregiverTip}
+              style={{ width: '100%' }}
+            >
+              Send Mobility Tip to Caregiver
+            </Button>
             {tips && (
               <Alert
                 message={

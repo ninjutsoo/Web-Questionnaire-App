@@ -12,6 +12,7 @@
   "dependencies": {
     "@ant-design/pro-components": "^2.8.7",
     "@ant-design/use-emotion-css": "^1.0.4",
+    "@sendgrid/mail": "^8.1.5",
     "@umijs/max": "^4.4.11",
     "antd": "^5.25.4",
     "axios": "^1.10.0",
