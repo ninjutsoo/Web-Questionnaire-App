@@ -7,6 +7,7 @@ import { auth } from '../services/firebase';
 import { getUserQuestionnaireContext } from '../services/questionnaireService';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
+import { getApiEndpoint } from '../services/apiClient';
 
 const { TextArea } = Input;
 const { Title, Text } = Typography;
@@ -426,7 +427,7 @@ const AIChatbot = () => {
       console.log('DEBUG: Sending to backend - messages:', messages);
       console.log('DEBUG: Sending to backend - userContext:', userContextWithLocation);
 
-      const response = await axios.post('http://localhost:5001/api/chat', {
+      const response = await axios.post(getApiEndpoint('/api/chat'), {
         messages: [
           ...messages, 
           newMessage
@@ -624,7 +625,7 @@ const AIChatbot = () => {
     setSuggestionsLoading(true);
     try {
       // Call backend to generate new quick questions
-      const response = await axios.post('http://localhost:5001/api/quick-questions', {
+      const response = await axios.post(getApiEndpoint('/api/quick-questions'), {
         userContext: userQuestionnaireData
       });
       let questions = response.data.questions || [];

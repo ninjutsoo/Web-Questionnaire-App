@@ -1,0 +1,20 @@
+# Backend Environment Variables (.env)
+# Copy these settings to your .env file in the chat-backend directory
+
+# Server Configuration
+PORT=5001
+
+# Frontend URL for CORS and referer headers
+FRONTEND_URL=http://localhost:3000
+
+# For shared environments, use your host IP or domain:
+# FRONTEND_URL=http://192.168.1.100:5173
+# FRONTEND_URL=http://your-domain.com:5173
+
+# API Keys (required)
+OPENROUTER_API_KEY=your_openrouter_api_key_here
+SENDGRID_API_KEY=your_sendgrid_api_key_here
+
+# Firebase Admin Credentials (for production)
+# GOOGLE_APPLICATION_CREDENTIALS=path/to/your/firebase-admin-key.json
+# Or set Firebase admin credentials directly in environment

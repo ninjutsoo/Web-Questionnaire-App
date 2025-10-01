@@ -111,11 +111,7 @@ export const lookupDrugByUPC = async (upcCode) => {
   for (const proxy of CORS_PROXIES) {
     try {
       console.log(`Trying UPC lookup with proxy: ${proxy}`);
-      const response = await fetch(`${proxy}${UPC_DB_URL}?upc=${upcCode}`, {
-        headers: {
-          'Origin': 'http://localhost:5176'
-        }
-      });
+      const response = await fetch(`${proxy}${UPC_DB_URL}?upc=${upcCode}`);
       
       if (response.ok) {
         const data = await response.json();

@@ -6,6 +6,7 @@ import SpeechReader from '../../components/SpeechReader';
 import MedicationScanner from '../../components/MedicationScanner';
 import { message } from 'antd';
 import axios from 'axios';
+import { getApiEndpoint } from '../../services/apiClient';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -282,7 +283,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
         }
         setSending(true);
         try {
-          const res = await axios.post('http://localhost:5001/send-caregiver-tip', {
+          const res = await axios.post(getApiEndpoint('/send-caregiver-tip'), {
             caregiverEmail,
             mobilityType: selectedType
           });
