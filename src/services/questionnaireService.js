@@ -448,7 +448,15 @@ export const getUserQuestionnaireContext = async (userId) => {
         
         answeredQuestions.forEach(([questionId, response]) => {
           const questionText = sectionQuestions[questionId]?.text || questionId;
-          
+
+          // Do not include caregiverEmail in AI context
+          if (sectionKey === 'mobility' && questionId === 'caregiverEmail') {
+            // Commented out: skip adding caregiverEmail to context
+            // let formattedResponse = response;
+            // context.responses[sectionKey][questionText] = formattedResponse;
+            return;
+          }
+
           let formattedResponse = '';
           if (typeof response === 'object' && response !== null) {
             if (response.tags && response.tags.length > 0) {
