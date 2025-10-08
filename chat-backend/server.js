@@ -145,37 +145,86 @@ RESPONSE RULES — FOLLOW THESE:
     console.log('==== SYSTEM PROMPT SENT TO AI ====');
     console.log(systemPrompt);
     
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        model: 'x-ai/grok-4-fast:free',
-        messages: [
-          { 
-            role: 'system', 
-            content: systemPrompt
+    // List of free models to try in order of preference
+    const freeModels = [
+      'z-ai/glm-4.5-air:free',           // Primary model
+      'deepseek/deepseek-chat-v3-0324:free',
+      'qwen/qwen3-coder:free',
+      'tngtech/deepseek-r1t2-chimera:free',
+      'meta-llama/llama-3.1-8b-instruct:free'
+    ];
+
+    let response;
+    let lastError;
+    let usedModel;
+
+    // Try each model until one works
+    for (const model of freeModels) {
+      try {
+        console.log(`🔄 Attempting OpenRouter API call with model: ${model}`);
+        
+        response = await axios.post(
+          'https://openrouter.ai/api/v1/chat/completions',
+          {
+            model: model,
+            messages: [
+              { 
+                role: 'system', 
+                content: systemPrompt
+              },
+              ...messages
+            ],
+            // max_tokens: 400,
+            temperature: 0.3
           },
-          ...messages
-        ],
-        // max_tokens: 400,
-        temperature: 0.3
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': req.headers.origin ?? process.env.FRONTEND_URL ?? 'http://localhost:3000',
-          'X-Title': '4Ms Health Questionnaire App'
+          {
+            headers: {
+              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+              'Content-Type': 'application/json',
+              'HTTP-Referer': req.headers.origin ?? process.env.FRONTEND_URL ?? 'http://localhost:3000',
+              'X-Title': '4Ms Health Questionnaire App'
+            }
+          }
+        );
+
+        usedModel = model;
+        console.log(`✅ Successfully used model: ${model}`);
+        break; // Success, exit the loop
+
+      } catch (error) {
+        lastError = error;
+        console.log(`❌ Model ${model} failed:`, error.response?.data?.error?.message || error.message);
+        
+        // Check if it's a rate limit or model unavailable error
+        const errorMessage = error.response?.data?.error?.message || '';
+        const isRateLimit = errorMessage.includes('rate limit') || 
+                           errorMessage.includes('quota') || 
+                           errorMessage.includes('No endpoints found') ||
+                           error.status === 429;
+        
+        if (isRateLimit) {
+          console.log(`⏳ Rate limit hit for ${model}, trying next model...`);
+          continue; // Try next model
+        } else {
+          console.log(`🚫 Non-rate-limit error for ${model}, trying next model...`);
+          continue; // Try next model for other errors too
         }
       }
-    );
+    }
 
-    console.log('✅ OpenRouter API Response:', response.data);
+    // If all models failed, throw the last error
+    if (!response) {
+      console.log('❌ All models failed, using fallback response');
+      throw lastError || new Error('All free models are currently unavailable');
+    }
+
+    console.log(`✅ OpenRouter API Response (using ${usedModel}):`, response.data);
     
     const assistantMessage = response.data.choices[0]?.message?.content || 
                             'I apologize, but I couldn\'t generate a response at the moment.';
 
     // Log the model's output (assistant's message)
-    console.log('==== MODEL OUTPUT FROM AI ====');
+    console.log(`==== MODEL OUTPUT FROM AI (${usedModel}) ====`);
     console.log(assistantMessage);
     
     res.json({
@@ -184,7 +233,13 @@ RESPONSE RULES — FOLLOW THESE:
           role: 'assistant',
           content: assistantMessage
         }
-      }]
+      }],
+      debug: {
+        model: usedModel,
+        maxTokens: 400,
+        temperature: 0.3,
+        systemPrompt: systemPrompt.substring(0, 500) + '...'
+      }
     });
 
   } catch (error) {
@@ -257,7 +312,7 @@ User's health assessment data:`;
     const response = await axios.post(
       'https://openrouter.ai/api/v1/chat/completions',
       {
-        model: 'x-ai/grok-4-fast:free',
+        model: 'z-ai/glm-4.5-air:free',
         messages: [
           { role: 'system', content: prompt }
         ],

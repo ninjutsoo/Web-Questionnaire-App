@@ -53,6 +53,8 @@ const AIChatbot = () => {
   const [locationError, setLocationError] = useState(null);
   const [locationText, setLocationText] = useState('');
   const [displayedSuggestions, setDisplayedSuggestions] = useState([]);
+  const [sendCooldown, setSendCooldown] = useState(0);
+  const [isOnCooldown, setIsOnCooldown] = useState(false);
 
   // Save suggestions to localStorage cache whenever they change
   useEffect(() => {
@@ -60,6 +62,25 @@ const AIChatbot = () => {
       localStorage.setItem('aiQuickQuestions', JSON.stringify(suggestions));
     }
   }, [suggestions]);
+
+  // Cooldown timer effect
+  useEffect(() => {
+    let interval;
+    if (isOnCooldown && sendCooldown > 0) {
+      interval = setInterval(() => {
+        setSendCooldown(prev => {
+          if (prev <= 1) {
+            setIsOnCooldown(false);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isOnCooldown, sendCooldown]);
 
   // Persist locationEnabled to localStorage whenever it changes
   useEffect(() => {
@@ -390,7 +411,7 @@ const AIChatbot = () => {
 
   const sendMessage = async (messageContent = null) => {
     const content = messageContent || input.trim();
-    if (!content) return;
+    if (!content || isOnCooldown) return;
 
     const newMessage = {
       role: 'user',
@@ -402,6 +423,10 @@ const AIChatbot = () => {
     setInput('');
     setIsLoading(true);
     setError(null);
+    
+    // Start 15-second cooldown
+    setSendCooldown(15);
+    setIsOnCooldown(true);
 
     try {
       // Prepare context for AI - let backend handle system prompt
@@ -794,19 +819,24 @@ const AIChatbot = () => {
             title={isListening ? "Stop listening" : "Start voice input"}
           />
           <Button
-            type="primary"
-            icon={<SendOutlined />}
+            type={isOnCooldown ? "default" : "primary"}
+            icon={isOnCooldown ? <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{sendCooldown}</span> : <SendOutlined />}
             onClick={() => sendMessage()}
             loading={isLoading}
-            disabled={!input.trim()}
+            disabled={!input.trim() || isOnCooldown}
             style={{
               borderRadius: '50%',
               width: isMobile ? '36px' : '40px',
               height: isMobile ? '36px' : '40px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center'
+              justifyContent: 'center',
+              backgroundColor: isOnCooldown ? '#f0f0f0' : undefined,
+              borderColor: isOnCooldown ? '#d9d9d9' : undefined,
+              color: isOnCooldown ? '#999' : undefined,
+              cursor: isOnCooldown ? 'not-allowed' : 'pointer'
             }}
+            title={isOnCooldown ? `Please wait ${sendCooldown} seconds before sending another message` : 'Send message'}
           />
         </div>
       </Card>
@@ -867,9 +897,9 @@ const AIChatbot = () => {
               return (
                 <Tag
                   key={index}
-                  color="blue"
+                  color={isOnCooldown ? "default" : "blue"}
                   style={{
-                    cursor: 'pointer',
+                    cursor: isOnCooldown ? 'not-allowed' : 'pointer',
                     padding: '10px 18px',
                     borderRadius: '16px',
                     fontSize: '15px',
@@ -882,8 +912,11 @@ const AIChatbot = () => {
                     justifyContent: 'center',
                     width: '100%',
                     boxSizing: 'border-box',
+                    opacity: isOnCooldown ? 0.5 : 1,
+                    backgroundColor: isOnCooldown ? '#f0f0f0' : undefined,
+                    color: isOnCooldown ? '#999' : undefined
                   }}
-                  onClick={() => sendMessage(cleanSuggestion)}
+                  onClick={() => !isOnCooldown && sendMessage(cleanSuggestion)}
                 >
                   {cleanSuggestion}
                 </Tag>
