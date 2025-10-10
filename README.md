@@ -107,7 +107,7 @@ Open two terminals.
 **Terminal 1 – Backend**
 ```bash
 cd chat-backend
-npm run dev        # or: npm start
+npm start
 ```
 Health check: http://localhost:5001/api/health
 
