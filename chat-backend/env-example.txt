@@ -5,11 +5,12 @@
 PORT=5001
 
 # Frontend URL for CORS and referer headers
-FRONTEND_URL=http://localhost:3000
+# IMPORTANT: Use HTTPS if your frontend is HTTPS (required for camera/mic access)
+FRONTEND_URL=https://localhost:5173
 
-# For shared environments, use your host IP or domain:
-# FRONTEND_URL=http://192.168.1.100:5173
-# FRONTEND_URL=http://your-domain.com:5173
+# For shared environments, use your host IP or domain with HTTPS:
+# FRONTEND_URL=https://192.168.1.100:5173
+# FRONTEND_URL=https://your-domain.com:5173
 
 # API Keys (required)
 OPENROUTER_API_KEY=your_openrouter_api_key_here

@@ -2,6 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const axios = require('axios');
+const https = require('https');
+const fs = require('fs');
+const path = require('path');
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const sgMail = require("@sendgrid/mail");
@@ -425,9 +428,31 @@ app.get('/test-send-email', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => {
-  console.log(`🚀 AI Chat Backend server running on port ${PORT}`);
-  console.log(`📡 Using OpenRouter API with DeepSeek Chat model`);
-  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
-}); 
+
+// Try to load HTTPS certificates (optional - falls back to HTTP if not found)
+const certPath = path.join(__dirname, '..', 'localhost+3.pem');
+const keyPath = path.join(__dirname, '..', 'localhost+3-key.pem');
+
+let server;
+if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+  // HTTPS server with mkcert certificates
+  const httpsOptions = {
+    key: fs.readFileSync(keyPath),
+    cert: fs.readFileSync(certPath)
+  };
+  server = https.createServer(httpsOptions, app);
+  server.listen(PORT, () => {
+    console.log(`🔒 AI Chat Backend server running on HTTPS port ${PORT}`);
+    console.log(`📡 Using OpenRouter API with DeepSeek Chat model`);
+    console.log(`🔗 Health check: https://localhost:${PORT}/api/health`);
+    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'https://localhost:5173'}`);
+  });
+} else {
+  // HTTP fallback (localhost only)
+  server = app.listen(PORT, () => {
+    console.log(`🚀 AI Chat Backend server running on HTTP port ${PORT}`);
+    console.log(`📡 Using OpenRouter API with DeepSeek Chat model`);
+    console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+  });
+} 

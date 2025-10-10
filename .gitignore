@@ -47,6 +47,17 @@ coverage/
 # yarn.lock
 
 # Misc
-.vite/       # Vite’s cache
-.cache/      # some tools’ caches
+.vite/       # Vite's cache
+.cache/      # some tools' caches
 *.localhistory
+
+# SSL Certificates (mkcert generated)
+*.pem
+*.key
+*.crt
+/certs/
+
+# Development helper scripts
+start-dev-https.bat
+BACKEND_HTTPS_CONFIG.md
+FIX_MIXED_CONTENT_ERROR.md

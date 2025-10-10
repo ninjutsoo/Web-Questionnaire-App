@@ -82,19 +82,21 @@ npm install
 
 1. **Frontend (`.env.development.local` at repo root)**  
    ```dotenv
-   VITE_API_BASE_URL=http://localhost:5001
+   VITE_API_BASE_URL=https://localhost:5001
    ```
-   Use your LAN IP or domain if testing across devices.
+   **Note:** Use HTTPS (not HTTP) to avoid mixed content errors when accessing from network devices. Use your LAN IP with HTTPS if testing across devices.
 
 2. **Backend (`chat-backend/.env`)**  
    ```dotenv
    PORT=5001
-   FRONTEND_URL=http://localhost:3000
+   FRONTEND_URL=https://localhost:5173
    OPENROUTER_API_KEY=replace_me
    SENDGRID_API_KEY=replace_me
    # Optional if running Firebase Admin locally
    # GOOGLE_APPLICATION_CREDENTIALS=C:\path\to\firebase-admin-key.json
    ```
+   
+   **⚠️ Important:** Set `FRONTEND_URL` to match your frontend's HTTPS URL (not HTTP). This ensures CORS works correctly with your HTTPS frontend.
 
 3. **Firebase Config**  
    If you use a different Firebase project, update `src/services/firebase.js` with your credentials.
@@ -113,7 +115,55 @@ Health check: http://localhost:5001/api/health
 ```bash
 npm run dev
 ```
-Frontend opens at http://localhost:5173 (or the port shown in the terminal).
+Frontend opens at https://localhost:5173 (or the port shown in the terminal).
+
+#### HTTPS Setup for Camera/Microphone Access
+
+The app requires HTTPS to access camera, microphone, and geolocation APIs when accessed over the network (non-localhost). We use `vite-plugin-mkcert` for automatic trusted certificate generation.
+
+**First-time setup (one-time per machine):**
+
+1. **Install mkcert** (if not already installed):
+   - **Windows (Chocolatey):** `choco install mkcert`
+   - **Windows (Manual):** Download from [mkcert releases](https://github.com/FiloSottile/mkcert/releases)
+   - **macOS:** `brew install mkcert`
+   - **Linux:** `sudo apt install mkcert` or equivalent
+
+2. **Install the local Certificate Authority:**
+   ```bash
+   mkcert -install
+   ```
+   This adds a trusted CA to your system and browsers.
+
+3. **Run the dev server:**
+   
+   **Windows:** Use the helper script (adds mkcert to PATH automatically)
+   ```bash
+   start-dev-https.bat
+   ```
+   
+   **Or manually:**
+   ```bash
+   # Add mkcert to PATH first, then run dev server
+   set PATH=%PATH%;C:\Users\[YourUsername]\Downloads
+   npm run dev
+   ```
+   
+   **macOS/Linux:**
+   ```bash
+   npm run dev
+   ```
+   
+   The `vite-plugin-mkcert` plugin will automatically generate trusted certificates.
+
+**Accessing from other devices on your network:**
+
+1. Find your machine's LAN IP (e.g., `192.168.1.100`)
+2. Open `https://192.168.1.100:5173` (or your dev server port) on other devices
+3. The certificate will be trusted if mkcert is installed on the host machine
+4. Camera, microphone, and location permissions will work properly
+
+**Note:** Certificate files (`*.pem`, `*.key`) are excluded from version control. Each developer needs to run mkcert setup locally.
 
 ---
 
@@ -297,6 +347,8 @@ Add screenshots after each step using:
 | Missing SendGrid emails | Confirm API key, verified sender, and mobility type value. |
 | AI chat 401 | Ensure `OPENROUTER_API_KEY` is valid and not rate limited. |
 | QR scanner fails | Browser may block camera; test in Chrome and ensure HTTPS in production. |
+| Camera/mic blocked on network | App must run over HTTPS. Install `mkcert` and restart dev server. See [HTTPS Setup](#https-setup-for-cameramicrophone-access). |
+| Certificate not trusted | Run `mkcert -install` to add the local CA to your system trust store. |
 | Firestore permission denied | Update security rules to allow authenticated access to required collections. |
 
 ---
