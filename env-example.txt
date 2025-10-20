@@ -1,9 +1,14 @@
 # Frontend Environment Variables (.env.development.local or .env.production)
-# Copy these settings to your .env file
+# OPTIONAL - The frontend automatically detects the correct API URL
 
-# API Base URL - Use HTTPS to avoid mixed content errors
-VITE_API_BASE_URL=https://localhost:5001
+# For local development, NO .env file is needed!
+# The system auto-detects:
+#   - localhost → https://localhost:5001
+#   - network IP → https://[SAME_IP]:5001
 
-# For shared environments, use your host IP or domain with HTTPS:
+# Only create .env.development.local if you need to override auto-detection:
+# VITE_API_BASE_URL=https://localhost:5001
+
+# For shared environments with custom URLs:
 # VITE_API_BASE_URL=https://192.168.1.100:5001
 # VITE_API_BASE_URL=https://your-domain.com:5001

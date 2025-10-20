@@ -9,3 +9,4 @@ do not walk me through to do changes only if asked
 do not change things already present and not asked you to change (don't be aggressive)
 Asking me to see if I want the changes is clearly not following my commands, you have to make the changes by yourself.
 If you are making a change and it doesn't resolve the issue, once trying a new change, you have to make sure to redo the first one so the original code doesn't change drastically. 
+Do not make extra .md files

@@ -1,20 +1,47 @@
 # Environment Configuration Guide
 
-This guide explains how to configure the application for shared environments and production deployment.
+This guide explains how to configure the application for local development and production deployment.
+
+## 🔥 Quick Start (HTTP - No Configuration Needed!)
+
+**The app now uses HTTP by default** for local development and LAN access. This avoids all certificate issues!
+
+```bash
+# 1. Start backend
+cd chat-backend
+npm start
+
+# 2. Start frontend (in another terminal)
+npm run dev
+
+# 3. Access from any device:
+# - Local: http://localhost:5173
+# - Network: http://YOUR_IP:5173
+```
+
+✅ **No .env files needed** - the app auto-detects everything!
+
+For HTTPS setup (production), see [NETWORK_ACCESS_GUIDE.md](./NETWORK_ACCESS_GUIDE.md)
 
 ## Frontend Configuration
 
-### 1. Create Environment File
+### 1. Create Environment File (Optional)
 
-Create a `.env.development.local` file in the project root (or `.env.production` for production):
+The frontend now **automatically detects** the correct API URL:
+- When accessed via `localhost` → uses `http://localhost:5001`
+- When accessed via network IP → uses `http://[SAME_IP]:5001`
+- **Matches the protocol (HTTP/HTTPS)** of the current page automatically
+
+**For local development, no `.env` file is needed!** The system auto-adapts.
+
+If you want to override the automatic detection, create a `.env.development.local` file:
 
 ```bash
-# API Base URL - Replace with your host IP or domain
+# Optional: Override automatic API URL detection
 VITE_API_BASE_URL=http://localhost:5001
 
-# For shared environments, use your host IP or domain:
-# VITE_API_BASE_URL=http://192.168.1.100:5001
-# VITE_API_BASE_URL=http://your-domain.com:5001
+# For production with HTTPS:
+# VITE_API_BASE_URL=https://your-domain.com/api
 ```
 
 ### 2. Vite Configuration
@@ -41,20 +68,26 @@ Create a `.env` file in the `chat-backend` directory:
 # Server Configuration
 PORT=5001
 
-# Frontend URL for CORS and referer headers
-FRONTEND_URL=http://localhost:3000
-
-# For shared environments:
-# FRONTEND_URL=http://192.168.1.100:5173
-# FRONTEND_URL=http://your-domain.com:5173
+# HTTPS Mode (default: false - uses HTTP)
+# USE_HTTPS=true  # Set to true only for production or localhost HTTPS testing
 
 # API Keys (required)
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 SENDGRID_API_KEY=your_sendgrid_api_key_here
 
-# Firebase Admin Credentials (for production)
-GOOGLE_APPLICATION_CREDENTIALS=path/to/your/firebase-admin-key.json
+# Firebase Admin Credentials (for production - optional)
+# GOOGLE_APPLICATION_CREDENTIALS=path/to/your/firebase-admin-key.json
+
+# For production with custom certificates:
+# CERT_PATH=/path/to/cert.pem
+# KEY_PATH=/path/to/key.pem
 ```
+
+**Key Features:**
+- **HTTP by default** - avoids certificate issues for local/LAN development
+- **Dynamic CORS** - accepts requests from any origin automatically
+- **No manual IP configuration** - detects request origin automatically
+- **Optional HTTPS** - set `USE_HTTPS=true` when needed
 
 ### 2. Firebase Configuration
 
@@ -81,8 +114,8 @@ npm start
 The backend will:
 - Run on port 5001
 - Accept connections from any IP (if firewall allows)
-- Use dynamic referer headers based on the request origin
-- Log the configured frontend URL on startup
+- Use **dynamic CORS** that automatically accepts requests from any origin
+- Use the actual request origin for API referer headers
 
 ### 2. Start the Frontend
 
@@ -91,10 +124,13 @@ npm run dev
 ```
 
 The frontend will:
-- Run on port 5173
+- Run on port 5173  
 - Bind to `0.0.0.0` for network access
-- Use the API base URL from environment variables
-- Fall back to `http://localhost:5001` if not configured
+- Use **HTTP by default** (no certificate issues!)
+- **Automatically detect** the correct API URL:
+  - `http://localhost:5001` when accessed via localhost
+  - `http://[YOUR_IP]:5001` when accessed via network IP
+- No manual configuration needed!
 
 ### 3. Access from Other Devices
 
@@ -141,10 +177,11 @@ For production deployment:
 
 ### Common Issues
 
-1. **CORS Errors:** Ensure `FRONTEND_URL` matches the actual frontend URL
-2. **Firebase Auth Errors:** Add your domain to Firebase authorized domains
-3. **Network Access Issues:** Check firewall settings and IP binding
-4. **API Connection Errors:** Verify `VITE_API_BASE_URL` is correct and backend is running
+1. **CORS Errors:** The system uses dynamic CORS - if issues persist, check browser console for specific errors
+2. **Firebase Auth Errors:** Add your domain/IP to Firebase authorized domains in the Firebase Console
+3. **Network Access Issues:** Check firewall settings and ensure ports 5173 and 5001 are open
+4. **API Connection Errors:** Verify the backend is running on port 5001 and accessible
+5. **IP Address Changes:** No action needed - the system auto-adapts to new IPs!
 
 ### Debug Steps
 

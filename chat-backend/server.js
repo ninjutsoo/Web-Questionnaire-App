@@ -66,7 +66,13 @@ const transportTips = {
 // });
 
 const app = express();
-app.use(cors());
+
+// Dynamic CORS configuration - accepts requests from any origin in development
+app.use(cors({
+  origin: true, // Reflect the request origin, allowing all origins
+  credentials: true
+}));
+
 app.use(express.json());
 
 // Endpoint to send a tip email to the caregiver immediately
@@ -184,7 +190,7 @@ RESPONSE RULES — FOLLOW THESE:
             headers: {
               'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
               'Content-Type': 'application/json',
-              'HTTP-Referer': req.headers.origin ?? process.env.FRONTEND_URL ?? 'http://localhost:3000',
+              'HTTP-Referer': req.headers.origin ?? process.env.FRONTEND_URL ?? 'http://localhost:5173',
               'X-Title': '4Ms Health Questionnaire App'
             }
           }
@@ -428,31 +434,41 @@ app.get('/test-send-email', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5001;
-
-// Try to load HTTPS certificates (optional - falls back to HTTP if not found)
-const certPath = path.join(__dirname, '..', 'localhost+3.pem');
-const keyPath = path.join(__dirname, '..', 'localhost+3-key.pem');
+const USE_HTTPS = process.env.USE_HTTPS === 'true';
 
 let server;
-if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
-  // HTTPS server with mkcert certificates
-  const httpsOptions = {
-    key: fs.readFileSync(keyPath),
-    cert: fs.readFileSync(certPath)
-  };
-  server = https.createServer(httpsOptions, app);
-  server.listen(PORT, () => {
-    console.log(`🔒 AI Chat Backend server running on HTTPS port ${PORT}`);
-    console.log(`📡 Using OpenRouter API with DeepSeek Chat model`);
-    console.log(`🔗 Health check: https://localhost:${PORT}/api/health`);
-    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'https://localhost:5173'}`);
-  });
+
+if (USE_HTTPS) {
+  // HTTPS mode - for production or when explicitly enabled
+  const certPath = process.env.CERT_PATH || path.join(__dirname, '..', 'localhost+3.pem');
+  const keyPath = process.env.KEY_PATH || path.join(__dirname, '..', 'localhost+3-key.pem');
+  
+  if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+    const httpsOptions = {
+      key: fs.readFileSync(keyPath),
+      cert: fs.readFileSync(certPath)
+    };
+    server = https.createServer(httpsOptions, app);
+    server.listen(PORT, '0.0.0.0', () => {
+      console.log(`🔒 AI Chat Backend server running on HTTPS port ${PORT}`);
+      console.log(`📡 Using OpenRouter API with DeepSeek Chat model`);
+      console.log(`🔗 Health check: https://localhost:${PORT}/api/health`);
+      console.log(`🌐 Accepting requests from any origin (dynamic CORS)`);
+    });
+  } else {
+    console.error(`❌ HTTPS enabled but certificates not found!`);
+    console.error(`   Expected: ${certPath} and ${keyPath}`);
+    console.error(`   Run with USE_HTTPS=false or provide valid certificates`);
+    process.exit(1);
+  }
 } else {
-  // HTTP fallback (localhost only)
-  server = app.listen(PORT, () => {
+  // HTTP mode - default for local development and LAN access
+  server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 AI Chat Backend server running on HTTP port ${PORT}`);
     console.log(`📡 Using OpenRouter API with DeepSeek Chat model`);
     console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
-    console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:3000'}`);
+    console.log(`🌐 Network: http://YOUR_IP:${PORT} (accessible from LAN)`);
+    console.log(`🌐 Accepting requests from any origin (dynamic CORS)`);
+    console.log(`💡 To enable HTTPS: set USE_HTTPS=true in .env`);
   });
 } 
