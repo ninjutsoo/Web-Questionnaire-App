@@ -1,5 +1,6 @@
 import React from 'react';
 import { SoundOutlined } from '@ant-design/icons';
+import { Tooltip } from 'antd';
 
 function SpeechReader({ text }) {
   const speakText = () => {
@@ -51,25 +52,42 @@ function SpeechReader({ text }) {
   };
 
   return (
-    <button
-      onClick={speakText}
-      style={{
-        marginLeft: 8,
-        background: 'none',
-        border: 'none',
-        padding: 0,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        height: 24,
-        width: 24,
-        color: '#1890ff'
-      }}
-      aria-label="Read question aloud"
-      title="Read question aloud"
-    >
-      <SoundOutlined style={{ fontSize: 20, color: '#1890ff' }} />
-    </button>
+    <Tooltip title="Click to hear this question read aloud">
+      <button
+        onClick={speakText}
+        style={{
+          marginLeft: 4,
+          background: 'rgba(24, 144, 255, 0.1)',
+          border: '1px solid rgba(24, 144, 255, 0.2)',
+          borderRadius: 6,
+          padding: '4px 8px',
+          cursor: 'pointer',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 2,
+          color: '#1890ff',
+          fontSize: 10,
+          fontWeight: 600,
+          transition: 'all 0.2s ease',
+          minWidth: 48,
+          whiteSpace: 'nowrap'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'rgba(24, 144, 255, 0.15)';
+          e.currentTarget.style.borderColor = 'rgba(24, 144, 255, 0.4)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'rgba(24, 144, 255, 0.1)';
+          e.currentTarget.style.borderColor = 'rgba(24, 144, 255, 0.2)';
+        }}
+        aria-label="Read question aloud"
+      >
+        <SoundOutlined style={{ fontSize: 16 }} />
+        <span style={{ lineHeight: 1, whiteSpace: 'nowrap' }}>Listen</span>
+      </button>
+    </Tooltip>
   );
 }
 

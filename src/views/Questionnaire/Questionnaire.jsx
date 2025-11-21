@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Tabs, Button, Progress, message } from 'antd';
+import { Tabs, Button, Progress, message, Tooltip } from 'antd';
 import { HomeOutlined, LeftOutlined, SaveOutlined } from '@ant-design/icons';
 import { auth, db } from '../../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -409,29 +409,34 @@ export default function Questionnaire() {
 
       {/* Sticky Submit Button (not on review tab) */}
       {activeTab !== 'review' && (
-        <Button
-          type="primary"
-          icon={<SaveOutlined />}
-          onClick={handleSave}
-          style={{
-            position: 'fixed',
-            right: 32,
-            bottom: 32,
-            zIndex: 1000,
-            boxShadow: '0 4px 24px rgba(24, 144, 255, 0.18)',
-            borderRadius: '50%',
-            width: 64,
-            height: 64,
-            fontSize: 28,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, #1890ff 0%, #52c41a 100%)',
-            border: 'none',
-            transition: 'box-shadow 0.2s',
-          }}
-          title="Save Progress"
-        />
+        <Tooltip title="Click to save your progress" placement="left">
+          <Button
+            type="primary"
+            onClick={handleSave}
+            style={{
+              position: 'fixed',
+              right: 32,
+              bottom: 32,
+              zIndex: 1000,
+              boxShadow: '0 4px 24px rgba(24, 144, 255, 0.18)',
+              borderRadius: 12,
+              height: 56,
+              padding: '0 24px',
+              fontSize: 16,
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              background: 'linear-gradient(135deg, #1890ff 0%, #52c41a 100%)',
+              border: 'none',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            <SaveOutlined style={{ fontSize: 20 }} />
+            Save
+          </Button>
+        </Tooltip>
       )}
     </div>
   );

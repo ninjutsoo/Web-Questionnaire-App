@@ -1,5 +1,5 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button, Alert, Checkbox } from 'antd';
+import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button, Alert, Checkbox, Tooltip } from 'antd';
 import { HeartOutlined, CarOutlined, MedicineBoxOutlined, StarOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { AudioOutlined, QrcodeOutlined } from '@ant-design/icons';
 import SpeechReader from '../../components/SpeechReader';
@@ -461,35 +461,50 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
                 }}>
                   Additional details:
                 </Text>
-                <div style={{ display: 'flex', gap: '8px' }}>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   {/* QR Scanner button - only show for medication section, first question */}
                   {section === 'medication' && questionKey === 'q1' && (
-                    <Button
-                      icon={<QrcodeOutlined />}
-                      onClick={() => setScannerVisible(true)}
-                      style={{
-                        padding: '4px 8px',
-                        height: 'auto',
-                        backgroundColor: config.color,
-                        borderColor: config.color,
-                        color: 'white'
-                      }}
-                      title="Scan medication QR code"
-                    />
+                    <Tooltip title="Scan medication barcode or QR code">
+                      <Button
+                        icon={<QrcodeOutlined />}
+                        onClick={() => setScannerVisible(true)}
+                        style={{
+                          padding: '8px 16px',
+                          height: 'auto',
+                          backgroundColor: config.color,
+                          borderColor: config.color,
+                          color: 'white',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        Scan
+                      </Button>
+                    </Tooltip>
                   )}
                   {recognition && (
-                    <Button
-                      icon={<AudioOutlined />}
-                      onClick={() => startListening(questionKey)}
-                      loading={isListening[questionKey]}
-                      style={{
-                        padding: '4px 8px',
-                        height: 'auto',
-                        backgroundColor: isListening[questionKey] ? '#ff4d4f' : config.color,
-                        borderColor: isListening[questionKey] ? '#ff4d4f' : config.color,
-                        color: 'white'
-                      }}
-                    />
+                    <Tooltip title={isListening[questionKey] ? "Recording... Click to stop" : "Click to speak your answer"}>
+                      <Button
+                        icon={<AudioOutlined />}
+                        onClick={() => startListening(questionKey)}
+                        loading={isListening[questionKey]}
+                        style={{
+                          padding: '8px 16px',
+                          height: 'auto',
+                          backgroundColor: isListening[questionKey] ? '#ff4d4f' : config.color,
+                          borderColor: isListening[questionKey] ? '#ff4d4f' : config.color,
+                          color: 'white',
+                          fontWeight: 600,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6
+                        }}
+                      >
+                        {isListening[questionKey] ? 'Recording...' : 'Voice Input'}
+                      </Button>
+                    </Tooltip>
                   )}
                 </div>
               </div>

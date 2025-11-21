@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Button, Avatar, Dropdown, Space, Typography, Badge, Drawer } from 'antd';
+import { Layout, Menu, Button, Avatar, Dropdown, Space, Typography, Badge, Drawer, Tooltip } from 'antd';
 import { 
   FormOutlined, 
   RobotOutlined, 
@@ -152,11 +152,14 @@ const AppLayout = ({ children }) => {
         {/* Responsive Navigation */}
         {isMobile ? (
           <>
-            <Button
-              icon={<MenuOutlined />}
-              style={{ color: 'white', border: 'none', background: 'transparent', fontSize: 22 }}
-              onClick={() => setMobileMenuOpen(true)}
-            />
+            <Tooltip title="Open menu">
+              <Button
+                icon={<MenuOutlined />}
+                style={{ color: 'white', border: 'none', background: 'transparent', fontSize: 22 }}
+                onClick={() => setMobileMenuOpen(true)}
+                aria-label="Open navigation menu"
+              />
+            </Tooltip>
             <Drawer
               title={null}
               placement="left"
