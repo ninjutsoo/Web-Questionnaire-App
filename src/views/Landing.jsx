@@ -19,10 +19,6 @@ const Landing = () => {
         {/* Hero Section */}
         <div className="landing-hero">
           <div className="hero-content">
-            <div className="landing-badge">
-              <SmileOutlined />
-              Designed for older adults
-            </div>
             <img
               src={logoSrc}
               alt="4Ms Health Assessment logo"
