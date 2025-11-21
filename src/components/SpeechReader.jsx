@@ -1,6 +1,6 @@
 import React from 'react';
-import { SoundOutlined } from '@ant-design/icons';
 import { Tooltip } from 'antd';
+import { SoundOutlined } from '@ant-design/icons';
 
 function SpeechReader({ text }) {
   const speakText = () => {

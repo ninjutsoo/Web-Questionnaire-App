@@ -1,6 +1,53 @@
 import { db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
+const LIKERT_SLIDER_CONFIG = {
+  happiness: {
+    min: 1,
+    max: 10,
+    step: 1,
+    scaleMinLabel: 'Not at all happy',
+    scaleMaxLabel: 'Very happy',
+    neutralLabel: 'Neutral'
+  },
+  memory: {
+    min: 1,
+    max: 10,
+    step: 1,
+    scaleMinLabel: 'Not worried',
+    scaleMaxLabel: 'Very worried',
+    neutralLabel: 'Somewhat worried'
+  },
+  sleep: {
+    min: 1,
+    max: 10,
+    step: 1,
+    scaleMinLabel: 'Very poor sleep',
+    scaleMaxLabel: 'Excellent sleep',
+    neutralLabel: 'Okay sleep'
+  }
+};
+
+const applyLikertSliderConfig = (questionnaire) => {
+  if (!questionnaire?.sections?.mind?.questions) return questionnaire;
+  const updatedQuestions = { ...questionnaire.sections.mind.questions };
+  Object.entries(LIKERT_SLIDER_CONFIG).forEach(([key, config]) => {
+    if (updatedQuestions[key]?.type === 'slider') {
+      updatedQuestions[key] = { ...updatedQuestions[key], ...config };
+    }
+  });
+  return {
+    ...questionnaire,
+    sections: {
+      ...questionnaire.sections,
+      mind: {
+        ...questionnaire.sections.mind,
+        questions: updatedQuestions
+      }
+    }
+  };
+};
+
 // Get the questionnaire structure
 export const getQuestionnaire = async () => {
   try {
@@ -10,12 +57,13 @@ export const getQuestionnaire = async () => {
     
     if (docSnap.exists()) {
       console.log('Questionnaire loaded from Firebase successfully');
-      const questionnaireData = docSnap.data();
+      const questionnaireData = applyLikertSliderConfig(docSnap.data());
       
       // Check if we need to update with new mobilityType question
       if (!questionnaireData.sections?.mobility?.questions?.mobilityType) {
         console.log('Updating existing questionnaire with new mobility question...');
-        return await updateQuestionnaireWithMobilityType();
+        const updated = await updateQuestionnaireWithMobilityType();
+        return applyLikertSliderConfig(updated);
       }
       
       return questionnaireData;
@@ -44,9 +92,9 @@ export const getQuestionnaire = async () => {
           },
           mind: {
             questions: {
-              happiness: { text: "How happy do you feel most days?", type: "slider", min: 0, max: 100 },
-              memory: { text: "How worried are you about your memory?", type: "slider", min: 0, max: 100 },
-              sleep: { text: "How would you rate your sleep quality?", type: "slider", min: 0, max: 100 },
+              happiness: { text: "How happy do you feel most days?", type: "slider", ...LIKERT_SLIDER_CONFIG.happiness },
+              memory: { text: "How worried are you about your memory?", type: "slider", ...LIKERT_SLIDER_CONFIG.memory },
+              sleep: { text: "How would you rate your sleep quality?", type: "slider", ...LIKERT_SLIDER_CONFIG.sleep },
               q4: { text: "What mental health concerns do you have?", type: "tag_text", tags: ["Anxiety", "Depression", "Stress", "Loneliness", "Grief", "Fear"] },
               q5: { text: "What causes you the most stress?", type: "tag_text", tags: ["Health", "Family", "Money", "Safety", "Future", "Memory"] },
               q6: { text: "What helps you cope with difficult times?", type: "tag_text", tags: ["Prayer", "Exercise", "Family", "Friends", "Hobbies", "Professional Help"] },
@@ -93,9 +141,10 @@ export const getQuestionnaire = async () => {
         updatedAt: new Date()
       };
       
-      await setDoc(docRef, defaultQuestionnaire);
+      const questionnaireWithLikert = applyLikertSliderConfig(defaultQuestionnaire);
+      await setDoc(docRef, questionnaireWithLikert);
       console.log('Default questionnaire created successfully');
-      return defaultQuestionnaire;
+      return questionnaireWithLikert;
     }
   } catch (error) {
     console.error('Error getting questionnaire:', error);
@@ -109,7 +158,7 @@ export const getQuestionnaire = async () => {
 
 // Fallback questionnaire in case Firebase fails
 const getFallbackQuestionnaire = () => {
-  return {
+  return applyLikertSliderConfig({
     name: "4 Ms Health Assessment",
     version: "1.0",
     sections: {
@@ -131,9 +180,9 @@ const getFallbackQuestionnaire = () => {
       },
       mind: {
         questions: {
-          happiness: { text: "How happy do you feel most days?", type: "slider", min: 0, max: 100 },
-          memory: { text: "How worried are you about your memory?", type: "slider", min: 0, max: 100 },
-          sleep: { text: "How would you rate your sleep quality?", type: "slider", min: 0, max: 100 },
+          happiness: { text: "How happy do you feel most days?", type: "slider", ...LIKERT_SLIDER_CONFIG.happiness },
+          memory: { text: "How worried are you about your memory?", type: "slider", ...LIKERT_SLIDER_CONFIG.memory },
+          sleep: { text: "How would you rate your sleep quality?", type: "slider", ...LIKERT_SLIDER_CONFIG.sleep },
           q4: { text: "What mental health concerns do you have?", type: "tag_text", tags: ["Anxiety", "Depression", "Stress", "Loneliness", "Grief", "Fear"] },
           q5: { text: "What causes you the most stress?", type: "tag_text", tags: ["Health", "Family", "Money", "Safety", "Future", "Memory"] },
           q6: { text: "What helps you cope with difficult times?", type: "tag_text", tags: ["Prayer", "Exercise", "Family", "Friends", "Hobbies", "Professional Help"] },
@@ -178,7 +227,7 @@ const getFallbackQuestionnaire = () => {
     },
     isActive: true,
     updatedAt: new Date()
-  };
+  });
 };
 
 // Create or get user session

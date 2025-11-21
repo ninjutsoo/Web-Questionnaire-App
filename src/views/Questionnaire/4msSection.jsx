@@ -55,22 +55,56 @@ const SECTION_CONFIG = {
   }
 };
 
+// Likert label helpers for slider questions
+const LIKERT_LABELS = {
+  happiness: { min: 'Not at all happy', max: 'Very happy' },
+  memory: { min: 'Not worried', max: 'Very worried' },
+  sleep: { min: 'Very poor sleep', max: 'Excellent sleep' }
+};
+const DEFAULT_LIKERT_LABELS = { min: 'Low', max: 'High' };
+
+const normalizeLikertValue = (value) => {
+  if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
+  if (value > 10) {
+    const scaled = (value / 100) * 9 + 1; // map 0-100 legacy values into 1-10
+    return Math.min(10, Math.max(1, Math.round(scaled)));
+  }
+  if (value < 1) return 1;
+  return Math.min(10, Math.round(value));
+};
+
+const normalizeSliderResponses = (source, sectionQuestions) => {
+  const normalized = { ...source };
+  Object.entries(sectionQuestions).forEach(([questionKey, question]) => {
+    if (question?.type !== 'slider') return;
+    const adjusted = normalizeLikertValue(source?.[questionKey]);
+    if (typeof adjusted === 'number') {
+      normalized[questionKey] = adjusted;
+    } else {
+      delete normalized[questionKey];
+    }
+  });
+  return normalized;
+};
+
 const FourMSection = forwardRef(({ section, questionnaire, responses, userProfile, onLocalChange }, ref) => {
   const [localResponses, setLocalResponses] = useState(responses || {});
   const [isListening, setIsListening] = useState({});
   const [recognition, setRecognition] = useState(null);
   const [scannerVisible, setScannerVisible] = useState(false);
+  const [mobilityTipSending, setMobilityTipSending] = useState(false);
 
   const config = SECTION_CONFIG[section];
 
   useEffect(() => {
-    const updatedResponses = responses || {};
+    const sectionQuestions = questionnaire?.sections?.[section]?.questions || {};
+    const normalized = normalizeSliderResponses(responses || {}, sectionQuestions);
     // Pre-populate caregiverEmail from userProfile if not already set
-    if (section === 'mobility' && userProfile?.caregiverEmail && !updatedResponses.caregiverEmail) {
-      updatedResponses.caregiverEmail = userProfile.caregiverEmail;
+    if (section === 'mobility' && userProfile?.caregiverEmail && !normalized.caregiverEmail) {
+      normalized.caregiverEmail = userProfile.caregiverEmail;
     }
-    setLocalResponses(updatedResponses);
-  }, [responses, userProfile, section]);
+    setLocalResponses(normalized);
+  }, [responses, userProfile, section, questionnaire]);
 
   // Expose getCurrentData method to parent
   useImperativeHandle(ref, () => ({
@@ -219,6 +253,15 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
 
   const renderQuestion = (questionKey, question, index) => {
     if (question.type === 'slider') {
+      const labels = LIKERT_LABELS[questionKey] || {
+        min: question.scaleMinLabel || DEFAULT_LIKERT_LABELS.min,
+        max: question.scaleMaxLabel || DEFAULT_LIKERT_LABELS.max
+      };
+      const rawValue = localResponses[questionKey];
+      const hasValue = typeof rawValue === 'number';
+      const displayValue = hasValue ? normalizeLikertValue(rawValue) : 5;
+      const sliderColor = hasValue ? config.color : '#d9d9d9';
+
       return (
         <Card 
           key={questionKey}
@@ -248,15 +291,40 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
         >
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={18}>
-              <div style={{ padding: '10px 0' }}>
+              <div style={{ padding: '10px 20px 10px 10px' }}>
+                {/* Labels above slider */}
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  fontSize: 'clamp(11px, 2.5vw, 13px)', 
+                  color: '#666',
+                  marginBottom: '8px',
+                  fontWeight: 500
+                }}>
+                  <span>{labels.min}</span>
+                  <span style={{ textAlign: 'center', color: '#999' }}>
+                    {question.neutralLabel || 'Neutral'}
+                  </span>
+                  <span>{labels.max}</span>
+                </div>
+                
+                {/* Slider without bottom marks to avoid duplication */}
                 <Slider
-                  min={question.min || 0}
-                  max={question.max || 100}
-                  value={localResponses[questionKey] || 50}
+                  min={question.min || 1}
+                  max={question.max || 10}
+                  step={question.step || 1}
+                  included={hasValue}
+                  value={displayValue}
                   onChange={(value) => handleSliderChange(questionKey, value)}
-                  tooltip={{ formatter: (value) => `${value}%` }}
-                  trackStyle={{ backgroundColor: config.color, height: 6 }}
-                  handleStyle={{ borderColor: config.color, borderWidth: 2, height: 20, width: 20 }}
+                  tooltip={{ formatter: (value) => hasValue ? `${value}/10` : 'Slide to choose' }}
+                  trackStyle={{ backgroundColor: sliderColor, height: 6 }}
+                  handleStyle={{ 
+                    borderColor: sliderColor, 
+                    borderWidth: 2, 
+                    height: 20, 
+                    width: 20, 
+                    boxShadow: hasValue ? undefined : '0 0 0 2px rgba(0,0,0,0.08) inset' 
+                  }}
                   railStyle={{ height: 6 }}
                 />
               </div>
@@ -266,10 +334,10 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
                 textAlign: 'center', 
                 fontSize: 'clamp(16px, 4vw, 18px)', 
                 fontWeight: 'bold', 
-                color: config.color,
+                color: hasValue ? config.color : '#bfbfbf',
                 padding: '5px 0'
               }}>
-                {localResponses[questionKey] || 50}%
+                {hasValue ? `${displayValue}/10` : 'Not set yet'}
               </div>
             </Col>
           </Row>
@@ -279,14 +347,13 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
       const selectedType = localResponses[questionKey];
       const tips = question.tips?.[selectedType];
       const caregiverEmail = localResponses.caregiverEmail || '';
-      const [sending, setSending] = useState(false);
 
       const handleSendCaregiverTip = async () => {
         if (!caregiverEmail || !selectedType) {
           message.error('Please enter a caregiver email and select a mobility type.');
           return;
         }
-        setSending(true);
+        setMobilityTipSending(true);
         try {
           const res = await axios.post(getApiEndpoint('/send-caregiver-tip'), {
             caregiverEmail,
@@ -300,7 +367,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
         } catch (err) {
           message.error(err.response?.data?.error || err.message || 'Failed to send email.');
         } finally {
-          setSending(false);
+          setMobilityTipSending(false);
         }
       };
 
@@ -361,7 +428,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
             />
             <Button
               type="primary"
-              loading={sending}
+              loading={mobilityTipSending}
               onClick={handleSendCaregiverTip}
               style={{ width: '100%' }}
             >

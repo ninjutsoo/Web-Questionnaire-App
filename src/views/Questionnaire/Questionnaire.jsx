@@ -410,28 +410,28 @@ export default function Questionnaire() {
       {/* Sticky Submit Button (not on review tab) */}
       {activeTab !== 'review' && (
         <Tooltip title="Click to save your progress" placement="left">
-          <Button
-            type="primary"
-            onClick={handleSave}
-            style={{
-              position: 'fixed',
-              right: 32,
-              bottom: 32,
-              zIndex: 1000,
-              boxShadow: '0 4px 24px rgba(24, 144, 255, 0.18)',
+        <Button
+          type="primary"
+          onClick={handleSave}
+          style={{
+            position: 'fixed',
+            right: 32,
+            bottom: 32,
+            zIndex: 1000,
+            boxShadow: '0 4px 24px rgba(24, 144, 255, 0.18)',
               borderRadius: 12,
               height: 56,
               padding: '0 24px',
               fontSize: 16,
               fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
               gap: 8,
-              background: 'linear-gradient(135deg, #1890ff 0%, #52c41a 100%)',
-              border: 'none',
+            background: 'linear-gradient(135deg, #1890ff 0%, #52c41a 100%)',
+            border: 'none',
               transition: 'all 0.2s ease',
-            }}
+          }}
           >
             <SaveOutlined style={{ fontSize: 20 }} />
             Save

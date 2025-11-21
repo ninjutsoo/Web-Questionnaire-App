@@ -802,23 +802,22 @@ const AIChatbot = () => {
               fontSize: isMobile ? 13 : 14
             }}
           />
-          <Tooltip title={isListening ? "Click to stop recording" : "Click to use voice input"}>
-            <Button
-              type={isListening ? "primary" : "default"}
-              icon={isListening ? <AudioMutedOutlined /> : <AudioOutlined />}
-              onClick={isListening ? stopListening : startListening}
-              style={{
-                borderRadius: '50%',
-                width: isMobile ? '36px' : '40px',
-                height: isMobile ? '36px' : '40px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: isListening ? '#ff4d4f' : undefined,
-                borderColor: isListening ? '#ff4d4f' : undefined
-              }}
-            />
-          </Tooltip>
+          <Button
+            type={isListening ? "primary" : "default"}
+            icon={isListening ? <AudioMutedOutlined /> : <AudioOutlined />}
+            onClick={isListening ? stopListening : startListening}
+            style={{
+              borderRadius: '50%',
+              width: isMobile ? '36px' : '40px',
+              height: isMobile ? '36px' : '40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: isListening ? '#ff4d4f' : undefined,
+              borderColor: isListening ? '#ff4d4f' : undefined
+            }}
+            title={isListening ? "Stop listening" : "Start voice input"}
+          />
           <Button
             type={isOnCooldown ? "default" : "primary"}
             icon={isOnCooldown ? <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{sendCooldown}</span> : <SendOutlined />}
