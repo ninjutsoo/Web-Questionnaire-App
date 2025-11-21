@@ -10,6 +10,7 @@ import {
   MobileOutlined,
   UserOutlined,
   GoogleOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import logoSrc from "../../assets/logo.svg";
 
@@ -24,6 +25,8 @@ export default function Signup() {
     email: "",
     phone: "",
     username: "",
+    age: "",
+    caregiverEmail: "",
     // NO password / confirmPassword here
   });
   const [loading, setLoading] = useState(false);
@@ -53,6 +56,8 @@ export default function Signup() {
       email,
       phone,
       username,
+      age,
+      caregiverEmail,
       password,
       confirmPassword,
     } = values;
@@ -63,6 +68,7 @@ export default function Signup() {
       !email ||
       !phone ||
       !username ||
+      !age ||
       !password ||
       !confirmPassword
     ) {
@@ -74,7 +80,7 @@ export default function Signup() {
       return;
     }
 
-    const payload = { firstName, lastName, email, phone, username, password };
+    const payload = { firstName, lastName, email, phone, username, age, caregiverEmail, password };
     setLoading(true);
     const result = await signUpWithEmail(payload);
     setLoading(false);
@@ -158,8 +164,8 @@ export default function Signup() {
             rules={[
               { required: true, message: "Phone number is required." },
               {
-                pattern: /^\d{10,15}$/,
-                message: "Please enter a valid phone number (10–15 digits).",
+                pattern: /^\d{10}$/,
+                message: "Please enter a valid 10-digit phone number (no country code needed).",
               },
             ]}
           />
@@ -172,6 +178,34 @@ export default function Signup() {
             value={formData.username}
             onChange={handleChange}
             rules={[{ required: true, message: "Username is required." }]}
+          />
+
+          {/* ===== Age ===== */}
+          <ProFormText
+            fieldProps={{ size: "large", prefix: <CalendarOutlined /> }}
+            name="age"
+            placeholder="Age"
+            value={formData.age}
+            onChange={handleChange}
+            rules={[
+              { required: true, message: "Age is required." },
+              {
+                pattern: /^[1-9]\d?$|^1[01]\d$|^120$/,
+                message: "Please enter a valid age (1-120).",
+              },
+            ]}
+          />
+
+          {/* ===== Caregiver Email (Optional) ===== */}
+          <ProFormText
+            fieldProps={{ size: "large", prefix: <MailOutlined /> }}
+            name="caregiverEmail"
+            placeholder="Caregiver Email (Optional)"
+            value={formData.caregiverEmail}
+            onChange={handleChange}
+            rules={[
+              { type: "email", message: "Please enter a valid email." },
+            ]}
           />
 
           {/* ===== Password (no value/onChange) ===== */}

@@ -55,7 +55,7 @@ const SECTION_CONFIG = {
   }
 };
 
-const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalChange }, ref) => {
+const FourMSection = forwardRef(({ section, questionnaire, responses, userProfile, onLocalChange }, ref) => {
   const [localResponses, setLocalResponses] = useState(responses || {});
   const [isListening, setIsListening] = useState({});
   const [recognition, setRecognition] = useState(null);
@@ -64,8 +64,13 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
   const config = SECTION_CONFIG[section];
 
   useEffect(() => {
-    setLocalResponses(responses || {});
-  }, [responses]);
+    const updatedResponses = responses || {};
+    // Pre-populate caregiverEmail from userProfile if not already set
+    if (section === 'mobility' && userProfile?.caregiverEmail && !updatedResponses.caregiverEmail) {
+      updatedResponses.caregiverEmail = userProfile.caregiverEmail;
+    }
+    setLocalResponses(updatedResponses);
+  }, [responses, userProfile, section]);
 
   // Expose getCurrentData method to parent
   useImperativeHandle(ref, () => ({

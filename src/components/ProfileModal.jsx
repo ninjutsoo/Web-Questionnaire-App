@@ -37,7 +37,8 @@ const ProfileModal = ({ open, onClose, user }) => {
         firstName: firstName || '',
         lastName: lastName || '',
         email: user.email || '',
-        phone: firestoreUser?.phone || user.phoneNumber || ''
+        phone: firestoreUser?.phone || user.phoneNumber || '',
+        caregiverEmail: firestoreUser?.caregiverEmail || ''
       });
     }
   }, [user, firestoreUser, open, form]);
@@ -59,9 +60,14 @@ const ProfileModal = ({ open, onClose, user }) => {
         setLoading(false);
         return;
       }
-      // Update phone in Firestore
+      // Update phone and caregiverEmail in Firestore
       const userDocRef = doc(db, 'Users', user.uid);
-      await setDoc(userDocRef, { phone: values.phone, firstName: values.firstName, lastName: values.lastName }, { merge: true });
+      await setDoc(userDocRef, { 
+        phone: values.phone, 
+        firstName: values.firstName, 
+        lastName: values.lastName,
+        caregiverEmail: values.caregiverEmail || ''
+      }, { merge: true });
       message.success('Profile updated successfully!');
       onClose();
       window.location.reload();
@@ -82,7 +88,7 @@ const ProfileModal = ({ open, onClose, user }) => {
       okText="Save Changes"
       destroyOnClose
     >
-      <Form form={form} layout="vertical" initialValues={{ firstName: '', lastName: '', email: '', phone: '' }}>
+      <Form form={form} layout="vertical" initialValues={{ firstName: '', lastName: '', email: '', phone: '', caregiverEmail: '' }}>
         <Form.Item label="First Name" name="firstName" rules={[{ required: true, message: 'Please enter your first name' }]}> 
           <Input />
         </Form.Item>
@@ -94,6 +100,9 @@ const ProfileModal = ({ open, onClose, user }) => {
         </Form.Item>
         <Form.Item label="Phone" name="phone"> 
           <Input />
+        </Form.Item>
+        <Form.Item label="Caregiver Email" name="caregiverEmail" rules={[{ type: 'email', message: 'Please enter a valid email' }]}> 
+          <Input placeholder="Optional" />
         </Form.Item>
       </Form>
     </Modal>

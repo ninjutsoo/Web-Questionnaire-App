@@ -63,6 +63,8 @@ export async function signUpWithGoogle() {
       email: user.email,
       phone: user.phoneNumber || "",
       username: "", // let them fill-in later if needed
+      age: "",
+      caregiverEmail: "",
       createdAt: serverTimestamp(),
     });
 
@@ -90,6 +92,8 @@ export async function signUpWithGoogle() {
  * @param {string} data.email
  * @param {string} data.phone
  * @param {string} data.username
+ * @param {string} data.age
+ * @param {string} data.caregiverEmail
  * @param {string} data.password
  * @returns {Promise<{ success: boolean, message?: string }>}
  */
@@ -100,6 +104,8 @@ export async function signUpWithEmail({
   email,
   phone,
   username,
+  age,
+  caregiverEmail,
   password,
 }) {
   try {
@@ -142,6 +148,8 @@ export async function signUpWithEmail({
       email,
       phone,
       username,
+      age: age || "",
+      caregiverEmail: caregiverEmail || "",
       createdAt: serverTimestamp(),
     });
 
@@ -190,6 +198,8 @@ export async function signInWithEmail({ email, password }) {
       lastName: userData.lastName,
       phone: userData.phone,
       username: userData.username,
+      age: userData.age || "",
+      caregiverEmail: userData.caregiverEmail || "",
       createdAt: userData.createdAt?.toDate?.() || null,
       // …spread any other Firestore fields
     };
@@ -236,7 +246,7 @@ export async function signInWithUsername({ username, password }) {
     // 2) Now attempt to sign in with that email + provided password
     const userCred = await signInWithEmailAndPassword(auth, email, password);
 
-    // 3) If success, reconstruct the “_currentUser” exactly as above:
+    // 3) If success, reconstruct the "_currentUser" exactly as above:
     _currentUser = {
       uid,
       email: userCred.user.email,
@@ -244,6 +254,8 @@ export async function signInWithUsername({ username, password }) {
       lastName: data.lastName,
       phone: data.phone,
       username: data.username,
+      age: data.age || "",
+      caregiverEmail: data.caregiverEmail || "",
       createdAt: data.createdAt?.toDate?.() || null,
       // …any other Firestore fields…
     };
@@ -286,6 +298,8 @@ export function watchAuthState(onChange) {
             lastName: d.lastName,
             phone: d.phone,
             username: d.username,
+            age: d.age || "",
+            caregiverEmail: d.caregiverEmail || "",
             createdAt: d.createdAt?.toDate?.() || null,
             // …etc
           };
