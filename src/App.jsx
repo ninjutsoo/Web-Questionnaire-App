@@ -1,9 +1,7 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
 
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import Landing from "./views/Landing.jsx";
 import Signup from "./views/Signup/Signup.jsx";
 import Signin from "./views/login/Signin.jsx";
 import Home from "./views/Home.jsx";
@@ -13,10 +11,10 @@ import AIChatbot from "./components/AIChatbot.jsx";
 import AppLayout from "./components/AppLayout.jsx";
 
 function App() {
-  const [count, setCount] = useState(0)
   return (
     <Router>
       <Routes>
+        <Route path="/" element={<Landing />} />
         <Route path="/signin" element={<Signin />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/home" element={
@@ -39,7 +37,7 @@ function App() {
             <AIChatbot />
           </AppLayout>
         } />
-        <Route path="*" element={<Navigate to="/signin" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
   );
