@@ -14,43 +14,43 @@ const { TextArea } = Input;
 // Section configuration
 const SECTION_CONFIG = {
   mind: {
-    title: "🧠 Your Mental Well-being",
-    description: "Tell us about your thoughts, feelings, and mental health. We want to understand how you're doing emotionally.",
+    title: "🧠 Mentation",
+    description: "Monitor your mental well-being by making note of changes in sleep, memory, mood, or stress.",
     icon: HeartOutlined,
     color: '#722ed1',
     backgroundColor: '#f9f0ff',
     borderColor: '#d3adf7',
-    tipText: "Taking care of your mental health is just as important as physical health. Don't forget to click 'Submit' to save your responses.",
+    tipText: "Share With Your Doctor: Bring this information to every medical visit. Tracking your changes in one place helps your healthcare team provide you with 4M care. Don't forget to tap Save to save your responses.",
     tipColor: '#722ed1'
   },
   mobility: {
-    title: "🚶‍♀️ How You Move Around and Stay Active",
-    description: "Tell us about your mobility and movement. We want to help you stay active and independent.",
+    title: "🚶‍♀️ Mobility",
+    description: "Track how you are moving day to day. Log falls, changes in balance or strength, exercises you do, and any challenges with walking or movement.",
     icon: CarOutlined,
     color: '#fa541c',
     backgroundColor: '#fff2e8',
     borderColor: '#ffbb96',
-    tipText: "Staying active helps maintain your independence and improves your overall health. Don't forget to click 'Submit' to save your mobility information.",
+    tipText: "Share With Your Doctor: Bring this information to every medical visit. Tracking your changes in one place helps your healthcare team provide you with 4M care. Don't forget to tap Save to save your mobility information.",
     tipColor: '#d46b08'
   },
   medication: {
-    title: "💊 Your Medications and Health Management",
-    description: "Tell us about your medications and how you manage your health. We want to ensure you're taking care of yourself properly.",
+    title: "💊 Medication",
+    description: "Record all medications you take including prescriptions and over-the-counter medicines. Add notes if you notice side effects, questions, or concerns.",
     icon: MedicineBoxOutlined,
     color: '#1890ff',
     backgroundColor: '#e6f7ff',
     borderColor: '#91d5ff',
-    tipText: "Proper medication management is crucial for your health. Don't forget to click 'Submit' to save your medication information.",
+    tipText: "Share With Your Doctor: Bring this information to every medical visit. Tracking your changes in one place helps your healthcare team provide you with 4M care. Don't forget to tap Save to save your medication information.",
     tipColor: '#096dd9'
   },
   matters: {
-    title: "⭐ What Matters Most to You",
-    description: "Tell us about your priorities and what's important in your life. We want to understand your goals and preferences.",
+    title: "⭐ What Matters",
+    description: "Keep track of what is important to you. Update your goals, concerns, and daily needs as they change.",
     icon: StarOutlined,
     color: '#52c41a',
     backgroundColor: '#f6ffed',
     borderColor: '#b7eb8f',
-    tipText: "Understanding what matters to you helps us provide better care. Don't forget to click 'Submit' to save your preferences.",
+    tipText: "Share With Your Doctor: Bring this information to every medical visit. Tracking your changes in one place helps your healthcare team provide you with 4M care. Don't forget to tap Save to save your preferences.",
     tipColor: '#389e0d'
   }
 };
@@ -552,7 +552,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
                     </Tooltip>
                   )}
                   {recognition && (
-                    <Tooltip title={isListening[questionKey] ? "Recording... Click to stop" : "Click to speak your answer"}>
+                    <Tooltip title={isListening[questionKey] ? "Recording... Tap to stop" : "Tap to speak your answer"}>
                       <Button
                         icon={<AudioOutlined />}
                         onClick={() => startListening(questionKey)}

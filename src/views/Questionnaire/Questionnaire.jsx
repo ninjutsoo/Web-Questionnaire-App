@@ -300,7 +300,7 @@ export default function Questionnaire() {
     },
     {
       key: 'review',
-      label: 'Review & Submit',
+      label: 'Review & Save',
       children: (
         <ReviewSubmit 
           questionnaire={questionnaire}
@@ -407,9 +407,9 @@ export default function Questionnaire() {
         />
       </div>
 
-      {/* Sticky Submit Button (not on review tab) */}
+      {/* Sticky Save Button (not on review tab) */}
       {activeTab !== 'review' && (
-        <Tooltip title="Click to save your progress" placement="left">
+        <Tooltip title="Tap to save your progress" placement="left">
         <Button
           type="primary"
           onClick={handleSave}

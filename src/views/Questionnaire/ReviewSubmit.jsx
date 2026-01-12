@@ -188,12 +188,12 @@ export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }
     const overallPercentage = Math.round((totalAnswered / totalQuestions) * 100);
 
     if (overallPercentage === 0) {
-      message.warning('Please answer at least some questions before submitting.');
+      message.warning('Please answer at least some questions before saving.');
       return;
     }
 
     if (overallPercentage < 25) {
-      message.info(`You've completed ${overallPercentage}% of the assessment. You can submit now or continue answering more questions.`);
+      message.info(`You've completed ${overallPercentage}% of the assessment. You can save now or continue answering more questions.`);
     }
 
     onFinalSubmit();
@@ -235,7 +235,7 @@ export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }
             </Title>
             {overallPercentage < 50 && (
               <Text style={{ fontSize: '16px', color: '#fa8c16' }}>
-                💡 Remember: All questions are optional. You can submit anytime or continue answering.
+                💡 Remember: All questions are optional. You can save anytime or continue answering.
               </Text>
             )}
           </div>
@@ -284,7 +284,7 @@ export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }
             }}
             onClick={handleSubmit}
           >
-            Submit Assessment
+            Save Assessment
           </Button>
         </Space>
         
@@ -297,7 +297,7 @@ export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }
         }}>
           <CheckCircleOutlined style={{ color: '#13c2c2', fontSize: '20px', marginRight: '10px' }} />
           <Text style={{ fontSize: '16px', color: '#006d75' }}>
-            Your responses are automatically saved. After submission, you can still return to update your assessment anytime.
+            Your responses are automatically saved. After saving, you can still return to update your assessment anytime.
           </Text>
         </div>
       </div>

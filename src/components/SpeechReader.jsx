@@ -52,7 +52,7 @@ function SpeechReader({ text }) {
   };
 
   return (
-    <Tooltip title="Click to hear this question read aloud">
+    <Tooltip title="Tap to hear this question read aloud">
       <button
         onClick={speakText}
         style={{

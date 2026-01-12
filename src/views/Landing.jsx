@@ -1,11 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  SaveOutlined,
-  SmileOutlined,
-  ClockCircleOutlined,
-  PhoneOutlined,
-  SafetyOutlined,
   HeartOutlined,
   MedicineBoxOutlined,
   BulbOutlined,
@@ -61,7 +56,6 @@ const Landing = () => {
 
         {/* How to Use This App Section */}
         <div className="how-to-use-section">
-          <h2>How to Use This App</h2>
           <div className="how-to-grid">
             <div className="how-to-card">
               <div className="how-to-icon what-matters-bg">
@@ -99,58 +93,6 @@ const Landing = () => {
           <div className="share-content">
             <h2>Share With Your Doctor</h2>
             <p>Bring this information to every medical visit. Tracking your changes in one place helps your healthcare team provide you with 4M care.</p>
-          </div>
-        </div>
-
-        {/* Features Grid */}
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">
-              <SaveOutlined />
-            </div>
-            <h3>Save Anytime</h3>
-            <p>Take breaks and save your progress. Come back whenever you're ready.</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <ClockCircleOutlined />
-            </div>
-            <h3>No Time Limit</h3>
-            <p>Answer questions at your own pace. There's no rush.</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <SmileOutlined />
-            </div>
-            <h3>Easy to Read</h3>
-            <p>Large text and clear design make it simple to understand.</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <PhoneOutlined />
-            </div>
-            <h3>Get Help Anytime</h3>
-            <p>Have a caregiver or family member help you fill it out.</p>
-          </div>
-
-          <div className="feature-card">
-            <div className="feature-icon">
-              <SafetyOutlined />
-            </div>
-            <h3>Private & Secure</h3>
-            <p>Your answers are protected and shared only with your care team.</p>
-          </div>
-
-          <div className="feature-card feature-card-accent">
-            <h3>How It Works</h3>
-            <ol className="steps-list">
-              <li>Create an account or sign in</li>
-              <li>Answer questions in 4 sections</li>
-              <li>Save your progress anytime</li>
-            </ol>
           </div>
         </div>
       </div>
