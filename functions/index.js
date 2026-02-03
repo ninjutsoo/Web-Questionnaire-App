@@ -301,7 +301,8 @@ const MAX_QUESTIONS = 6;
 function normalizeQuestion(s) {
   if (typeof s !== 'string') return '';
   let q = s.trim();
-  q = q.replace(/^[\s\[\],"]+/, '').replace(/[\s\[\],"]+$/, '');
+  // Match leading/trailing whitespace, brackets, comma, double-quote (] escaped in class)
+  q = q.replace(/^[\s\],["]+/, '').replace(/[\s\],["]+$/, '');
   if (q.length > MAX_QUESTION_LENGTH) {
     const cut = q.slice(0, MAX_QUESTION_LENGTH);
     const lastSpace = cut.lastIndexOf(' ');
@@ -327,7 +328,7 @@ function parseQuickQuestionsResponse(text) {
     try {
       const parsed = JSON.parse(jsonStr);
       if (Array.isArray(parsed)) questions = parsed.map(s => String(s || '').trim()).filter(Boolean);
-    } catch (_) {
+    } catch {
       const quoted = clean.match(/"([^"]*?)"/g);
       if (quoted) questions = quoted.map(m => m.slice(1, -1).replace(/\\"/g, '"').trim()).filter(Boolean);
     }

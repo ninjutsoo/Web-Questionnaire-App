@@ -1,13 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import mkcert from 'vite-plugin-mkcert'
+
+let mkcert
+try {
+  mkcert = (await import('vite-plugin-mkcert')).default
+} catch {
+  mkcert = null
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
     react(),
-    // Only use HTTPS if explicitly enabled via environment variable
-    process.env.USE_HTTPS === 'true' ? mkcert() : null
+    process.env.USE_HTTPS === 'true' && mkcert ? mkcert() : null
   ].filter(Boolean),
   server: {
     host: '0.0.0.0',
