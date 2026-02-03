@@ -34,10 +34,6 @@ jobs:
       - name: Create functions .env from GitHub Secrets
         run: |
           echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > functions/.env
-          echo "SENDGRID_API_KEY=${{ secrets.SENDGRID_API_KEY }}" >> functions/.env
-        env:
-          GEMINI_API_KEY: "${{ secrets.GEMINI_API_KEY }}"
-          SENDGRID_API_KEY: "${{ secrets.SENDGRID_API_KEY }}"
 
       - name: Deploy to Firebase
         run: firebase deploy --only hosting,functions --non-interactive

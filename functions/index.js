@@ -370,7 +370,8 @@ User's health assessment data:`;
       const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
       questions = JSON.parse(cleanText);
       if (!Array.isArray(questions)) throw new Error('Not an array');
-    } catch (_parseErr) {
+    // eslint-disable-next-line no-unused-vars
+    } catch (parseErr) {
       const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
       for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
