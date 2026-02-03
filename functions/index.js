@@ -293,9 +293,60 @@ RESPONSE RULES — FOLLOW THESE:
   }
 });
 
+// Parse and normalize AI quick-questions response: 4-6 items, each ≤100 chars
+const MAX_QUESTION_LENGTH = 100;
+const MIN_QUESTIONS = 4;
+const MAX_QUESTIONS = 6;
+
+function normalizeQuestion(s) {
+  if (typeof s !== 'string') return '';
+  let q = s.trim();
+  q = q.replace(/^[\s\[\],"]+/, '').replace(/[\s\[\],"]+$/, '');
+  if (q.length > MAX_QUESTION_LENGTH) {
+    const cut = q.slice(0, MAX_QUESTION_LENGTH);
+    const lastSpace = cut.lastIndexOf(' ');
+    q = (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trim();
+    if (!q.endsWith('?')) q += '?';
+  }
+  return q;
+}
+
+function parseQuickQuestionsResponse(text) {
+  const raw = (text || '').trim();
+  let questions = [];
+  let clean = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/g, '').trim();
+  const startIdx = clean.indexOf('[');
+  if (startIdx !== -1) {
+    let depth = 0;
+    let endIdx = -1;
+    for (let i = startIdx; i < clean.length; i++) {
+      if (clean[i] === '[') depth++;
+      else if (clean[i] === ']') { depth--; if (depth === 0) { endIdx = i; break; } }
+    }
+    const jsonStr = endIdx !== -1 ? clean.slice(startIdx, endIdx + 1) : clean.slice(startIdx);
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (Array.isArray(parsed)) questions = parsed.map(s => String(s || '').trim()).filter(Boolean);
+    } catch (_) {
+      const quoted = clean.match(/"([^"]*?)"/g);
+      if (quoted) questions = quoted.map(m => m.slice(1, -1).replace(/\\"/g, '"').trim()).filter(Boolean);
+    }
+  }
+  if (questions.length === 0) {
+    const lines = raw.split(/\n/).map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      const stripped = line.replace(/^[\s\-.\d\]"]+/, '').replace(/[\s",\]]+$/, '');
+      if (stripped.includes('?') && stripped.length >= 10 && stripped.length <= MAX_QUESTION_LENGTH) questions.push(stripped);
+    }
+  }
+  questions = questions
+    .map(normalizeQuestion)
+    .filter(q => q.length >= 10 && q.length <= MAX_QUESTION_LENGTH && q.includes('?'));
+  return questions.slice(0, MAX_QUESTIONS);
+}
+
 // Quick Questions endpoint - only generate, don't save
 app.get('/api/quick-questions', async (req, res) => {
-  // Return empty array - frontend will handle loading from Firebase
   res.json({ questions: [] });
 });
 
@@ -304,12 +355,7 @@ const QUICK_QUESTIONS_FALLBACK = [
   "How can I improve my sleep quality?",
   "What foods are good for heart health?",
   "How can I manage stress better?",
-  "How can I stay mentally active?",
-  "What are some ways to stay socially connected?",
-  "How can I safely increase my physical activity?",
-  "What are some tips for managing medications?",
-  "How can I improve my memory?",
-  "What are some healthy snacks for seniors?"
+  "How can I stay mentally active?"
 ];
 
 app.post("/api/quick-questions", async (req, res) => {
@@ -323,12 +369,15 @@ app.post("/api/quick-questions", async (req, res) => {
   try {
     console.log('🔄 Quick Questions request received (Gemini)');
 
-    let prompt = `You are a helpful AI assistant. Based on the following user's health questionnaire answers, generate exactly 10 short, helpful questions that someone with this context would benefit from asking an AI health assistant.
+    let prompt = `You are a helpful AI assistant. Based on the following user's health questionnaire answers, generate 4 to 6 short, helpful questions that this person would benefit from asking an AI health assistant.
 
-IMPORTANT: Return ONLY a JSON array of 10 strings (the questions). Do not include any other text, explanations, or formatting.
+RULES:
+- Return ONLY a JSON array of 4 to 6 strings. No other text, no markdown, no code fences.
+- Each question MUST be under 100 characters (count carefully).
+- Each question must be a complete sentence ending with "?".
+- Do not truncate any question mid-sentence.
 
-Example format:
-["Question 1?", "Question 2?", ..., "Question 10?"]
+Example: ["What exercises help balance?", "How can I sleep better?"]
 
 User's health assessment data:`;
 
@@ -345,9 +394,9 @@ User's health assessment data:`;
     } else {
       prompt += '\n(No answers yet)';
     }
-    prompt += '\n\nGenerate 10 relevant questions based on this context:';
+    prompt += '\n\nGenerate 4 to 6 relevant questions (each under 100 characters), JSON array only:';
 
-    const body = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 1024 } };
+    const body = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 512 } };
     let response;
     for (const model of GEMINI_MODELS) {
       try {
@@ -368,23 +417,9 @@ User's health assessment data:`;
       return res.json({ questions: QUICK_QUESTIONS_FALLBACK });
     }
     const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    let questions = [];
-    try {
-      const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
-      questions = JSON.parse(cleanText);
-      if (!Array.isArray(questions)) throw new Error('Not an array');
-    } catch {
-      const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if ((line.indexOf("?") !== -1 || line.startsWith('"') || line.startsWith("-")) &&
-            line.length > 10 && line.length < 100) {
-          questions.push(line.replace(/^[\s\-.\d"]+/, "").replace(/[\s"]+$/, ""));
-        }
-      }
-    }
-    if (questions.length === 0) questions = QUICK_QUESTIONS_FALLBACK;
-    res.json({ questions: questions.slice(0, 10) });
+    let questions = parseQuickQuestionsResponse(text);
+    if (questions.length < MIN_QUESTIONS) questions = [...QUICK_QUESTIONS_FALLBACK];
+    res.json({ questions: questions.slice(0, MAX_QUESTIONS) });
   } catch (error) {
     console.error('❌ Gemini Quick Questions Error:', error.response?.data || error.message);
     res.json({ questions: QUICK_QUESTIONS_FALLBACK });

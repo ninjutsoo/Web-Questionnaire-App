@@ -277,11 +277,86 @@ RESPONSE RULES — FOLLOW THESE:
   }
 });
 
+// Parse and normalize AI quick-questions response: 4-6 items, each ≤100 chars, no truncation
+const MAX_QUESTION_LENGTH = 100;
+const MIN_QUESTIONS = 4;
+const MAX_QUESTIONS = 6;
+
+function normalizeQuestion(s) {
+  if (typeof s !== 'string') return '';
+  let q = s.trim();
+  // Strip leading/trailing JSON/markdown artifacts (e.g. [" or ", or ])
+  q = q.replace(/^[\s\[\],"]+/, '').replace(/[\s\[\],"]+$/, '');
+  if (q.length > MAX_QUESTION_LENGTH) {
+    const cut = q.slice(0, MAX_QUESTION_LENGTH);
+    const lastSpace = cut.lastIndexOf(' ');
+    q = (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trim();
+    if (!q.endsWith('?')) q += '?';
+  }
+  return q;
+}
+
+function parseQuickQuestionsResponse(text) {
+  const raw = (text || '').trim();
+  let questions = [];
+
+  // 1) Strip code fences and trim
+  let clean = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/g, '').trim();
+
+  // 2) Try to extract a JSON array: find first '[' and matching ']'
+  const startIdx = clean.indexOf('[');
+  if (startIdx !== -1) {
+    let depth = 0;
+    let endIdx = -1;
+    for (let i = startIdx; i < clean.length; i++) {
+      if (clean[i] === '[') depth++;
+      else if (clean[i] === ']') { depth--; if (depth === 0) { endIdx = i; break; } }
+    }
+    const jsonStr = endIdx !== -1 ? clean.slice(startIdx, endIdx + 1) : clean.slice(startIdx);
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (Array.isArray(parsed)) questions = parsed.map(s => String(s || '').trim()).filter(Boolean);
+    } catch (_) {
+      // 3) Fallback: extract quoted strings (handles truncated or malformed JSON)
+      const quoted = clean.match(/"([^"]*?)"/g);
+      if (quoted) {
+        questions = quoted.map(m => m.slice(1, -1).replace(/\\"/g, '"').trim()).filter(Boolean);
+      }
+    }
+  }
+
+  // 4) If still empty, try line-by-line extraction
+  if (questions.length === 0) {
+    const lines = raw.split(/\n/).map(l => l.trim()).filter(Boolean);
+    for (const line of lines) {
+      const stripped = line.replace(/^[\s\-.\d\]"]+/, '').replace(/[\s",\]]+$/, '');
+      if (stripped.includes('?') && stripped.length >= 10 && stripped.length <= MAX_QUESTION_LENGTH) {
+        questions.push(stripped);
+      }
+    }
+  }
+
+  // 5) Normalize: ≤100 chars, must look like a question
+  questions = questions
+    .map(normalizeQuestion)
+    .filter(q => q.length >= 10 && q.length <= MAX_QUESTION_LENGTH && q.includes('?'));
+
+  return questions.slice(0, MAX_QUESTIONS);
+}
+
 // Quick Questions endpoint - only generate, don't save
 app.get('/api/quick-questions', async (req, res) => {
   // Return empty array - frontend will handle loading from Firebase
   res.json({ questions: [] });
 });
+
+const QUICK_QUESTIONS_FALLBACK = [
+  "What are some good exercises for seniors?",
+  "How can I improve my sleep quality?",
+  "What foods are good for heart health?",
+  "How can I manage stress better?",
+  "How can I stay mentally active?"
+];
 
 app.post('/api/quick-questions', async (req, res) => {
   const { userContext } = req.body;
@@ -289,16 +364,18 @@ app.post('/api/quick-questions', async (req, res) => {
     console.log('🔄 Quick Questions request received');
     console.log('📊 User context:', userContext);
     
-    let prompt = `You are a helpful AI assistant. Based on the following user's health questionnaire answers, generate exactly 10 short, helpful questions that someone with this context would benefit from asking an AI health assistant.
+    let prompt = `You are a helpful AI assistant. Based on the following user's health questionnaire answers, generate 4 to 6 short, helpful questions that this person would benefit from asking an AI health assistant.
 
-IMPORTANT: Return ONLY a JSON array of 10 strings (the questions). Do not include any other text, explanations, or formatting.
+RULES:
+- Return ONLY a JSON array of 4 to 6 strings. No other text, no markdown, no code fences.
+- Each question MUST be under 100 characters (count carefully).
+- Each question must be a complete sentence ending with "?".
+- Do not truncate any question mid-sentence.
 
-Example format:
-["Question 1?", "Question 2?", ..., "Question 10?"]
+Example: ["What exercises help balance?", "How can I sleep better?"]
 
 User's health assessment data:`;
     
-    // Add location to quick questions prompt if present
     if (userContext && userContext.location) {
       prompt += `\n\nThe person is currently located at: ${userContext.location}`;
     }
@@ -314,7 +391,7 @@ User's health assessment data:`;
       prompt += '\n(No answers yet)';
     }
     
-    prompt += '\n\nGenerate 10 relevant questions based on this context:';
+    prompt += '\n\nGenerate 4 to 6 relevant questions (each under 100 characters), JSON array only:';
     
     console.log('📝 Sending prompt to AI:', prompt);
     
@@ -325,7 +402,7 @@ User's health assessment data:`;
         messages: [
           { role: 'system', content: prompt }
         ],
-        // max_tokens: 400,
+        max_tokens: 512,
         temperature: 0.3
       },
       {
@@ -338,73 +415,21 @@ User's health assessment data:`;
       }
     );
     
-    console.log('✅ AI Response received:', response.data.choices[0]?.message?.content);
+    const rawContent = response.data.choices[0]?.message?.content || '';
+    console.log('✅ AI Response received:', rawContent);
     
-    // Try to parse the response as a JSON array
-    let questions = [];
-    try {
-      const text = response.data.choices[0]?.message?.content || '';
-      console.log('🔍 Attempting to parse:', text);
-      
-      // Clean the text - remove any markdown formatting
-      const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
-      questions = JSON.parse(cleanText);
-      
-      if (!Array.isArray(questions)) {
-        throw new Error('Response is not an array');
-      }
-      
-      console.log('✅ Successfully parsed questions:', questions);
-    } catch (err) {
-      console.log('⚠️ JSON parsing failed, trying to extract questions from text');
-      // fallback: try to extract lines that look like questions
-      const text = response.data.choices[0]?.message?.content || '';
-      const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-      
-      questions = lines
-        .filter(line => line.includes('?') || line.startsWith('"') || line.startsWith('-'))
-        .map(line => {
-          // Remove quotes, dashes, numbers, etc.
-          return line.replace(/^\["\-\d\.\s]+/, '').replace(/["\s]+$/, '');
-        })
-        .filter(line => line.length > 10 && line.length < 100);
-      
-      if (questions.length === 0) {
-        console.log('⚠️ No questions extracted, using fallback');
-        questions = [
-          "What are some good exercises for seniors?",
-          "How can I improve my sleep quality?",
-          "What foods are good for heart health?",
-          "How can I manage stress better?",
-          "How can I stay mentally active?",
-          "What are some ways to stay socially connected?",
-          "How can I safely increase my physical activity?",
-          "What are some tips for managing medications?",
-          "How can I improve my memory?",
-          "What are some healthy snacks for seniors?"
-        ];
-      }
+    let questions = parseQuickQuestionsResponse(rawContent);
+    if (questions.length < MIN_QUESTIONS) {
+      console.log('⚠️ Too few questions after parse, using fallback');
+      questions = [...QUICK_QUESTIONS_FALLBACK];
     }
-    
-    // Only return up to 10 questions
-    questions = questions.slice(0, 10);
+    questions = questions.slice(0, MAX_QUESTIONS);
     
     console.log('📤 Sending questions to frontend:', questions);
     res.json({ questions });
   } catch (error) {
     console.error('❌ OpenRouter Quick Questions Error:', error.response?.data || error.message);
-    res.json({ questions: [
-      "What are some good exercises for seniors?",
-      "How can I improve my sleep quality?",
-      "What foods are good for heart health?",
-      "How can I manage stress better?",
-      "How can I stay mentally active?",
-      "What are some ways to stay socially connected?",
-      "How can I safely increase my physical activity?",
-      "What are some tips for managing medications?",
-      "How can I improve my memory?",
-      "What are some healthy snacks for seniors?"
-    ] });
+    res.json({ questions: QUICK_QUESTIONS_FALLBACK });
   }
 });
 

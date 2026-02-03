@@ -87,14 +87,41 @@ const AIChatbot = () => {
     localStorage.setItem('locationEnabled', locationEnabled);
   }, [locationEnabled]);
 
-  // Add a utility to pick 6 random questions from the suggestions array
+  const MAX_QUESTION_LENGTH = 100;
+  const QUICK_QUESTIONS_FALLBACK = [
+    "What are some good exercises for seniors?",
+    "How can I improve my sleep quality?",
+    "What foods are good for heart health?",
+    "How can I manage stress better?",
+    "How can I stay mentally active?"
+  ];
+  const sanitizeQuickQuestion = (s) => {
+    if (typeof s !== 'string') return '';
+    let q = s.trim();
+    q = q.replace(/^[\s\[\],"]+/, '').replace(/[\s\[\],"]+$/, '');
+    if (q.length > MAX_QUESTION_LENGTH) {
+      const cut = q.slice(0, MAX_QUESTION_LENGTH);
+      const lastSpace = cut.lastIndexOf(' ');
+      q = (lastSpace > 40 ? cut.slice(0, lastSpace) : cut).trim();
+      if (!q.endsWith('?')) q += '?';
+    }
+    return q;
+  };
+  const sanitizeQuickQuestions = (list) => {
+    if (!Array.isArray(list)) return [];
+    return list
+      .map(sanitizeQuickQuestion)
+      .filter((q) => q.length >= 10 && q.length <= MAX_QUESTION_LENGTH && q.includes('?'));
+  };
+
+  // Add a utility to pick up to 6 random questions from the suggestions array
   function getRandomSubset(arr, n) {
     if (!Array.isArray(arr)) return [];
     const shuffled = arr.slice().sort(() => 0.5 - Math.random());
     return shuffled.slice(0, n);
   }
 
-  // Whenever suggestions change, pick 6 random ones to display
+  // Whenever suggestions change, pick up to 6 to display
   useEffect(() => {
     if (suggestions.length > 0) {
       setDisplayedSuggestions(getRandomSubset(suggestions, 6));
@@ -201,8 +228,9 @@ const AIChatbot = () => {
         try {
           const parsed = JSON.parse(saved);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            setSuggestions(parsed);
-            console.log('✅ Loaded cached quick questions for instant display:', parsed);
+            const cleaned = sanitizeQuickQuestions(parsed);
+            setSuggestions(cleaned.length >= 4 ? cleaned : QUICK_QUESTIONS_FALLBACK);
+            console.log('✅ Loaded cached quick questions for instant display:', cleaned.length >= 4 ? cleaned : QUICK_QUESTIONS_FALLBACK);
           }
         } catch (parseError) {
           console.error('❌ Error parsing cached questions:', parseError);
@@ -228,23 +256,16 @@ const AIChatbot = () => {
           console.log('🔍 Cache timestamp:', cacheTimestamp);
           console.log('🔍 Firebase timestamp:', firebaseTimestamp);
           
-          // Check if cached questions are the default ones
-          const defaultQuestions = [
-            "What are some good exercises for seniors?",
-            "How can I improve my sleep quality?",
-            "What foods are good for heart health?",
-            "How can I manage stress better?",
-            "How can I stay mentally active?"
-          ];
-          
           const cachedQuestions = JSON.parse(localStorage.getItem('aiQuickQuestions') || '[]');
-          const isCachedDefault = JSON.stringify(cachedQuestions.sort()) === JSON.stringify(defaultQuestions.sort());
+          const isCachedDefault = JSON.stringify([...cachedQuestions].sort()) === JSON.stringify([...QUICK_QUESTIONS_FALLBACK].sort());
           
           if (!cacheTimestamp || new Date(firebaseTimestamp) >= new Date(cacheTimestamp) || isCachedDefault) {
-            setSuggestions(data.quickQuestions);
-            localStorage.setItem('aiQuickQuestions', JSON.stringify(data.quickQuestions));
+            const cleaned = sanitizeQuickQuestions(data.quickQuestions);
+            const toUse = cleaned.length >= 4 ? cleaned : QUICK_QUESTIONS_FALLBACK;
+            setSuggestions(toUse);
+            localStorage.setItem('aiQuickQuestions', JSON.stringify(toUse));
             localStorage.setItem('aiQuickQuestionsTimestamp', firebaseTimestamp);
-            console.log('✅ Loaded quick questions from Firebase:', data.quickQuestions);
+            console.log('✅ Loaded quick questions from Firebase:', toUse);
             if (isCachedDefault) {
               console.log('✅ Overriding default cached questions with Firebase data');
             }
@@ -259,37 +280,19 @@ const AIChatbot = () => {
         console.log('⚠️ Firebase document does not exist');
       }
       
-      // Only set defaults if we don't have any cached questions
       if (!saved || !localStorage.getItem('aiQuickQuestions')) {
         console.log('No saved quick questions found, using defaults');
-        const defaultQuestions = [
-          "What are some good exercises for seniors?",
-          "How can I improve my sleep quality?",
-          "What foods are good for heart health?",
-          "How can I manage stress better?",
-          "How can I stay mentally active?"
-        ];
-        setSuggestions(defaultQuestions);
-        // Save defaults to cache so they persist
-        localStorage.setItem('aiQuickQuestions', JSON.stringify(defaultQuestions));
+        setSuggestions(QUICK_QUESTIONS_FALLBACK);
+        localStorage.setItem('aiQuickQuestions', JSON.stringify(QUICK_QUESTIONS_FALLBACK));
         localStorage.setItem('aiQuickQuestionsTimestamp', new Date().toISOString());
       } else {
         console.log('✅ Using existing cached questions');
       }
     } catch (error) {
       console.error('❌ Error loading saved quick questions:', error);
-      // Only set defaults if we don't have any cached questions
       if (!localStorage.getItem('aiQuickQuestions')) {
-        const defaultQuestions = [
-          "What are some good exercises for seniors?",
-          "How can I improve my sleep quality?",
-          "What foods are good for heart health?",
-          "How can I manage stress better?",
-          "How can I stay mentally active?"
-        ];
-        setSuggestions(defaultQuestions);
-        // Save defaults to cache so they persist
-        localStorage.setItem('aiQuickQuestions', JSON.stringify(defaultQuestions));
+        setSuggestions(QUICK_QUESTIONS_FALLBACK);
+        localStorage.setItem('aiQuickQuestions', JSON.stringify(QUICK_QUESTIONS_FALLBACK));
         localStorage.setItem('aiQuickQuestionsTimestamp', new Date().toISOString());
       }
     }
@@ -332,7 +335,8 @@ const AIChatbot = () => {
       try {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setSuggestions(parsed);
+          const cleaned = sanitizeQuickQuestions(parsed);
+          setSuggestions(cleaned.length >= 4 ? cleaned : QUICK_QUESTIONS_FALLBACK);
           setSuggestionsLoading(false);
           didSetFromCache = true;
         }
@@ -649,27 +653,20 @@ const AIChatbot = () => {
     }
     setSuggestionsLoading(true);
     try {
-      // Call backend to generate new quick questions
       const response = await axios.post(getApiEndpoint('/api/quick-questions'), {
         userContext: userQuestionnaireData
       });
       let questions = response.data.questions || [];
-      // Fallback if backend returns nothing
-      if (!Array.isArray(questions) || questions.length === 0) {
-        questions = [
-          "What are some good exercises for seniors?",
-          "How can I improve my sleep quality?",
-          "What foods are good for heart health?",
-          "How can I manage stress better?",
-          "How can I stay mentally active?"
-        ];
+      questions = sanitizeQuickQuestions(questions);
+      if (questions.length < 4) {
+        questions = [...QUICK_QUESTIONS_FALLBACK];
       }
       setSuggestions(questions);
-      // Save to Firebase and cache
       await saveQuickQuestions(userQuestionnaireData.userId, questions);
       setSuggestionsLoading(false);
     } catch (error) {
       console.error('❌ Error generating quick questions:', error);
+      setSuggestions(QUICK_QUESTIONS_FALLBACK);
       setSuggestionsLoading(false);
     }
   };
