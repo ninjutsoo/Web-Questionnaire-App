@@ -22,6 +22,10 @@ jobs:
       - name: Install root dependencies
         run: npm ci
 
+      - name: Install Functions dependencies
+        working-directory: ./functions
+        run: npm ci
+
       - name: Build frontend
         run: npm run build
         env:
