@@ -44,7 +44,6 @@ admin.initializeApp();
 
 // v7 params: set via .env in functions/ or prompt on deploy (e.g. .env.web-app-new-efb66)
 const geminiApiKeyParam = defineString("GEMINI_API_KEY", { default: "" });
-const sendgridApiKeyParam = defineString("SENDGRID_API_KEY", { default: "" });
 
 // Example tips for each transport method
 const transportTips = {
@@ -111,7 +110,11 @@ app.use(express.json());
 
 // Endpoint to send a tip email to the caregiver immediately
 app.post("/send-caregiver-tip", async (req, res) => {
-  sgMail.setApiKey(sendgridApiKeyParam.value());
+  const sendgridKey = process.env.SENDGRID_API_KEY;
+  if (!sendgridKey) {
+    return res.status(501).json({ error: "SendGrid is not configured." });
+  }
+  sgMail.setApiKey(sendgridKey);
   const { caregiverEmail, mobilityType } = req.body;
   console.log("Received caregiverEmail:", caregiverEmail);
   console.log("Received mobilityType:", mobilityType);
@@ -390,7 +393,11 @@ User's health assessment data:`;
 
 // Test endpoint for sending a notification email locally
 app.get("/test-send-email", async (req, res) => {
-  sgMail.setApiKey(sendgridApiKeyParam.value());
+  const sendgridKey = process.env.SENDGRID_API_KEY;
+  if (!sendgridKey) {
+    return res.status(501).json({ error: "SendGrid is not configured." });
+  }
+  sgMail.setApiKey(sendgridKey);
   const email = req.query.email;
   const method = req.query.method || "Bedrest";
   if (!email || !transportTips[method]) {
