@@ -32,15 +32,19 @@
 // //   response.send("Hello from Firebase!");
 // // });
 
-const express = require('express');
-const cors = require('cors');
-const axios = require('axios');
+const express = require("express");
+const cors = require("cors");
+const axios = require("axios");
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const sgMail = require("@sendgrid/mail");
+const { defineString } = require("firebase-functions/params");
 
 admin.initializeApp();
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+// v7 params: set via .env in functions/ or prompt on deploy (e.g. .env.web-app-new-efb66)
+const geminiApiKeyParam = defineString("GEMINI_API_KEY", { default: "" });
+const sendgridApiKeyParam = defineString("SENDGRID_API_KEY", { default: "" });
 
 // Example tips for each transport method
 const transportTips = {
@@ -106,10 +110,11 @@ app.use(cors({
 app.use(express.json());
 
 // Endpoint to send a tip email to the caregiver immediately
-app.post('/send-caregiver-tip', async (req, res) => {
+app.post("/send-caregiver-tip", async (req, res) => {
+  sgMail.setApiKey(sendgridApiKeyParam.value());
   const { caregiverEmail, mobilityType } = req.body;
-  console.log('Received caregiverEmail:', caregiverEmail);
-  console.log('Received mobilityType:', mobilityType);
+  console.log("Received caregiverEmail:", caregiverEmail);
+  console.log("Received mobilityType:", mobilityType);
   if (!caregiverEmail || !mobilityType || !transportTips[mobilityType]) {
     console.log('Invalid input:', req.body);
     return res.status(400).json({ error: 'Missing or invalid caregiverEmail or mobilityType' });
@@ -134,19 +139,53 @@ app.post('/send-caregiver-tip', async (req, res) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'AI Chat Backend is running with OpenRouter API' });
+  res.json({ status: 'OK', message: 'AI Chat Backend is running with Google Gemini API' });
 });
 
-// AI Chat endpoint using OpenRouter API with DeepSeek Chat
-app.post('/api/chat', async (req, res) => {
+// Debug: check if Gemini key is set (does not reveal the key)
+app.get("/api/chat-status", (req, res) => {
+  const keySet = !!geminiApiKeyParam.value();
+  res.json({
+    geminiKeySet: keySet,
+    hint: keySet ? "Key is configured" : "Set GEMINI_API_KEY in functions/.env or when prompted on deploy",
+  });
+});
+
+// Google Gemini (Google AI Studio) - try in order; 2.5 may not be in all regions yet
+const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
+
+// Convert chat messages to Gemini contents (user/model + parts)
+function messagesToGeminiContents(messages) {
+  return messages
+    .filter(m => m.role === 'user' || m.role === 'assistant')
+    .map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: typeof m.content === 'string' ? m.content : (m.content || '').toString() }]
+    }));
+}
+
+app.post("/api/chat", async (req, res) => {
   const { messages, userContext } = req.body;
+  const apiKey = geminiApiKeyParam.value();
+
+  if (!apiKey) {
+    console.error('❌ GEMINI_API_KEY not set. Set via: firebase functions:config:set gemini.api_key="..."');
+    return res.json({
+      choices: [{
+        message: {
+          role: "assistant",
+          content: "I'm having trouble connecting to the AI service. Please set GEMINI_API_KEY in functions/.env or when prompted on deploy.",
+        },
+      }],
+    });
+  }
 
   try {
-    console.log('Attempting OpenRouter API call with DeepSeek Chat');
-    console.log('User messages:', messages);
+    console.log("Attempting Gemini API call with", GEMINI_MODELS[0], "(and fallbacks)");
+    console.log('User messages:', messages?.length);
     console.log('User context available:', !!userContext);
-    
-    // Build personalized system prompt based on user context
+
     let systemPrompt = `
 You are a kind, supportive AI assistant for an elderly person with health and daily questions.
 
@@ -161,111 +200,73 @@ RESPONSE RULES — FOLLOW THESE:
 • Be warm, friendly, and clear — like a helpful friend.
 `;
 
-    // Add location to system prompt if present
     if (userContext && userContext.location) {
       systemPrompt += `\n\nThe person is currently located at: ${userContext.location}`;
     }
 
     if (userContext && userContext.completedSections && userContext.completedSections.length > 0) {
       systemPrompt += '\n\nIMPORTANT: You are a medical advisor for an elderly person who has completed a health assessment. Use the following information about this person to provide personalized, relevant advice:';
-      
-      // Add user's health assessment data
-      Object.entries(userContext.responses).forEach(([section, questions]) => {
+      Object.entries(userContext.responses || {}).forEach(([section, questions]) => {
         systemPrompt += `\n\n**${section.charAt(0).toUpperCase() + section.slice(1)} Assessment:**`;
-        Object.entries(questions).forEach(([question, answer]) => {
+        Object.entries(questions || {}).forEach(([question, answer]) => {
           systemPrompt += `\n- ${question}: ${answer}`;
         });
       });
-      
       systemPrompt += '\n\nWhen providing advice, consider this person\'s specific health situation, concerns, and needs. Tailor your recommendations to their mobility level, medication concerns, mental health status, and what matters most to them. Be empathetic and supportive while providing practical, actionable advice.';
     }
-    
-    // Log the system prompt for debugging (do not log userContext separately)
-    console.log('==== SYSTEM PROMPT SENT TO AI ====');
-    console.log(systemPrompt);
-    
-    // List of free models to try in order of preference
-    const freeModels = [
-      'z-ai/glm-4.5-air:free',           // Primary model
-      'deepseek/deepseek-chat-v3-0324:free',
-      'qwen/qwen3-coder:free',
-      'tngtech/deepseek-r1t2-chimera:free',
-      'meta-llama/llama-3.1-8b-instruct:free'
-    ];
 
+    const contents = messagesToGeminiContents(messages || []);
+    if (contents.length === 0) {
+      return res.status(400).json({ error: 'No messages provided' });
+    }
+
+    const body = {
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      contents,
+      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
+    };
     let response;
-    let lastError;
     let usedModel;
+    let lastErr;
 
-    // Try each model until one works
-    for (const model of freeModels) {
+    for (const model of GEMINI_MODELS) {
       try {
-        console.log(`🔄 Attempting OpenRouter API call with model: ${model}`);
-        
+        console.log(`🔄 Trying Gemini model: ${model}`);
         response = await axios.post(
-          'https://openrouter.ai/api/v1/chat/completions',
-          {
-            model: model,
-            messages: [
-              { 
-                role: 'system', 
-                content: systemPrompt
-              },
-              ...messages
-            ],
-            // max_tokens: 400,
-            temperature: 0.3
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-              'Content-Type': 'application/json',
-              'HTTP-Referer': req.headers.origin ?? process.env.FRONTEND_URL ?? 'http://localhost:5173',
-              'X-Title': '4Ms Health Questionnaire App'
-            }
-          }
+          `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`,
+          body,
+          { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
         );
-
         usedModel = model;
-        console.log(`✅ Successfully used model: ${model}`);
-        break; // Success, exit the loop
-
-      } catch (error) {
-        lastError = error;
-        console.log(`❌ Model ${model} failed:`, error.response?.data?.error?.message || error.message);
-        
-        // Check if it's a rate limit or model unavailable error
-        const errorMessage = error.response?.data?.error?.message || '';
-        const isRateLimit = errorMessage.includes('rate limit') || 
-                           errorMessage.includes('quota') || 
-                           errorMessage.includes('No endpoints found') ||
-                           error.status === 429;
-        
-        if (isRateLimit) {
-          console.log(`⏳ Rate limit hit for ${model}, trying next model...`);
-          continue; // Try next model
-        } else {
-          console.log(`🚫 Non-rate-limit error for ${model}, trying next model...`);
-          continue; // Try next model for other errors too
-        }
+        console.log(`✅ Gemini API success with ${model}`);
+        break;
+      } catch (err) {
+        lastErr = err;
+        const status = err.response?.status;
+        const msg = err.response?.data?.error?.message || err.message;
+        console.error(`❌ Gemini ${model} failed:`, status, msg);
+        if (status === 404 || status === 400) continue;
+        break;
       }
     }
 
-    // If all models failed, throw the last error
     if (!response) {
-      console.log('❌ All models failed, using fallback response');
-      throw lastError || new Error('All free models are currently unavailable');
+      console.error('❌ All Gemini models failed. Last error:', lastErr?.response?.data || lastErr?.message);
+      return res.json({
+        choices: [{
+          message: {
+            role: 'assistant',
+            content: "The AI service is temporarily unavailable. Please try again in a moment. If this keeps happening, set GEMINI_API_KEY in functions/.env and redeploy.",
+          }
+        }],
+        _fallback: true
+      });
     }
 
-    console.log(`✅ OpenRouter API Response (using ${usedModel}):`, response.data);
-    
-    const assistantMessage = response.data.choices[0]?.message?.content || 
-                            'I apologize, but I couldn\'t generate a response at the moment.';
+    const candidate = response.data?.candidates?.[0];
+    const textPart = candidate?.content?.parts?.[0]?.text;
+    const assistantMessage = textPart?.trim() || "I couldn't generate a response at the moment. Please try again.";
 
-    // Log the model's output (assistant's message)
-    console.log(`==== MODEL OUTPUT FROM AI (${usedModel}) ====`);
-    console.log(assistantMessage);
-    
     res.json({
       choices: [{
         message: {
@@ -273,36 +274,18 @@ RESPONSE RULES — FOLLOW THESE:
           content: assistantMessage
         }
       }],
-      debug: {
-        model: usedModel,
-        maxTokens: 400,
-        temperature: 0.3,
-        systemPrompt: systemPrompt.substring(0, 500) + '...'
-      }
+      debug: { model: usedModel }
     });
-
   } catch (error) {
-    console.error('❌ OpenRouter API Error:', error.response?.data || error.message);
-    console.error('Error status:', error.response?.status);
-    
-    // Provide a fallback response instead of error
-    const fallbackResponses = [
-      "I'm here to help with your health questions! What would you like to know about exercise, nutrition, or general wellness?",
-      "I'd be happy to assist you with health-related topics. Feel free to ask about physical activity, sleep, stress management, or other wellness concerns.",
-      "Hello! I'm your AI health assistant. I can help you with questions about staying healthy, exercise tips, nutrition advice, and general wellness. What's on your mind?",
-      "Welcome! I'm here to support your health journey. Whether you have questions about fitness, diet, mental health, or general wellness, I'm ready to help.",
-      "Hi there! I'm your friendly AI health companion. I can provide information about healthy living, exercise recommendations, nutrition tips, and wellness advice. What would you like to discuss?"
-    ];
-    
-    const randomResponse = fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
-    
+    console.error('❌ Gemini API Error (unexpected):', error.response?.data || error.message);
     res.json({
       choices: [{
         message: {
           role: 'assistant',
-          content: randomResponse
+          content: "The AI service is temporarily unavailable. Please try again in a moment."
         }
-      }]
+      }],
+      _fallback: true
     });
   }
 });
@@ -313,12 +296,30 @@ app.get('/api/quick-questions', async (req, res) => {
   res.json({ questions: [] });
 });
 
-app.post('/api/quick-questions', async (req, res) => {
+const QUICK_QUESTIONS_FALLBACK = [
+  "What are some good exercises for seniors?",
+  "How can I improve my sleep quality?",
+  "What foods are good for heart health?",
+  "How can I manage stress better?",
+  "How can I stay mentally active?",
+  "What are some ways to stay socially connected?",
+  "How can I safely increase my physical activity?",
+  "What are some tips for managing medications?",
+  "How can I improve my memory?",
+  "What are some healthy snacks for seniors?"
+];
+
+app.post("/api/quick-questions", async (req, res) => {
   const { userContext } = req.body;
+  const apiKey = geminiApiKeyParam.value();
+
+  if (!apiKey) {
+    return res.json({ questions: QUICK_QUESTIONS_FALLBACK });
+  }
+
   try {
-    console.log('🔄 Quick Questions request received');
-    console.log('📊 User context:', userContext);
-    
+    console.log('🔄 Quick Questions request received (Gemini)');
+
     let prompt = `You are a helpful AI assistant. Based on the following user's health questionnaire answers, generate exactly 10 short, helpful questions that someone with this context would benefit from asking an AI health assistant.
 
 IMPORTANT: Return ONLY a JSON array of 10 strings (the questions). Do not include any other text, explanations, or formatting.
@@ -327,12 +328,10 @@ Example format:
 ["Question 1?", "Question 2?", ..., "Question 10?"]
 
 User's health assessment data:`;
-    
-    // Add location to quick questions prompt if present
+
     if (userContext && userContext.location) {
       prompt += `\n\nThe person is currently located at: ${userContext.location}`;
     }
-    
     if (userContext && userContext.responses) {
       Object.entries(userContext.responses).forEach(([section, questions]) => {
         prompt += `\n\n${section.charAt(0).toUpperCase() + section.slice(1)} Section:`;
@@ -343,107 +342,57 @@ User's health assessment data:`;
     } else {
       prompt += '\n(No answers yet)';
     }
-    
     prompt += '\n\nGenerate 10 relevant questions based on this context:';
-    
-    console.log('📝 Sending prompt to AI:', prompt);
-    
-    const response = await axios.post(
-      'https://openrouter.ai/api/v1/chat/completions',
-      {
-        model: 'z-ai/glm-4.5-air:free',
-        messages: [
-          { role: 'system', content: prompt }
-        ],
-        // max_tokens: 400,
-        temperature: 0.3
-      },
-      {
-        headers: {
-          'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-          'Content-Type': 'application/json',
-          'HTTP-Referer': req.headers.origin ?? process.env.FRONTEND_URL ?? 'http://localhost:3000',
-          'X-Title': '4Ms Health Questionnaire App'
-        }
-      }
-    );
-    
-    console.log('✅ AI Response received:', response.data.choices[0]?.message?.content);
-    
-    // Try to parse the response as a JSON array
-    let questions = [];
-    try {
-      const text = response.data.choices[0]?.message?.content || '';
-      console.log('🔍 Attempting to parse:', text);
-      
-      // Clean the text - remove any markdown formatting
-      const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
-      questions = JSON.parse(cleanText);
-      
-      if (!Array.isArray(questions)) {
-        throw new Error('Response is not an array');
-      }
-      
-      console.log('✅ Successfully parsed questions:', questions);
-    } catch (err) {
-      console.log('⚠️ JSON parsing failed, trying to extract questions from text');
-      // fallback: try to extract lines that look like questions
-      const text = response.data.choices[0]?.message?.content || '';
-      const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
-      
-      questions = lines
-        .filter(line => line.includes('?') || line.startsWith('"') || line.startsWith('-'))
-        .map(line => {
-          // Remove quotes, dashes, numbers, etc.
-          return line
-            .replace(/^(?:(?:\]|\[|-|\d|\.|\s|")+)+/, '')
-            .replace(/["\s]+$/, '');
-        })
-        .filter(line => line.length > 10 && line.length < 100);
-      
-      if (questions.length === 0) {
-        console.log('⚠️ No questions extracted, using fallback');
-        questions = [
-          "What are some good exercises for seniors?",
-          "How can I improve my sleep quality?",
-          "What foods are good for heart health?",
-          "How can I manage stress better?",
-          "How can I stay mentally active?",
-          "What are some ways to stay socially connected?",
-          "How can I safely increase my physical activity?",
-          "What are some tips for managing medications?",
-          "How can I improve my memory?",
-          "What are some healthy snacks for seniors?"
-        ];
+
+    const body = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 1024 } };
+    let response;
+    for (const model of GEMINI_MODELS) {
+      try {
+        response = await axios.post(
+          `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`,
+          body,
+          { headers: { 'Content-Type': 'application/json' }, timeout: 30000 }
+        );
+        break;
+      } catch (err) {
+        console.error(`Quick questions: ${model} failed`, err.response?.status, err.response?.data?.error?.message);
+        if (err.response?.status === 404 || err.response?.status === 400) continue;
+        throw err;
       }
     }
-    
-    // Only return up to 10 questions
-    questions = questions.slice(0, 10);
-    
-    console.log('📤 Sending questions to frontend:', questions);
-    res.json({ questions });
+
+    if (!response) {
+      return res.json({ questions: QUICK_QUESTIONS_FALLBACK });
+    }
+    const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    let questions = [];
+    try {
+      const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
+      questions = JSON.parse(cleanText);
+      if (!Array.isArray(questions)) throw new Error('Not an array');
+    } catch (parseErr) {
+      const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if ((line.indexOf("?") !== -1 || line.startsWith('"') || line.startsWith("-")) &&
+            line.length > 10 && line.length < 100) {
+          questions.push(line.replace(/^[\s\-.\d"]+/, "").replace(/[\s"]+$/, ""));
+        }
+      }
+    }
+    if (questions.length === 0) questions = QUICK_QUESTIONS_FALLBACK;
+    res.json({ questions: questions.slice(0, 10) });
   } catch (error) {
-    console.error('❌ OpenRouter Quick Questions Error:', error.response?.data || error.message);
-    res.json({ questions: [
-      "What are some good exercises for seniors?",
-      "How can I improve my sleep quality?",
-      "What foods are good for heart health?",
-      "How can I manage stress better?",
-      "How can I stay mentally active?",
-      "What are some ways to stay socially connected?",
-      "How can I safely increase my physical activity?",
-      "What are some tips for managing medications?",
-      "How can I improve my memory?",
-      "What are some healthy snacks for seniors?"
-    ] });
+    console.error('❌ Gemini Quick Questions Error:', error.response?.data || error.message);
+    res.json({ questions: QUICK_QUESTIONS_FALLBACK });
   }
 });
 
 // Test endpoint for sending a notification email locally
-app.get('/test-send-email', async (req, res) => {
+app.get("/test-send-email", async (req, res) => {
+  sgMail.setApiKey(sendgridApiKeyParam.value());
   const email = req.query.email;
-  const method = req.query.method || 'Bedrest';
+  const method = req.query.method || "Bedrest";
   if (!email || !transportTips[method]) {
     return res.status(400).json({ error: 'Missing or invalid email/method' });
   }

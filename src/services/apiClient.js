@@ -5,20 +5,30 @@ const getApiBaseUrl = () => {
     console.log('🔧 API URL from .env:', import.meta.env.VITE_API_BASE_URL);
     return import.meta.env.VITE_API_BASE_URL;
   }
-  
+
   // Auto-detect based on current window location
   if (typeof window !== 'undefined') {
     const hostname = window.location.hostname;
     const protocol = window.location.protocol;
-    
-    // Use the same protocol (http/https) as the current page
-    // This ensures consistency and avoids mixed content warnings
+
+    // Production: Firebase Hosting (same origin, no port). API is at /api/*
+    const isProduction =
+      hostname.endsWith('.web.app') ||
+      hostname.endsWith('.firebaseapp.com') ||
+      hostname === 'web-app-new-efb66.web.app';
+
+    if (isProduction) {
+      const apiUrl = `${protocol}//${hostname}`;
+      console.log('🔧 Auto-detected API URL (production):', apiUrl);
+      return apiUrl;
+    }
+
+    // Local dev: use emulator on port 5001
     const apiUrl = `${protocol}//${hostname}:5001`;
-    console.log('🔧 Auto-detected API URL:', apiUrl);
-    console.log('   Current page:', `${protocol}//${hostname}:${window.location.port}`);
+    console.log('🔧 Auto-detected API URL (dev):', apiUrl);
     return apiUrl;
   }
-  
+
   // Default to HTTP localhost for local development
   console.log('🔧 Using default API URL: http://localhost:5001');
   return 'http://localhost:5001';

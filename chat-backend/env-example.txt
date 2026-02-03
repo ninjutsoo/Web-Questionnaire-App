@@ -4,8 +4,8 @@
 # Server Configuration
 PORT=5001
 
-# API Keys (required)
-OPENROUTER_API_KEY=your_openrouter_api_key_here
+# API Keys (required for local dev; production uses Firebase config: firebase functions:config:set gemini.api_key="..." sendgrid.api_key="SG....")
+GEMINI_API_KEY=your_google_ai_studio_api_key_here
 SENDGRID_API_KEY=your_sendgrid_api_key_here
 
 # Firebase Admin Credentials (for production - optional)
