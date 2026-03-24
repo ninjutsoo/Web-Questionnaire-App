@@ -69,6 +69,113 @@ const transportTips = {
   ]
 };
 
+const EMAIL_FROM = "mohammad.a.roshani@gmail.com";
+
+const normalizeEmail = (email) => (typeof email === "string" ? email.trim().toLowerCase() : "");
+
+const getRecipientEmails = async (uid, userData) => {
+  const recipients = new Set();
+  const caregiver = normalizeEmail(userData?.caregiverEmail);
+  const profileEmail = normalizeEmail(userData?.email);
+
+  if (caregiver) recipients.add(caregiver);
+  if (profileEmail) recipients.add(profileEmail);
+
+  try {
+    const authUser = await admin.auth().getUser(uid);
+    const authEmail = normalizeEmail(authUser?.email);
+    if (authEmail) recipients.add(authEmail);
+  } catch (error) {
+    console.warn(`Could not load auth email for user ${uid}:`, error.message);
+  }
+
+  return [...recipients];
+};
+
+const formatMedicationSummary = (medicationResponses = {}) => {
+  const sections = [];
+  Object.entries(medicationResponses).forEach(([questionKey, answer]) => {
+    if (!answer) return;
+    if (typeof answer === "object") {
+      const tags = Array.isArray(answer.tags) ? answer.tags.join(", ") : "";
+      const notes = typeof answer.text === "string" ? answer.text.trim() : "";
+      const combined = [tags && `Selected: ${tags}`, notes && `Notes: ${notes}`].filter(Boolean).join(" | ");
+      if (combined) sections.push(`${questionKey.toUpperCase()}: ${combined}`);
+      return;
+    }
+    if (typeof answer === "string" && answer.trim()) {
+      sections.push(`${questionKey.toUpperCase()}: ${answer.trim()}`);
+    }
+  });
+  return sections.length ? sections.join("\n") : "No medication updates were saved yet.";
+};
+
+const pickMobilityTip = (mobilityType) => {
+  if (!mobilityType || !transportTips[mobilityType]) {
+    return "Try to move safely today, go slowly when standing, and ask for help if needed.";
+  }
+  const tips = transportTips[mobilityType];
+  return tips[Math.floor(Math.random() * tips.length)];
+};
+
+const sendDailyMedicationAndMobilityReminders = async () => {
+  const sendgridKey = process.env.SENDGRID_API_KEY;
+  if (!sendgridKey) {
+    console.error("SENDGRID_API_KEY missing; daily reminders skipped.");
+    return { processed: 0, sent: 0, skipped: 0 };
+  }
+  sgMail.setApiKey(sendgridKey);
+
+  const usersSnapshot = await admin.firestore().collection("Users").get();
+  let processed = 0;
+  let sent = 0;
+  let skipped = 0;
+
+  for (const userDoc of usersSnapshot.docs) {
+    processed += 1;
+    const uid = userDoc.id;
+    const userData = userDoc.data() || {};
+    const recipients = await getRecipientEmails(uid, userData);
+    if (!recipients.length) {
+      skipped += 1;
+      continue;
+    }
+
+    const answerDocRef = admin.firestore().collection("Answers").doc(`${uid}_4ms_health`);
+    const answerSnap = await answerDocRef.get();
+    const responses = answerSnap.exists ? (answerSnap.data()?.responses || {}) : {};
+    const medicationSummary = formatMedicationSummary(responses.medication || {});
+    const mobilityType = responses?.mobility?.mobilityType;
+    const mobilityTip = pickMobilityTip(mobilityType);
+
+    const medicationMsg = {
+      to: recipients,
+      from: EMAIL_FROM,
+      subject: "Daily Medication Reminder",
+      text: `This is your daily medication reminder.\n\nMedication summary:\n${medicationSummary}`
+    };
+    const mobilityMsg = {
+      to: recipients,
+      from: EMAIL_FROM,
+      subject: "Daily Mobility Tip",
+      text: `Mobility type: ${mobilityType || "Not set"}\n\nToday's tip:\n${mobilityTip}`
+    };
+
+    try {
+      await sgMail.send(medicationMsg);
+      await sgMail.send(mobilityMsg);
+      sent += recipients.length;
+      console.log(`Daily reminders sent for user ${uid} to: ${recipients.join(", ")}`);
+    } catch (error) {
+      skipped += 1;
+      console.error(`Failed sending reminders for user ${uid}:`, error.response?.body || error.message);
+    }
+  }
+
+  console.log(`Daily reminders complete. processed=${processed}, sent=${sent}, skipped=${skipped}`);
+  return { processed, sent, skipped };
+};
+
 // Scheduled function to send daily tips
 // exports.sendDailyTransportTips = functions.pubsub.schedule('every day 08:00').timeZone('America/New_York').onRun(async (context) => {
 //   const usersSnapshot = await admin.firestore().collection('User').where('caregiverNotify', '==', true).get();
@@ -126,7 +233,7 @@ app.post("/send-caregiver-tip", async (req, res) => {
   const tip = tips[Math.floor(Math.random() * tips.length)];
   const msg = {
     to: caregiverEmail,
-    from: "mohammad.a.roshani@gmail.com",
+    from: EMAIL_FROM,
     subject: "Mobility Tip for Your Care Recipient",
     text: `Here is a tip for their mobility type (${mobilityType}):\n\n${tip}`,
   };
@@ -137,6 +244,16 @@ app.post("/send-caregiver-tip", async (req, res) => {
   } catch (err) {
     console.error('SendGrid error:', err.response?.body || err.message || err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/send-daily-reminders-now", async (req, res) => {
+  try {
+    const result = await sendDailyMedicationAndMobilityReminders();
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error("Error running daily reminders:", error.message);
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
@@ -443,7 +560,7 @@ app.get("/test-send-email", async (req, res) => {
   const tip = tips[Math.floor(Math.random() * tips.length)];
   const msg = {
     to: email,
-    from: "mohammad.a.roshani@gmail.com",
+    from: EMAIL_FROM,
     subject: "Your Daily Transportation Tip (Test)",
     text: `Here is your daily tip for getting around by ${method}:\n\n${tip}`,
   };
@@ -456,5 +573,13 @@ app.get("/test-send-email", async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+exports.sendDailyMedicationAndMobilityTips = functions.pubsub
+  .schedule("every day 08:00")
+  .timeZone("America/New_York")
+  .onRun(async () => {
+    await sendDailyMedicationAndMobilityReminders();
+    return null;
+  });
 
 exports.api = functions.https.onRequest(app);

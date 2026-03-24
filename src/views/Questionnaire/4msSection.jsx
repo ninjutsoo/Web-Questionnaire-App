@@ -1,12 +1,9 @@
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Card, Select, Input, Space, Typography, Slider, Row, Col, Button, Alert, Checkbox, Tooltip } from 'antd';
+import { Card, Select, Input, Space, Typography, Row, Col, Button, Alert, Tooltip } from 'antd';
 import { HeartOutlined, CarOutlined, MedicineBoxOutlined, StarOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { AudioOutlined, QrcodeOutlined } from '@ant-design/icons';
 import SpeechReader from '../../components/SpeechReader';
 import MedicationScanner from '../../components/MedicationScanner';
-import { message } from 'antd';
-import axios from 'axios';
-import { getApiEndpoint } from '../../services/apiClient';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -63,6 +60,30 @@ const LIKERT_LABELS = {
 };
 const DEFAULT_LIKERT_LABELS = { min: 'Low', max: 'High' };
 
+const LIKERT_BUTTON_OPTIONS = {
+  happiness: [
+    { value: 1, label: 'Not at all happy' },
+    { value: 3, label: 'A little happy' },
+    { value: 5, label: 'Neutral' },
+    { value: 8, label: 'Happy' },
+    { value: 10, label: 'Very happy' }
+  ],
+  memory: [
+    { value: 1, label: 'Not worried' },
+    { value: 3, label: 'A little worried' },
+    { value: 5, label: 'Somewhat worried' },
+    { value: 8, label: 'Worried' },
+    { value: 10, label: 'Very worried' }
+  ],
+  sleep: [
+    { value: 1, label: 'Very poor sleep' },
+    { value: 3, label: 'Poor sleep' },
+    { value: 5, label: 'Okay sleep' },
+    { value: 8, label: 'Good sleep' },
+    { value: 10, label: 'Excellent sleep' }
+  ]
+};
+
 const normalizeLikertValue = (value) => {
   if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
   if (value > 10) {
@@ -87,24 +108,19 @@ const normalizeSliderResponses = (source, sectionQuestions) => {
   return normalized;
 };
 
-const FourMSection = forwardRef(({ section, questionnaire, responses, userProfile, onLocalChange }, ref) => {
+const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalChange }, ref) => {
   const [localResponses, setLocalResponses] = useState(responses || {});
   const [isListening, setIsListening] = useState({});
   const [recognition, setRecognition] = useState(null);
   const [scannerVisible, setScannerVisible] = useState(false);
-  const [mobilityTipSending, setMobilityTipSending] = useState(false);
 
   const config = SECTION_CONFIG[section];
 
   useEffect(() => {
     const sectionQuestions = questionnaire?.sections?.[section]?.questions || {};
     const normalized = normalizeSliderResponses(responses || {}, sectionQuestions);
-    // Pre-populate caregiverEmail from userProfile if not already set
-    if (section === 'mobility' && userProfile?.caregiverEmail && !normalized.caregiverEmail) {
-      normalized.caregiverEmail = userProfile.caregiverEmail;
-    }
     setLocalResponses(normalized);
-  }, [responses, userProfile, section, questionnaire]);
+  }, [responses, section, questionnaire]);
 
   // Expose getCurrentData method to parent
   useImperativeHandle(ref, () => ({
@@ -260,7 +276,11 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
       const rawValue = localResponses[questionKey];
       const hasValue = typeof rawValue === 'number';
       const displayValue = hasValue ? normalizeLikertValue(rawValue) : 5;
-      const sliderColor = hasValue ? config.color : '#d9d9d9';
+      const buttonOptions = LIKERT_BUTTON_OPTIONS[questionKey] || [
+        { value: 1, label: labels.min },
+        { value: 5, label: question.neutralLabel || 'Neutral' },
+        { value: 10, label: labels.max }
+      ];
 
       return (
         <Card 
@@ -291,8 +311,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
         >
           <Row gutter={[16, 16]}>
             <Col xs={24} sm={18}>
-              <div style={{ padding: '10px 20px 10px 10px' }}>
-                {/* Labels above slider */}
+              <div style={{ padding: '10px 10px 10px 10px' }}>
                 <div style={{ 
                   display: 'flex', 
                   justifyContent: 'space-between', 
@@ -307,26 +326,27 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
                   </span>
                   <span>{labels.max}</span>
                 </div>
-                
-                {/* Slider without bottom marks to avoid duplication */}
-                <Slider
-                  min={question.min || 1}
-                  max={question.max || 10}
-                  step={question.step || 1}
-                  included={hasValue}
-                  value={displayValue}
-                  onChange={(value) => handleSliderChange(questionKey, value)}
-                  tooltip={{ formatter: (value) => hasValue ? `${value}/10` : 'Slide to choose' }}
-                  trackStyle={{ backgroundColor: sliderColor, height: 6 }}
-                  handleStyle={{ 
-                    borderColor: sliderColor, 
-                    borderWidth: 2, 
-                    height: 20, 
-                    width: 20, 
-                    boxShadow: hasValue ? undefined : '0 0 0 2px rgba(0,0,0,0.08) inset' 
-                  }}
-                  railStyle={{ height: 6 }}
-                />
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {buttonOptions.map((option) => {
+                    const isActive = displayValue === option.value;
+                    return (
+                      <Button
+                        key={`${questionKey}-${option.value}`}
+                        type={isActive ? 'primary' : 'default'}
+                        onClick={() => handleSliderChange(questionKey, option.value)}
+                        style={{
+                          minHeight: 42,
+                          whiteSpace: 'normal',
+                          borderColor: isActive ? config.color : undefined,
+                          backgroundColor: isActive ? config.color : '#fff'
+                        }}
+                      >
+                        {option.label}
+                      </Button>
+                    );
+                  })}
+                </div>
               </div>
             </Col>
             <Col xs={24} sm={6}>
@@ -346,30 +366,6 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
     } else if (question.type === 'mobility_type') {
       const selectedType = localResponses[questionKey];
       const tips = question.tips?.[selectedType];
-      const caregiverEmail = localResponses.caregiverEmail || '';
-
-      const handleSendCaregiverTip = async () => {
-        if (!caregiverEmail || !selectedType) {
-          message.error('Please enter a caregiver email and select a mobility type.');
-          return;
-        }
-        setMobilityTipSending(true);
-        try {
-          const res = await axios.post(getApiEndpoint('/send-caregiver-tip'), {
-            caregiverEmail,
-            mobilityType: selectedType
-          });
-          if (res.data.success) {
-            message.success('Tip email sent to caregiver!');
-          } else {
-            message.error(res.data.error || 'Failed to send email.');
-          }
-        } catch (err) {
-          message.error(err.response?.data?.error || err.message || 'Failed to send email.');
-        } finally {
-          setMobilityTipSending(false);
-        }
-      };
 
       return (
         <Card 
@@ -416,24 +412,6 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, userProfil
                 options={question.options?.map(option => ({ label: option, value: option })) || []}
               />
             </div>
-            <Input
-              type="email"
-              placeholder="Caregiver's email address"
-              value={caregiverEmail}
-              onChange={e => {
-                setLocalResponses({ ...localResponses, caregiverEmail: e.target.value });
-                if (onLocalChange) onLocalChange();
-              }}
-              style={{ width: '100%' }}
-            />
-            <Button
-              type="primary"
-              loading={mobilityTipSending}
-              onClick={handleSendCaregiverTip}
-              style={{ width: '100%' }}
-            >
-              Send Mobility Tip to Caregiver
-            </Button>
             {tips && (
               <Alert
                 message={

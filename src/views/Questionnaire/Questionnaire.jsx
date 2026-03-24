@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, Button, Progress, message, Tooltip } from 'antd';
 import { HomeOutlined, LeftOutlined, SaveOutlined } from '@ant-design/icons';
-import { auth, db } from '../../services/firebase';
+import { auth } from '../../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc } from 'firebase/firestore';
 import { getQuestionnaire, getUserSession, saveSectionResponses } from '../../services/questionnaireService';
 import FourMSection from './4msSection';
 import ReviewSubmit from './ReviewSubmit';
@@ -12,7 +11,6 @@ import ReviewSubmit from './ReviewSubmit';
 export default function Questionnaire() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
   const [activeTab, setActiveTab] = useState('matters');
   const [questionnaire, setQuestionnaire] = useState(null);
   const [sessionId, setSessionId] = useState(null);
@@ -39,18 +37,6 @@ export default function Questionnaire() {
       } else {
         console.log("User authenticated:", currentUser.uid, currentUser.email);
         setUser(currentUser);
-        
-        // Fetch user profile from Firestore
-        try {
-          const userDocRef = doc(db, "Users", currentUser.uid);
-          const userDoc = await getDoc(userDocRef);
-          if (userDoc.exists()) {
-            setUserProfile(userDoc.data());
-          }
-        } catch (error) {
-          console.error("Error fetching user profile:", error);
-        }
-        
         initializeQuestionnaire(currentUser.uid);
       }
     });
@@ -293,7 +279,6 @@ export default function Questionnaire() {
           section="mobility"
           questionnaire={questionnaire}
           responses={responses.mobility}
-          userProfile={userProfile}
           onLocalChange={triggerProgressUpdate}
         />
       )

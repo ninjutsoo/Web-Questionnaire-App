@@ -48,6 +48,115 @@ const applyLikertSliderConfig = (questionnaire) => {
   };
 };
 
+const withOther = (tags = []) => {
+  if (!Array.isArray(tags)) return ['Other'];
+  return tags.includes('Other') ? tags : [...tags, 'Other'];
+};
+
+const getMarch6MedicationQuestions = () => ({
+  q1: {
+    text: "What prescribed medications are you currently taking?",
+    type: "tag_text",
+    tags: ["Blood Pressure", "Diabetes", "Heart", "Pain", "Dementia medication", "Mental Health", "Other"]
+  },
+  q2: {
+    text: "What \"over the counter\" medications are you currently taking?",
+    type: "tag_text",
+    tags: ["Vitamins", "herps", "fiber supplements", "allergy medications", "other"]
+  },
+  q3: {
+    text: "Do you have any concerns about your medications?",
+    type: "tag_text",
+    tags: ["Side Effects", "Too Many", "Cost", "Effectiveness", "Interactions", "Forgetting"]
+  },
+  q4: {
+    text: "How often do you miss doses?",
+    type: "tag_text",
+    tags: ["Never", "Rarely", "Sometimes", "Often", "Multiple Times", "Need Help", "Other"]
+  },
+  q5: {
+    text: "How do you manage your medication?",
+    type: "tag_text",
+    tags: ["days of the week pill box", "reminder app", "timer", "caregiver assistance", "other"]
+  }
+});
+
+const applyMarch6QuestionnaireUpdates = (questionnaire) => {
+  if (!questionnaire?.sections) return { data: questionnaire, changed: false };
+
+  const next = JSON.parse(JSON.stringify(questionnaire));
+  let changed = false;
+
+  // What Matters: add Other to all questions
+  const mattersQuestions = next.sections?.matters?.questions || {};
+  Object.keys(mattersQuestions).forEach((key) => {
+    const q = mattersQuestions[key];
+    if (q?.type === 'tag_text') {
+      const updatedTags = withOther(q.tags);
+      if ((q.tags || []).length !== updatedTags.length || !updatedTags.every((t, i) => t === q.tags?.[i])) {
+        q.tags = updatedTags;
+        changed = true;
+      }
+    }
+  });
+
+  // Medication: replace with required March 6 structure
+  const desiredMedication = getMarch6MedicationQuestions();
+  const currentMedication = next.sections?.medication?.questions || {};
+  if (JSON.stringify(currentMedication) !== JSON.stringify(desiredMedication)) {
+    next.sections.medication = {
+      ...(next.sections.medication || {}),
+      questions: desiredMedication
+    };
+    changed = true;
+  }
+
+  // Mentation (mind): update q5-q7 text and add Other to q4-q7
+  const mindQuestions = next.sections?.mind?.questions || {};
+  const mindTextUpdates = {
+    q5: "Is there anything that has been causing you stress lately?",
+    q6: "When you need support, what kind of support do you find most helpful?",
+    q7: "If you were looking for support around well-being, what would feel most helpful?"
+  };
+  ['q4', 'q5', 'q6', 'q7'].forEach((key) => {
+    const q = mindQuestions[key];
+    if (q?.type === 'tag_text') {
+      const updatedTags = withOther(q.tags);
+      if ((q.tags || []).length !== updatedTags.length || !updatedTags.every((t, i) => t === q.tags?.[i])) {
+        q.tags = updatedTags;
+        changed = true;
+      }
+      if (mindTextUpdates[key] && q.text !== mindTextUpdates[key]) {
+        q.text = mindTextUpdates[key];
+        changed = true;
+      }
+    }
+  });
+
+  // Mobility: add Other to all tag_text questions and add two options to q2
+  const mobilityQuestions = next.sections?.mobility?.questions || {};
+  Object.keys(mobilityQuestions).forEach((key) => {
+    const q = mobilityQuestions[key];
+    if (q?.type === 'tag_text') {
+      let updatedTags = withOther(q.tags);
+      if (key === 'q2') {
+        if (!updatedTags.includes('Dizziness')) updatedTags.push('Dizziness');
+        if (!updatedTags.includes('Fear of falling')) updatedTags.push('Fear of falling');
+      }
+      if ((q.tags || []).length !== updatedTags.length || !updatedTags.every((t, i) => t === q.tags?.[i])) {
+        q.tags = updatedTags;
+        changed = true;
+      }
+    }
+  });
+
+  if (changed) {
+    next.updatedAt = new Date();
+  }
+
+  return { data: next, changed };
+};
+
 // Get the questionnaire structure
 export const getQuestionnaire = async () => {
   try {
@@ -57,7 +166,12 @@ export const getQuestionnaire = async () => {
     
     if (docSnap.exists()) {
       console.log('Questionnaire loaded from Firebase successfully');
-      const questionnaireData = applyLikertSliderConfig(docSnap.data());
+      let questionnaireData = applyLikertSliderConfig(docSnap.data());
+      const march6Result = applyMarch6QuestionnaireUpdates(questionnaireData);
+      questionnaireData = march6Result.data;
+      if (march6Result.changed) {
+        await setDoc(docRef, questionnaireData);
+      }
       
       // Check if we need to update with new mobilityType question
       if (!questionnaireData.sections?.mobility?.questions?.mobilityType) {
@@ -76,29 +190,24 @@ export const getQuestionnaire = async () => {
         sections: {
           matters: {
             questions: {
-              q1: { text: "What activities bring you the most joy?", type: "tag_text", tags: ["Family Time", "Reading", "Exercise", "Cooking", "Travel", "Music"] },
-              q2: { text: "What are your main concerns in life right now?", type: "tag_text", tags: ["Health", "Finance", "Family", "Independence", "Safety", "Loneliness"] },
-              q3: { text: "What are your most important goals?", type: "tag_text", tags: ["Stay Healthy", "Family Time", "Travel", "Independence", "Learn New Things", "Help Others"] },
-              q4: { text: "What kind of support do you need most?", type: "tag_text", tags: ["Medical Care", "Family Support", "Transportation", "Home Help", "Social Activities", "Financial"] }
+              q1: { text: "What activities bring you the most joy?", type: "tag_text", tags: ["Family Time", "Reading", "Exercise", "Cooking", "Travel", "Music", "Other"] },
+              q2: { text: "What are your main concerns in life right now?", type: "tag_text", tags: ["Health", "Finance", "Family", "Independence", "Safety", "Loneliness", "Other"] },
+              q3: { text: "What are your most important goals?", type: "tag_text", tags: ["Stay Healthy", "Family Time", "Travel", "Independence", "Learn New Things", "Help Others", "Other"] },
+              q4: { text: "What kind of support do you need most?", type: "tag_text", tags: ["Medical Care", "Family Support", "Transportation", "Home Help", "Social Activities", "Financial", "Other"] }
             }
           },
           medication: {
-            questions: {
-              q1: { text: "What medications are you currently taking?", type: "tag_text", tags: ["Blood Pressure", "Diabetes", "Heart", "Pain", "Vitamins", "Mental Health"] },
-              q2: { text: "Do you have any concerns about your medications?", type: "tag_text", tags: ["Side Effects", "Too Many", "Cost", "Effectiveness", "Interactions", "Forgetting"] },
-              q3: { text: "How often do you miss doses?", type: "tag_text", tags: ["Never", "Rarely", "Sometimes", "Often", "Multiple Times", "Need Help"] },
-              q4: { text: "What questions do you have about your medications?", type: "tag_text", tags: ["Dosage", "Timing", "Food Interactions", "Side Effects", "Alternatives", "Stopping"] }
-            }
+            questions: getMarch6MedicationQuestions()
           },
           mind: {
             questions: {
               happiness: { text: "How happy do you feel most days?", type: "slider", ...LIKERT_SLIDER_CONFIG.happiness },
               memory: { text: "How worried are you about your memory?", type: "slider", ...LIKERT_SLIDER_CONFIG.memory },
               sleep: { text: "How would you rate your sleep quality?", type: "slider", ...LIKERT_SLIDER_CONFIG.sleep },
-              q4: { text: "What mental health concerns do you have?", type: "tag_text", tags: ["Anxiety", "Depression", "Stress", "Loneliness", "Grief", "Fear"] },
-              q5: { text: "What causes you the most stress?", type: "tag_text", tags: ["Health", "Family", "Money", "Safety", "Future", "Memory"] },
-              q6: { text: "What helps you cope with difficult times?", type: "tag_text", tags: ["Prayer", "Exercise", "Family", "Friends", "Hobbies", "Professional Help"] },
-              q7: { text: "What mental health support would be helpful?", type: "tag_text", tags: ["Counseling", "Support Groups", "Medication", "Family Help", "Social Activities", "Spiritual Care"] }
+              q4: { text: "What mental health concerns do you have?", type: "tag_text", tags: ["Anxiety", "Depression", "Stress", "Loneliness", "Grief", "Fear", "Other"] },
+              q5: { text: "Is there anything that has been causing you stress lately?", type: "tag_text", tags: ["Health", "Family", "Money", "Safety", "Future", "Memory", "Other"] },
+              q6: { text: "When you need support, what kind of support do you find most helpful?", type: "tag_text", tags: ["Prayer", "Exercise", "Family", "Friends", "Hobbies", "Professional Help", "Other"] },
+              q7: { text: "If you were looking for support around well-being, what would feel most helpful?", type: "tag_text", tags: ["Counseling", "Support Groups", "Medication", "Family Help", "Social Activities", "Spiritual Care", "Other"] }
             }
           },
           mobility: {
@@ -130,10 +239,10 @@ export const getQuestionnaire = async () => {
                   }
                 }
               },
-              q1: { text: "What mobility challenges do you face?", type: "tag_text", tags: ["Walking", "Stairs", "Balance", "Standing", "Getting Up", "Pain"] },
-              q2: { text: "What is your current exercise routine?", type: "tag_text", tags: ["Daily Walk", "Gym", "Swimming", "Yoga", "Physical Therapy", "None"] },
-              q3: { text: "Do you use any mobility aids?", type: "tag_text", tags: ["Cane", "Walker", "Wheelchair", "Grab Bars", "Ramp", "None"] },
-              q4: { text: "What are your concerns about falling?", type: "tag_text", tags: ["Balance Problems", "Weakness", "Dizziness", "Medications", "Home Hazards", "No Concerns"] }
+              q1: { text: "What mobility challenges do you face?", type: "tag_text", tags: ["Walking", "Stairs", "Balance", "Standing", "Getting Up", "Pain", "Other"] },
+              q2: { text: "What is your current exercise routine?", type: "tag_text", tags: ["Daily Walk", "Gym", "Swimming", "Yoga", "Physical Therapy", "None", "Dizziness", "Fear of falling", "Other"] },
+              q3: { text: "Do you use any mobility aids?", type: "tag_text", tags: ["Cane", "Walker", "Wheelchair", "Grab Bars", "Ramp", "None", "Other"] },
+              q4: { text: "What are your concerns about falling?", type: "tag_text", tags: ["Balance Problems", "Weakness", "Dizziness", "Medications", "Home Hazards", "No Concerns", "Other"] }
             }
           }
         },
@@ -158,35 +267,30 @@ export const getQuestionnaire = async () => {
 
 // Fallback questionnaire in case Firebase fails
 const getFallbackQuestionnaire = () => {
-  return applyLikertSliderConfig({
+  return applyMarch6QuestionnaireUpdates(applyLikertSliderConfig({
     name: "4 Ms Health Assessment",
     version: "1.0",
     sections: {
       matters: {
         questions: {
-          q1: { text: "What activities bring you the most joy?", type: "tag_text", tags: ["Family Time", "Reading", "Exercise", "Cooking", "Travel", "Music"] },
-          q2: { text: "What are your main concerns in life right now?", type: "tag_text", tags: ["Health", "Finance", "Family", "Independence", "Safety", "Loneliness"] },
-          q3: { text: "What are your most important goals?", type: "tag_text", tags: ["Stay Healthy", "Family Time", "Travel", "Independence", "Learn New Things", "Help Others"] },
-          q4: { text: "What kind of support do you need most?", type: "tag_text", tags: ["Medical Care", "Family Support", "Transportation", "Home Help", "Social Activities", "Financial"] }
+          q1: { text: "What activities bring you the most joy?", type: "tag_text", tags: ["Family Time", "Reading", "Exercise", "Cooking", "Travel", "Music", "Other"] },
+          q2: { text: "What are your main concerns in life right now?", type: "tag_text", tags: ["Health", "Finance", "Family", "Independence", "Safety", "Loneliness", "Other"] },
+          q3: { text: "What are your most important goals?", type: "tag_text", tags: ["Stay Healthy", "Family Time", "Travel", "Independence", "Learn New Things", "Help Others", "Other"] },
+          q4: { text: "What kind of support do you need most?", type: "tag_text", tags: ["Medical Care", "Family Support", "Transportation", "Home Help", "Social Activities", "Financial", "Other"] }
         }
       },
       medication: {
-        questions: {
-          q1: { text: "What medications are you currently taking?", type: "tag_text", tags: ["Blood Pressure", "Diabetes", "Heart", "Pain", "Vitamins", "Mental Health"] },
-          q2: { text: "Do you have any concerns about your medications?", type: "tag_text", tags: ["Side Effects", "Too Many", "Cost", "Effectiveness", "Interactions", "Forgetting"] },
-          q3: { text: "How often do you miss doses?", type: "tag_text", tags: ["Never", "Rarely", "Sometimes", "Often", "Multiple Times", "Need Help"] },
-          q4: { text: "What questions do you have about your medications?", type: "tag_text", tags: ["Dosage", "Timing", "Food Interactions", "Side Effects", "Alternatives", "Stopping"] }
-        }
+        questions: getMarch6MedicationQuestions()
       },
       mind: {
         questions: {
           happiness: { text: "How happy do you feel most days?", type: "slider", ...LIKERT_SLIDER_CONFIG.happiness },
           memory: { text: "How worried are you about your memory?", type: "slider", ...LIKERT_SLIDER_CONFIG.memory },
           sleep: { text: "How would you rate your sleep quality?", type: "slider", ...LIKERT_SLIDER_CONFIG.sleep },
-          q4: { text: "What mental health concerns do you have?", type: "tag_text", tags: ["Anxiety", "Depression", "Stress", "Loneliness", "Grief", "Fear"] },
-          q5: { text: "What causes you the most stress?", type: "tag_text", tags: ["Health", "Family", "Money", "Safety", "Future", "Memory"] },
-          q6: { text: "What helps you cope with difficult times?", type: "tag_text", tags: ["Prayer", "Exercise", "Family", "Friends", "Hobbies", "Professional Help"] },
-          q7: { text: "What mental health support would be helpful?", type: "tag_text", tags: ["Counseling", "Support Groups", "Medication", "Family Help", "Social Activities", "Spiritual Care"] }
+          q4: { text: "What mental health concerns do you have?", type: "tag_text", tags: ["Anxiety", "Depression", "Stress", "Loneliness", "Grief", "Fear", "Other"] },
+          q5: { text: "Is there anything that has been causing you stress lately?", type: "tag_text", tags: ["Health", "Family", "Money", "Safety", "Future", "Memory", "Other"] },
+          q6: { text: "When you need support, what kind of support do you find most helpful?", type: "tag_text", tags: ["Prayer", "Exercise", "Family", "Friends", "Hobbies", "Professional Help", "Other"] },
+          q7: { text: "If you were looking for support around well-being, what would feel most helpful?", type: "tag_text", tags: ["Counseling", "Support Groups", "Medication", "Family Help", "Social Activities", "Spiritual Care", "Other"] }
         }
       },
       mobility: {
@@ -218,16 +322,16 @@ const getFallbackQuestionnaire = () => {
               }
             }
           },
-          q1: { text: "What mobility challenges do you face?", type: "tag_text", tags: ["Walking", "Stairs", "Balance", "Standing", "Getting Up", "Pain"] },
-          q2: { text: "What is your current exercise routine?", type: "tag_text", tags: ["Daily Walk", "Gym", "Swimming", "Yoga", "Physical Therapy", "None"] },
-          q3: { text: "Do you use any mobility aids?", type: "tag_text", tags: ["Cane", "Walker", "Wheelchair", "Grab Bars", "Ramp", "None"] },
-          q4: { text: "What are your concerns about falling?", type: "tag_text", tags: ["Balance Problems", "Weakness", "Dizziness", "Medications", "Home Hazards", "No Concerns"] }
+          q1: { text: "What mobility challenges do you face?", type: "tag_text", tags: ["Walking", "Stairs", "Balance", "Standing", "Getting Up", "Pain", "Other"] },
+          q2: { text: "What is your current exercise routine?", type: "tag_text", tags: ["Daily Walk", "Gym", "Swimming", "Yoga", "Physical Therapy", "None", "Dizziness", "Fear of falling", "Other"] },
+          q3: { text: "Do you use any mobility aids?", type: "tag_text", tags: ["Cane", "Walker", "Wheelchair", "Grab Bars", "Ramp", "None", "Other"] },
+          q4: { text: "What are your concerns about falling?", type: "tag_text", tags: ["Balance Problems", "Weakness", "Dizziness", "Medications", "Home Hazards", "No Concerns", "Other"] }
         }
       }
     },
     isActive: true,
     updatedAt: new Date()
-  });
+  })).data;
 };
 
 // Create or get user session
