@@ -36,6 +36,7 @@ const express = require("express");
 const cors = require("cors");
 const axios = require("axios");
 const functions = require("firebase-functions");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const sgMail = require("@sendgrid/mail");
 const { defineString } = require("firebase-functions/params");
@@ -574,12 +575,11 @@ app.get("/test-send-email", async (req, res) => {
   }
 });
 
-exports.sendDailyMedicationAndMobilityTips = functions.pubsub
-  .schedule("every day 08:00")
-  .timeZone("America/New_York")
-  .onRun(async () => {
+exports.sendDailyMedicationAndMobilityTips = onSchedule(
+  { schedule: "every day 08:00", timeZone: "America/New_York" },
+  async () => {
     await sendDailyMedicationAndMobilityReminders();
-    return null;
-  });
+  }
+);
 
 exports.api = functions.https.onRequest(app);
