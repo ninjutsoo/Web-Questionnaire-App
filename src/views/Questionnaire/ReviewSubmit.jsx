@@ -5,6 +5,88 @@ import { CheckCircleOutlined, SendOutlined, EditOutlined } from '@ant-design/ico
 const { Title, Text, Paragraph } = Typography;
 
 export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }) {
+  // If legacy responses stored slider values as 0-100 percentages, normalize them into 1-10.
+  const normalizeLikertValue = (value) => {
+    if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
+    if (value > 10) {
+      const scaled = (value / 100) * 9 + 1; // map 0-100 -> 1-10
+      return Math.min(10, Math.max(1, Math.round(scaled)));
+    }
+    if (value < 1) return 1;
+    return Math.min(10, Math.round(value));
+  };
+
+  // Used for showing the selected "button label" in the Review & Save screen.
+  const MIND_SLIDER_VALUE_LABELS = {
+    happiness: {
+      1: 'Not at all happy',
+      3: 'A little happy',
+      5: 'Neutral',
+      8: 'Happy',
+      10: 'Very happy'
+    },
+    memory: {
+      1: 'Not worried',
+      3: 'A little worried',
+      5: 'Somewhat worried',
+      8: 'Worried',
+      10: 'Very worried'
+    },
+    sleep: {
+      1: 'Very poor sleep',
+      3: 'Poor sleep',
+      5: 'Okay sleep',
+      8: 'Good sleep',
+      10: 'Excellent sleep'
+    }
+  };
+
+  const getOrderedQuestionKeys = (sectionKey) => {
+    const questions = questionnaire?.sections?.[sectionKey]?.questions || {};
+    const sliderOrder = ['happiness', 'memory', 'sleep'];
+
+    const sortedEntries = Object.entries(questions).sort(([keyA], [keyB]) => {
+      // Custom order for mind section: sliders first, then text questions.
+      if (sectionKey === 'mind') {
+        const indexA = sliderOrder.indexOf(keyA);
+        const indexB = sliderOrder.indexOf(keyB);
+
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+      }
+
+      // Custom order for mobility section: mobilityType first, then other questions.
+      if (sectionKey === 'mobility') {
+        if (keyA === 'mobilityType') return -1;
+        if (keyB === 'mobilityType') return 1;
+      }
+
+      // Numeric sorting for q1, q2, q3, etc.
+      const numA = keyA.match(/\d+/)?.[0];
+      const numB = keyB.match(/\d+/)?.[0];
+      if (numA && numB) return parseInt(numA, 10) - parseInt(numB, 10);
+
+      return keyA.localeCompare(keyB);
+    });
+
+    return sortedEntries.map(([key]) => key);
+  };
+
+  const getSliderLabel = (questionKey, rawValue) => {
+    const normalized = normalizeLikertValue(rawValue);
+    const labels = MIND_SLIDER_VALUE_LABELS[questionKey] || {};
+    if (typeof normalized !== 'number') return '';
+    if (labels[normalized]) return labels[normalized];
+
+    // Fallback: choose nearest defined button value label
+    const numericKeys = Object.keys(labels).map((k) => parseInt(k, 10));
+    if (numericKeys.length === 0) return '';
+    const nearest = numericKeys.reduce((closest, current) =>
+      Math.abs(current - normalized) < Math.abs(closest - normalized) ? current : closest
+    );
+    return labels[nearest] || '';
+  };
 
   const getSectionSummary = (sectionKey, sectionData) => {
     if (!sectionData || Object.keys(sectionData).length === 0) {
@@ -121,53 +203,61 @@ export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }
           </Text>
         ) : (
           <Space direction="vertical" size="small" style={{ width: '100%' }}>
-            {Object.entries(sectionData).map(([key, value]) => {
-              // Get the actual question text from the questionnaire structure
-              const questionText = questionnaire?.sections?.[section.key]?.questions?.[key]?.text || 
-                                 key.replace(/([A-Z])/g, ' $1').trim();
-              
-              return (
-                <div key={key} style={{ marginBottom: '15px', padding: '12px', backgroundColor: '#fafafa', borderRadius: '8px' }}>
-                  <Text strong style={{ fontSize: '15px', color: '#333', display: 'block', marginBottom: '8px' }}>
-                    {questionText}
-                  </Text>
-                  <div style={{ marginTop: '4px', paddingLeft: '16px' }}>
-                    {typeof value === 'object' && value !== null ? (
-                      <div>
-                        {value.tags && value.tags.length > 0 && (
-                          <div style={{ marginBottom: '6px' }}>
-                            {value.tags.map(tag => (
-                              <Tag key={tag} color="blue" style={{ marginBottom: '2px' }}>
-                                {tag}
-                              </Tag>
-                            ))}
-                          </div>
-                        )}
-                        {value.text && (
-                          <Paragraph 
-                            style={{ 
-                              fontSize: '14px', 
-                              margin: 0, 
-                              color: '#666',
-                              backgroundColor: '#f0f0f0',
-                              padding: '8px',
-                              borderRadius: '4px',
-                              fontStyle: 'italic'
-                            }}
-                          >
-                            "{value.text}"
-                          </Paragraph>
-                        )}
-                      </div>
-                    ) : (
-                      <Text style={{ fontSize: '16px', color: '#1890ff', fontWeight: '600' }}>
-                        {typeof value === 'number' ? `${value}%` : value}
-                      </Text>
-                    )}
+            {getOrderedQuestionKeys(section.key)
+              .filter((key) => Object.prototype.hasOwnProperty.call(sectionData, key))
+              .map((key) => {
+                const value = sectionData[key];
+                // Get the actual question text/type from the questionnaire structure
+                const question = questionnaire?.sections?.[section.key]?.questions?.[key];
+                const questionText = question?.text || key.replace(/([A-Z])/g, ' $1').trim();
+                const questionType = question?.type;
+
+                return (
+                  <div key={key} style={{ marginBottom: '15px', padding: '12px', backgroundColor: '#fafafa', borderRadius: '8px' }}>
+                    <Text strong style={{ fontSize: '15px', color: '#333', display: 'block', marginBottom: '8px' }}>
+                      {questionText}
+                    </Text>
+                    <div style={{ marginTop: '4px', paddingLeft: '16px' }}>
+                      {typeof value === 'object' && value !== null ? (
+                        <div>
+                          {value.tags && value.tags.length > 0 && (
+                            <div style={{ marginBottom: '6px' }}>
+                              {value.tags.map(tag => (
+                                <Tag key={tag} color="blue" style={{ marginBottom: '2px' }}>
+                                  {tag}
+                                </Tag>
+                              ))}
+                            </div>
+                          )}
+                          {value.text && (
+                            <Paragraph
+                              style={{
+                                fontSize: '14px',
+                                margin: 0,
+                                color: '#666',
+                                backgroundColor: '#f0f0f0',
+                                padding: '8px',
+                                borderRadius: '4px',
+                                fontStyle: 'italic'
+                              }}
+                            >
+                              "{value.text}"
+                            </Paragraph>
+                          )}
+                        </div>
+                      ) : (
+                        <Text style={{ fontSize: '16px', color: '#1890ff', fontWeight: '600' }}>
+                          {typeof value === 'number'
+                            ? questionType === 'slider'
+                              ? getSliderLabel(key, value)
+                              : value
+                            : value}
+                        </Text>
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
           </Space>
         )}
       </Card>
