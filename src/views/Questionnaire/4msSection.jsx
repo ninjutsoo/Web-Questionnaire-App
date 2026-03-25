@@ -114,6 +114,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
   const [recognition, setRecognition] = useState(null);
   const idleStopTimerRef = useRef(null);
   const [scannerVisible, setScannerVisible] = useState(false);
+  const [scannerTargetQuestion, setScannerTargetQuestion] = useState('q1');
 
   const config = SECTION_CONFIG[section];
 
@@ -224,9 +225,10 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
     } else {
       displayText = scannedValue;
     }
-    const currentText = localResponses.q1?.text || '';
+    const targetQuestion = scannerTargetQuestion || 'q1';
+    const currentText = localResponses[targetQuestion]?.text || '';
     const newText = currentText ? `${currentText}\n${displayText}` : displayText;
-    handleTextChange('q1', newText);
+    handleTextChange(targetQuestion, newText);
   };
 
   // Initialize speech recognition
@@ -552,12 +554,15 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
                   Additional details:
                 </Text>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {/* QR Scanner button - only show for medication section, first question */}
-                  {section === 'medication' && questionKey === 'q1' && (
+                  {/* QR Scanner button - show for medication section q1 and q2 */}
+                  {section === 'medication' && (questionKey === 'q1' || questionKey === 'q2') && (
                     <Tooltip title="Scan medication barcode or QR code">
                       <Button
                         icon={<QrcodeOutlined />}
-                        onClick={() => setScannerVisible(true)}
+                        onClick={() => {
+                          setScannerTargetQuestion(questionKey);
+                          setScannerVisible(true);
+                        }}
                         style={{
                           padding: '8px 16px',
                           height: 'auto',

@@ -47,9 +47,9 @@ function MedicationScanner({ onMedScanned, visible, onClose }) {
       const initScanner = async () => {
         try {
           let attempts = 0;
-          const maxAttempts = 10;
+          const maxAttempts = 20;
           while (attempts < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, 200));
+            await new Promise(resolve => setTimeout(resolve, 100));
             const element = document.getElementById("qr-reader");
             if (element && element.clientWidth > 0 && !scannerRef.current) {
               const qrCode = new Html5Qrcode("qr-reader");
@@ -74,11 +74,7 @@ function MedicationScanner({ onMedScanned, visible, onClose }) {
 
   useEffect(() => {
     if (visible && html5QrCode && isInitialized && !isScanning) {
-      setTimeout(() => {
-        if (visible && !isScanning) {
-          startScanning();
-        }
-      }, 500);
+      startScanning();
     }
   }, [visible, html5QrCode, isInitialized, isScanning]);
 
@@ -118,9 +114,10 @@ function MedicationScanner({ onMedScanned, visible, onClose }) {
       await html5QrCode.start(
         { facingMode: "environment" },
         {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-          aspectRatio: 1.0,
+          fps: 15,
+          // Wider scan area helps 1D barcode capture speed.
+          qrbox: { width: 320, height: 180 },
+          aspectRatio: 1.7777777778,
           disableFlip: false,
           supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA],
           experimentalFeatures: {
@@ -130,28 +127,28 @@ function MedicationScanner({ onMedScanned, visible, onClose }) {
         async (decodedText) => {
           if (isProcessingRef.current) return;
           isProcessingRef.current = true;
-          setIsLookingUp(true);
-          if (scannerRef.current) {
-            scannerRef.current.stop().finally(() => {
+          if (/^\d+$/.test(decodedText)) {
+            setIsLookingUp(true);
+            if (scannerRef.current) {
+              await scannerRef.current.stop().catch(() => undefined);
               setIsRunning(false);
               setIsScanning(false);
-            });
-          }
-          if (/^\d+$/.test(decodedText)) {
+            }
             const lookupResult = await tryAllLookups(decodedText);
             if (lookupResult.success) {
               onMedScanned(lookupResult.data);
               message.success('Medication found and added!');
               onClose();
             } else {
-              // message.error('Drug information not found in any database.');
-              console.error('Drug information not found in any database.');
+              console.error('Drug information not found in any database. Continuing scan...');
               setIsLookingUp(false);
               isProcessingRef.current = false;
+              if (!isUnmountedRef.current && visible) {
+                startScanning();
+              }
             }
           } else {
-            // message.error('Invalid code scanned. Please scan a valid medication barcode.');
-            console.error('Invalid code scanned. Please scan a valid medication barcode.');
+            // Ignore non-numeric decodes and keep scanning for valid barcodes.
             setIsLookingUp(false);
             isProcessingRef.current = false;
           }
