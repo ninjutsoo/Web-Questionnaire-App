@@ -69,6 +69,9 @@ const AIChatbot = () => {
   const [userQuestionnaireData, setUserQuestionnaireData] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState(null);
+  const shouldAutoRestartRef = useRef(false);
+  const restartAttemptsRef = useRef(0);
+  const transcriptRef = useRef('');
   const messagesEndRef = useRef(null);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
@@ -187,8 +190,9 @@ const AIChatbot = () => {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
       
-      recognitionInstance.continuous = false;
-      recognitionInstance.interimResults = false;
+      // Keep the recognizer running through short pauses so it doesn't end mid-utterance.
+      recognitionInstance.continuous = true;
+      recognitionInstance.interimResults = true;
       recognitionInstance.lang = 'en-US';
       
       recognitionInstance.onstart = () => {
@@ -197,15 +201,31 @@ const AIChatbot = () => {
       };
       
       recognitionInstance.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(transcript);
-        setIsListening(false);
-        console.log('Voice transcript:', transcript);
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        // SpeechRecognition can emit multiple result chunks per event.
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const res = event.results[i];
+          const text = res?.[0]?.transcript ?? '';
+          if (!text) continue;
+          if (res.isFinal) finalTranscript += text;
+          else interimTranscript += text;
+        }
+
+        if (finalTranscript.trim()) {
+          transcriptRef.current = `${transcriptRef.current} ${finalTranscript}`.trim();
+        }
+
+        const combined = `${transcriptRef.current}${interimTranscript.trim() ? ` ${interimTranscript.trim()}` : ''}`.trim();
+        setInput(combined);
+        console.log('Voice transcript:', combined);
       };
       
       recognitionInstance.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
         setIsListening(false);
+        shouldAutoRestartRef.current = false;
         if (event.error === 'not-allowed') {
           alert('Please allow microphone access to use voice input.');
         }
@@ -214,6 +234,19 @@ const AIChatbot = () => {
       recognitionInstance.onend = () => {
         setIsListening(false);
         console.log('Voice recognition ended');
+
+        // Some browsers fire `onend` when they think speech has stopped.
+        // If the user hasn't pressed stop, attempt a limited auto-restart.
+        if (shouldAutoRestartRef.current && restartAttemptsRef.current < 3) {
+          restartAttemptsRef.current += 1;
+          setTimeout(() => {
+            try {
+              recognitionInstance.start();
+            } catch (e) {
+              console.error('Error auto-restarting speech recognition:', e);
+            }
+          }, 300);
+        }
       };
       
       setRecognition(recognitionInstance);
@@ -570,6 +603,9 @@ const AIChatbot = () => {
   const startListening = () => {
     if (recognition) {
       try {
+        shouldAutoRestartRef.current = true;
+        restartAttemptsRef.current = 0;
+        transcriptRef.current = '';
         recognition.start();
       } catch (error) {
         console.error('Error starting speech recognition:', error);
@@ -581,6 +617,7 @@ const AIChatbot = () => {
 
   const stopListening = () => {
     if (recognition) {
+      shouldAutoRestartRef.current = false;
       recognition.stop();
     }
   };

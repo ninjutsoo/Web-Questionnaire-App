@@ -233,8 +233,9 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
-      recognitionInstance.continuous = false;
-      recognitionInstance.interimResults = false;
+      // Keep listening through short pauses so it doesn't stop mid-utterance.
+      recognitionInstance.continuous = true;
+      recognitionInstance.interimResults = true;
       recognitionInstance.lang = 'en-US';
       setRecognition(recognitionInstance);
     }
@@ -249,11 +250,32 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
     setIsListening(prev => ({ ...prev, [questionKey]: true }));
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
-      const currentText = localResponses[questionKey]?.text || '';
-      const newText = currentText ? `${currentText} ${transcript}` : transcript;
-      handleTextChange(questionKey, newText);
-      setIsListening(prev => ({ ...prev, [questionKey]: false }));
+      let finalTranscript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const res = event.results[i];
+        if (!res?.isFinal) continue;
+        const text = res?.[0]?.transcript ?? '';
+        if (text) finalTranscript += text;
+      }
+
+      const cleaned = finalTranscript.trim();
+      if (!cleaned) return;
+
+      // Use functional update to avoid stale `localResponses` when we get
+      // multiple recognition result chunks.
+      setLocalResponses((prev) => {
+        const currentText = prev[questionKey]?.text || '';
+        const newText = currentText ? `${currentText} ${cleaned}` : cleaned;
+        return {
+          ...prev,
+          [questionKey]: {
+            ...(prev[questionKey] || {}),
+            text: newText
+          }
+        };
+      });
+
+      if (onLocalChange) onLocalChange();
     };
 
     recognition.onerror = () => {
