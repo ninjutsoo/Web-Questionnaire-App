@@ -1,4 +1,4 @@
-import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import React, { useState, useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import { Card, Select, Input, Space, Typography, Row, Col, Button, Alert, Tooltip } from 'antd';
 import { HeartOutlined, CarOutlined, MedicineBoxOutlined, StarOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import { AudioOutlined, QrcodeOutlined } from '@ant-design/icons';
@@ -112,6 +112,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
   const [localResponses, setLocalResponses] = useState(responses || {});
   const [isListening, setIsListening] = useState({});
   const [recognition, setRecognition] = useState(null);
+  const idleStopTimerRef = useRef(null);
   const [scannerVisible, setScannerVisible] = useState(false);
 
   const config = SECTION_CONFIG[section];
@@ -246,6 +247,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
       alert('Speech recognition is not supported in your browser');
       return;
     }
+    const IDLE_STOP_MS = 4000;
 
     setIsListening(prev => ({ ...prev, [questionKey]: true }));
 
@@ -276,16 +278,37 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
       });
 
       if (onLocalChange) onLocalChange();
+
+      if (idleStopTimerRef.current) clearTimeout(idleStopTimerRef.current);
+      idleStopTimerRef.current = setTimeout(() => {
+        try {
+          recognition.stop();
+        } catch (e) {
+          console.error('Error stopping speech recognition after idle:', e);
+        }
+      }, IDLE_STOP_MS);
     };
 
     recognition.onerror = () => {
+      if (idleStopTimerRef.current) {
+        clearTimeout(idleStopTimerRef.current);
+        idleStopTimerRef.current = null;
+      }
       setIsListening(prev => ({ ...prev, [questionKey]: false }));
     };
 
     recognition.onend = () => {
+      if (idleStopTimerRef.current) {
+        clearTimeout(idleStopTimerRef.current);
+        idleStopTimerRef.current = null;
+      }
       setIsListening(prev => ({ ...prev, [questionKey]: false }));
     };
 
+    if (idleStopTimerRef.current) {
+      clearTimeout(idleStopTimerRef.current);
+      idleStopTimerRef.current = null;
+    }
     recognition.start();
   };
 

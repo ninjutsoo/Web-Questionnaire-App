@@ -69,8 +69,7 @@ const AIChatbot = () => {
   const [userQuestionnaireData, setUserQuestionnaireData] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState(null);
-  const shouldAutoRestartRef = useRef(false);
-  const restartAttemptsRef = useRef(0);
+  const idleStopTimerRef = useRef(null);
   const transcriptRef = useRef('');
   const messagesEndRef = useRef(null);
   const [suggestions, setSuggestions] = useState([]);
@@ -189,8 +188,9 @@ const AIChatbot = () => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
+      const IDLE_STOP_MS = 4000;
       
-      // Keep the recognizer running through short pauses so it doesn't end mid-utterance.
+      // Keep listening through short pauses; we stop explicitly after idle timeout.
       recognitionInstance.continuous = true;
       recognitionInstance.interimResults = true;
       recognitionInstance.lang = 'en-US';
@@ -220,12 +220,24 @@ const AIChatbot = () => {
         const combined = `${transcriptRef.current}${interimTranscript.trim() ? ` ${interimTranscript.trim()}` : ''}`.trim();
         setInput(combined);
         console.log('Voice transcript:', combined);
+
+        if (idleStopTimerRef.current) clearTimeout(idleStopTimerRef.current);
+        idleStopTimerRef.current = setTimeout(() => {
+          try {
+            recognitionInstance.stop();
+          } catch (e) {
+            console.error('Error stopping speech recognition after idle:', e);
+          }
+        }, IDLE_STOP_MS);
       };
       
       recognitionInstance.onerror = (event) => {
         console.error('Speech recognition error:', event.error);
         setIsListening(false);
-        shouldAutoRestartRef.current = false;
+        if (idleStopTimerRef.current) {
+          clearTimeout(idleStopTimerRef.current);
+          idleStopTimerRef.current = null;
+        }
         if (event.error === 'not-allowed') {
           alert('Please allow microphone access to use voice input.');
         }
@@ -234,18 +246,9 @@ const AIChatbot = () => {
       recognitionInstance.onend = () => {
         setIsListening(false);
         console.log('Voice recognition ended');
-
-        // Some browsers fire `onend` when they think speech has stopped.
-        // If the user hasn't pressed stop, attempt a limited auto-restart.
-        if (shouldAutoRestartRef.current && restartAttemptsRef.current < 3) {
-          restartAttemptsRef.current += 1;
-          setTimeout(() => {
-            try {
-              recognitionInstance.start();
-            } catch (e) {
-              console.error('Error auto-restarting speech recognition:', e);
-            }
-          }, 300);
+        if (idleStopTimerRef.current) {
+          clearTimeout(idleStopTimerRef.current);
+          idleStopTimerRef.current = null;
         }
       };
       
@@ -603,9 +606,11 @@ const AIChatbot = () => {
   const startListening = () => {
     if (recognition) {
       try {
-        shouldAutoRestartRef.current = true;
-        restartAttemptsRef.current = 0;
         transcriptRef.current = '';
+        if (idleStopTimerRef.current) {
+          clearTimeout(idleStopTimerRef.current);
+          idleStopTimerRef.current = null;
+        }
         recognition.start();
       } catch (error) {
         console.error('Error starting speech recognition:', error);
@@ -617,7 +622,10 @@ const AIChatbot = () => {
 
   const stopListening = () => {
     if (recognition) {
-      shouldAutoRestartRef.current = false;
+      if (idleStopTimerRef.current) {
+        clearTimeout(idleStopTimerRef.current);
+        idleStopTimerRef.current = null;
+      }
       recognition.stop();
     }
   };
