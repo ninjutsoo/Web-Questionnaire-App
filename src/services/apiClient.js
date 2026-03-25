@@ -23,13 +23,19 @@ const getApiBaseUrl = () => {
       return apiUrl;
     }
 
-    // Local dev: use emulator on port 5001
+    // Vite dev server: same-origin /api/* is proxied to hosted API (see vite.config.js).
+    // Avoids ERR_CONNECTION_REFUSED when nothing runs on port 5001.
+    if (import.meta.env.DEV) {
+      console.log('🔧 API URL (dev): same origin + Vite /api proxy');
+      return '';
+    }
+
+    // vite preview / odd hosts: optional local backend
     const apiUrl = `${protocol}//${hostname}:5001`;
-    console.log('🔧 Auto-detected API URL (dev):', apiUrl);
+    console.log('🔧 Auto-detected API URL (fallback :5001):', apiUrl);
     return apiUrl;
   }
 
-  // Default to HTTP localhost for local development
   console.log('🔧 Using default API URL: http://localhost:5001');
   return 'http://localhost:5001';
 };

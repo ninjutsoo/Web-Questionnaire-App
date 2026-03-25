@@ -12,29 +12,56 @@ import { getApiEndpoint } from '../services/apiClient';
 const { TextArea } = Input;
 const { Title, Text } = Typography;
 
-const AIChatbot = () => {
-  // Initial assistant message
-  const initialMessages = [
+/** Previous default welcome (localStorage migration). */
+const LEGACY_WELCOME_CONTENT =
+  "Hello! I'm your AI health assistant. I'm here to help you with health-related questions, provide information, or just chat. How can I assist you today? 💙";
+
+function isDashStyleWelcomeBanner(content) {
+  return (
+    typeof content === 'string' &&
+    content.includes("I'm here for health questions or a quick chat")
+  );
+}
+
+function buildWelcomeContent(firstName) {
+  const name = typeof firstName === 'string' ? firstName.trim() : '';
+  if (name) {
+    return `Hi, ${name}. What would you like to know about your health?`;
+  }
+  return 'Hello. What would you like to know about your health?';
+}
+
+function buildWelcomeMessages(firstName) {
+  return [
     {
       role: 'assistant',
-      content: 'Hello! I\'m your AI health assistant. I\'m here to help you with health-related questions, provide information, or just chat. How can I assist you today? 💙',
-      timestamp: new Date()
-    }
+      content: buildWelcomeContent(firstName),
+      timestamp: new Date(),
+    },
   ];
+}
 
+const AIChatbot = () => {
   const [messages, setMessages] = useState(() => {
-    // Load from localStorage on mount
     const saved = localStorage.getItem('aiChatMessages');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Convert timestamp strings back to Date objects
-        return parsed.map(msg => ({ ...msg, timestamp: new Date(msg.timestamp) }));
+        const mapped = parsed.map((msg) => ({ ...msg, timestamp: new Date(msg.timestamp) }));
+        if (
+          mapped.length === 1 &&
+          mapped[0].role === 'assistant' &&
+          (mapped[0].content === LEGACY_WELCOME_CONTENT ||
+            isDashStyleWelcomeBanner(mapped[0].content))
+        ) {
+          return buildWelcomeMessages(null);
+        }
+        return mapped;
       } catch {
-        return initialMessages;
+        return buildWelcomeMessages(null);
       }
     }
-    return initialMessages;
+    return buildWelcomeMessages(null);
   });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -55,6 +82,17 @@ const AIChatbot = () => {
   const [displayedSuggestions, setDisplayedSuggestions] = useState([]);
   const [sendCooldown, setSendCooldown] = useState(0);
   const [isOnCooldown, setIsOnCooldown] = useState(false);
+  const [userFirstName, setUserFirstName] = useState('');
+  const [windowWidth, setWindowWidth] = useState(() => window.innerWidth);
+
+  const isMobile = windowWidth <= 600;
+  const isNarrow = windowWidth <= 400;
+
+  useEffect(() => {
+    const onResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // Save suggestions to localStorage cache whenever they change
   useEffect(() => {
@@ -202,12 +240,20 @@ const AIChatbot = () => {
       }
     };
     unsubscribe = auth.onAuthStateChanged((currentUser) => {
+      const first =
+        currentUser?.displayName?.trim().split(/\s+/).filter(Boolean)[0] || '';
+      setUserFirstName(first);
       loadUserData(currentUser);
     });
     // Also reload when window/tab regains focus
     const handleFocus = () => {
       const user = auth.currentUser;
-      if (user) loadUserData(user);
+      if (user) {
+        const first =
+          user.displayName?.trim().split(/\s+/).filter(Boolean)[0] || '';
+        setUserFirstName(first);
+        loadUserData(user);
+      }
     };
     window.addEventListener('focus', handleFocus);
     return () => {
@@ -354,6 +400,21 @@ const AIChatbot = () => {
     // eslint-disable-next-line
   }, [userQuestionnaireData]);
 
+  // Personalize welcome when first name becomes available (single default welcome only)
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length !== 1 || prev[0].role !== 'assistant') return prev;
+      const c = prev[0].content;
+      if (c === LEGACY_WELCOME_CONTENT || isDashStyleWelcomeBanner(c)) {
+        return buildWelcomeMessages(userFirstName);
+      }
+      if (userFirstName && c === buildWelcomeContent(null)) {
+        return buildWelcomeMessages(userFirstName);
+      }
+      return prev;
+    });
+  }, [userFirstName]);
+
   // Save messages to localStorage on every change
   useEffect(() => {
     localStorage.setItem('aiChatMessages', JSON.stringify(messages));
@@ -482,12 +543,11 @@ const AIChatbot = () => {
       setMessages(prev => [...prev, aiResponse]);
     } catch (err) {
       console.error('Chat error:', err);
-      setError('Sorry, I\'m having trouble connecting right now. Please try again in a moment.');
-      
-      // Add a fallback response
+      setError('Could not reach the chat service. Try again in a moment.');
+
       const fallbackResponse = {
         role: 'assistant',
-        content: 'I apologize, but I\'m experiencing some technical difficulties. Please try again in a moment, or feel free to ask me about health topics, exercises, or general wellness advice.',
+        content: 'Something went wrong. Please try sending your message again.',
         timestamp: new Date()
       };
       setMessages(prev => [...prev, fallbackResponse]);
@@ -524,8 +584,6 @@ const AIChatbot = () => {
       recognition.stop();
     }
   };
-
-  const isMobile = window.innerWidth <= 600;
 
   const renderMessage = (message, index) => {
     const isUser = message.role === 'user';
@@ -642,7 +700,7 @@ const AIChatbot = () => {
 
   // New Chat handler
   const handleNewChat = () => {
-    setMessages(initialMessages);
+    setMessages(buildWelcomeMessages(userFirstName));
     localStorage.removeItem('aiChatMessages');
   };
 
@@ -671,15 +729,28 @@ const AIChatbot = () => {
     }
   };
 
+  const toolbarBtnHeight = isMobile ? 36 : 40;
+  const actionBtnSize = isNarrow ? 32 : isMobile ? 36 : 40;
+
+  /** Short threads stay compact; from this count up, use the full viewport-limited height + scroll. */
+  const CHAT_EXPAND_MESSAGE_COUNT = 3;
+  const chatIsCompact =
+    messages.length < CHAT_EXPAND_MESSAGE_COUNT && !isLoading;
+
+  const chatCardMaxHeightMobile = 'calc(100dvh - 160px)';
+  const chatCardHeightExpandedMobile = 'calc(100dvh - 188px)';
+
   return (
     <div style={{ 
       maxWidth: '1000px', 
       margin: '0 auto', 
       padding: isMobile ? '0 2px' : '0',
-      minHeight: isMobile ? 'calc(100vh - 80px)' : 'calc(100vh - 112px)'
+      minHeight: isMobile ? 'calc(100dvh - 80px)' : 'calc(100vh - 112px)',
+      display: 'flex',
+      flexDirection: 'column',
     }}>
       {/* New Chat Button */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: isMobile ? 4 : 8, gap: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', flexWrap: 'wrap', marginBottom: isMobile ? 4 : 8, gap: isMobile ? 8 : 12 }}>
         <Tooltip title={locationEnabled ? (locationText ? `Location: ${locationText}` : 'Location enabled') : 'Enable location for better suggestions'}>
           <Button
             type={locationEnabled ? 'primary' : 'default'}
@@ -691,27 +762,33 @@ const AIChatbot = () => {
               color: locationEnabled ? '#1890ff' : '#888',
               background: locationEnabled ? 'rgba(24,144,255,0.08)' : 'white',
               fontWeight: 500,
-              height: 40,
+              height: toolbarBtnHeight,
               borderRadius: 8,
-              padding: '0 18px',
+              padding: isMobile ? '0 12px' : '0 18px',
               display: 'flex',
               alignItems: 'center',
               transition: 'all 0.2s',
               boxShadow: locationEnabled ? '0 0 0 2px #e6f7ff' : undefined
             }}
           >
-            {locationEnabled ? 'Location ON' : 'Location OFF'}
+            {isMobile ? (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                {locationEnabled ? 'On' : 'Off'}
+              </span>
+            ) : (
+              locationEnabled ? 'Location ON' : 'Location OFF'
+            )}
           </Button>
         </Tooltip>
         <Button onClick={handleNewChat} type="default" danger style={{
-          height: 40,
+          height: toolbarBtnHeight,
           borderRadius: 8,
-          padding: '0 18px',
+          padding: isMobile ? '0 12px' : '0 18px',
           fontWeight: 500,
           display: 'flex',
           alignItems: 'center',
         }}>
-          New Chat
+          {isMobile ? 'New' : 'New Chat'}
         </Button>
       </div>
       {locationError && (
@@ -723,24 +800,33 @@ const AIChatbot = () => {
           borderRadius: '12px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           marginBottom: isMobile ? 10 : 20,
-          height: isMobile ? '60vh' : '70vh',
+          flex: isMobile && !chatIsCompact ? 1 : undefined,
+          minHeight: chatIsCompact ? undefined : 0,
+          height: chatIsCompact
+            ? 'auto'
+            : isMobile
+              ? chatCardHeightExpandedMobile
+              : '70vh',
+          maxHeight: chatIsCompact ? chatCardMaxHeightMobile : isMobile ? chatCardMaxHeightMobile : undefined,
           overflow: 'hidden',
           padding: isMobile ? '4px' : undefined
         }}
         styles={{ 
           body: { 
             padding: isMobile ? '8px 2px 8px 2px' : '20px',
-            height: '100%',
+            height: chatIsCompact ? 'auto' : '100%',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            minHeight: chatIsCompact ? undefined : 0,
           }
         }}
       >
         {/* Messages Area */}
         <div
           style={{
-            flex: 1,
-            overflowY: 'auto',
+            flex: chatIsCompact ? '0 0 auto' : 1,
+            minHeight: chatIsCompact ? undefined : 0,
+            overflowY: chatIsCompact ? 'visible' : 'auto',
             paddingRight: isMobile ? 2 : 8,
             marginBottom: isMobile ? 8 : 16
           }}
@@ -786,55 +872,84 @@ const AIChatbot = () => {
         )}
 
         {/* Input Area */}
-        <div style={{ display: 'flex', gap: isMobile ? 4 : 8, alignItems: 'flex-end' }}>
-          <TextArea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Type your message here..."
-            autoSize={{ minRows: 1, maxRows: 4 }}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: isNarrow ? 'wrap' : 'nowrap',
+            gap: isMobile ? 4 : 8,
+            alignItems: 'flex-end',
+            width: '100%',
+          }}
+        >
+          <div
             style={{
-              borderRadius: '20px',
-              resize: 'none',
-              fontSize: isMobile ? 13 : 14
+              flex: 1,
+              minWidth: isNarrow ? '100%' : 0,
+              width: isNarrow ? '100%' : undefined,
             }}
-          />
-          <Button
-            type={isListening ? "primary" : "default"}
-            icon={isListening ? <AudioMutedOutlined /> : <AudioOutlined />}
-            onClick={isListening ? stopListening : startListening}
+          >
+            <TextArea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Type your message here..."
+              autoSize={{ minRows: 1, maxRows: isMobile ? 3 : 4 }}
+              style={{
+                width: '100%',
+                borderRadius: '20px',
+                resize: 'none',
+                fontSize: isMobile ? 13 : 14,
+              }}
+            />
+          </div>
+          <div
             style={{
-              borderRadius: '50%',
-              width: isMobile ? '36px' : '40px',
-              height: isMobile ? '36px' : '40px',
               display: 'flex',
+              gap: isMobile ? 4 : 8,
               alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: isListening ? '#ff4d4f' : undefined,
-              borderColor: isListening ? '#ff4d4f' : undefined
+              flexShrink: 0,
+              width: isNarrow ? '100%' : undefined,
+              justifyContent: isNarrow ? 'flex-end' : undefined,
+              marginTop: isNarrow ? 6 : undefined,
             }}
-            title={isListening ? "Stop listening" : "Start voice input"}
-          />
-          <Button
-            type={isOnCooldown ? "default" : "primary"}
-            icon={isOnCooldown ? <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{sendCooldown}</span> : <SendOutlined />}
-            onClick={() => sendMessage()}
-            loading={isLoading}
-            disabled={!input.trim() || isOnCooldown}
-            style={{
-              borderRadius: '50%',
-              width: isMobile ? '36px' : '40px',
-              height: isMobile ? '36px' : '40px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: isOnCooldown ? '#f0f0f0' : undefined,
-              borderColor: isOnCooldown ? '#d9d9d9' : undefined,
-              color: isOnCooldown ? '#999' : undefined,
-              cursor: isOnCooldown ? 'not-allowed' : 'pointer'
-            }}
-            title={isOnCooldown ? `Please wait ${sendCooldown} seconds before sending another message` : 'Send message'}
-          />
+          >
+            <Button
+              type={isListening ? 'primary' : 'default'}
+              icon={isListening ? <AudioMutedOutlined /> : <AudioOutlined />}
+              onClick={isListening ? stopListening : startListening}
+              style={{
+                borderRadius: '50%',
+                width: actionBtnSize,
+                height: actionBtnSize,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: isListening ? '#ff4d4f' : undefined,
+                borderColor: isListening ? '#ff4d4f' : undefined,
+              }}
+              title={isListening ? 'Stop listening' : 'Start voice input'}
+            />
+            <Button
+              type={isOnCooldown ? 'default' : 'primary'}
+              icon={isOnCooldown ? <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{sendCooldown}</span> : <SendOutlined />}
+              onClick={() => sendMessage()}
+              loading={isLoading}
+              disabled={!input.trim() || isOnCooldown}
+              style={{
+                borderRadius: '50%',
+                width: actionBtnSize,
+                height: actionBtnSize,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: isOnCooldown ? '#f0f0f0' : undefined,
+                borderColor: isOnCooldown ? '#d9d9d9' : undefined,
+                color: isOnCooldown ? '#999' : undefined,
+                cursor: isOnCooldown ? 'not-allowed' : 'pointer',
+              }}
+              title={isOnCooldown ? `Please wait ${sendCooldown} seconds before sending another message` : 'Send message'}
+            />
+          </div>
         </div>
       </Card>
 
@@ -861,20 +976,28 @@ const AIChatbot = () => {
         style={{
           borderRadius: '12px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          marginBottom: '20px',
+          marginBottom: isMobile ? 12 : 20,
           maxWidth: '900px',
           marginLeft: 'auto',
           marginRight: 'auto',
         }}
+        styles={{
+          body: isMobile ? { padding: '12px 10px' } : undefined,
+        }}
       >
-        <div className="questions-grid" style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '18px',
-          minHeight: '48px',
-          justifyItems: 'center',
-          alignItems: 'center',
-        }}>
+        <div
+          className="questions-grid"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile
+              ? 'repeat(auto-fit, minmax(140px, 1fr))'
+              : 'repeat(auto-fit, minmax(220px, 1fr))',
+            gap: isMobile ? 10 : 18,
+            minHeight: '48px',
+            justifyItems: 'center',
+            alignItems: 'center',
+          }}
+        >
           {suggestionsLoading ? (
             Array.from({ length: 6 }).map((_, idx) => (
               <div key={idx} style={{ height: 48, minWidth: 180, borderRadius: 16, background: '#f0f0f0', animation: 'fadeIn 0.8s', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
@@ -897,13 +1020,13 @@ const AIChatbot = () => {
                   color={isOnCooldown ? "default" : "blue"}
                   style={{
                     cursor: isOnCooldown ? 'not-allowed' : 'pointer',
-                    padding: '10px 18px',
+                    padding: isMobile ? '8px 10px' : '10px 18px',
                     borderRadius: '16px',
-                    fontSize: '15px',
+                    fontSize: isMobile ? 13 : 15,
                     whiteSpace: 'normal',
                     wordBreak: 'break-word',
                     textAlign: 'center',
-                    minHeight: 48,
+                    minHeight: isMobile ? 40 : 48,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -926,7 +1049,7 @@ const AIChatbot = () => {
       {/* Health Tips */}
       <Card
         title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: isMobile ? 14 : undefined }}>
             <HeartOutlined style={{ color: '#ff4d4f' }} />
             <span>Health Tip of the Day</span>
           </div>
@@ -934,11 +1057,15 @@ const AIChatbot = () => {
         style={{
           borderRadius: '12px',
           boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          borderLeft: '4px solid #ff4d4f'
+          borderLeft: '4px solid #ff4d4f',
+          marginBottom: isMobile ? 8 : undefined,
+        }}
+        styles={{
+          body: isMobile ? { padding: '12px 14px' } : undefined,
         }}
       >
-        <Text style={{ fontSize: '14px', lineHeight: '1.6' }}>
-          💡 <strong>Stay Hydrated:</strong> Drinking enough water is crucial for your health, especially as you age. 
+        <Text style={{ fontSize: isMobile ? 13 : 14, lineHeight: '1.55' }}>
+          💡 <strong>Stay Hydrated:</strong> Drinking enough water is crucial for your health, especially as you age.
           Aim for 6-8 glasses of water daily. Dehydration can affect your energy levels, cognitive function, and overall well-being.
         </Text>
       </Card>

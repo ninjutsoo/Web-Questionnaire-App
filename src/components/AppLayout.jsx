@@ -25,7 +25,10 @@ const AppLayout = ({ children }) => {
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const isMobile = windowWidth <= 600;
+  /** Burger + drawer: avoids cramped horizontal menu where labels (e.g. Health Assessment) vanish. */
+  const useDrawerNav = windowWidth <= 992;
+  /** Tighter page padding on small phones only. */
+  const isPhone = windowWidth <= 600;
 
   useEffect(() => {
     // Set selected key based on current route
@@ -118,39 +121,42 @@ const AppLayout = ({ children }) => {
       <Header 
         style={{ 
           background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          padding: isMobile ? '0 8px' : '0 24px',
+          padding: isPhone ? '0 8px' : useDrawerNav ? '0 12px' : '0 24px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          gap: 12,
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
           flexWrap: 'nowrap',
           minHeight: 56
         }}
       >
-        {/* Logo and App Name */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '6px' : '12px' }}>
+        {/* Logo and App Name — flexShrink: 0 so the bar never eats the title */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: isPhone ? '6px' : '12px', flexShrink: 0, minWidth: 0 }}>
           <div style={{ 
-            width: isMobile ? '32px' : '40px', 
-            height: isMobile ? '32px' : '40px', 
+            width: isPhone ? '32px' : '40px', 
+            height: isPhone ? '32px' : '40px', 
             background: 'rgba(255,255,255,0.2)', 
             borderRadius: '8px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            flexShrink: 0
           }}>
-            <MessageOutlined style={{ color: 'white', fontSize: isMobile ? '16px' : '20px' }} />
+            <MessageOutlined style={{ color: 'white', fontSize: isPhone ? '16px' : '20px' }} />
           </div>
           <Text style={{ 
             color: 'white', 
-            fontSize: isMobile ? '16px' : '20px', 
+            fontSize: isPhone ? '16px' : '20px', 
             fontWeight: 'bold',
-            margin: 0
+            margin: 0,
+            whiteSpace: 'nowrap',
           }}>
             4Ms Health Assessment
           </Text>
         </div>
         {/* Responsive Navigation */}
-        {isMobile ? (
+        {useDrawerNav ? (
           <>
             <Button
               icon={<MenuOutlined />}
@@ -195,22 +201,34 @@ const AppLayout = ({ children }) => {
           </>
         ) : (
           <>
-            <Menu
-              mode="horizontal"
-              selectedKeys={[selectedKey]}
-              onClick={handleMenuClick}
-              items={menuItems}
+            <div
               style={{
-                background: 'transparent',
-                border: 'none',
                 flex: 1,
+                minWidth: 0,
+                display: 'flex',
                 justifyContent: 'center',
-                marginLeft: '40px'
+                marginLeft: 16,
+                marginRight: 8,
               }}
-              theme="dark"
-            />
+            >
+              <Menu
+                mode="horizontal"
+                selectedKeys={[selectedKey]}
+                onClick={handleMenuClick}
+                items={menuItems}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  flex: 1,
+                  minWidth: 0,
+                  maxWidth: '100%',
+                  justifyContent: 'center',
+                }}
+                theme="dark"
+              />
+            </div>
             {/* User Profile */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
               <Dropdown
                 menu={{ items: userMenuItems }}
                 placement="bottomRight"
@@ -234,7 +252,10 @@ const AppLayout = ({ children }) => {
                     icon={<UserOutlined />}
                     style={{ backgroundColor: 'rgba(255,255,255,0.2)' }}
                   />
-                  <Text style={{ color: 'white', fontSize: '14px' }}>
+                  <Text
+                    ellipsis
+                    style={{ color: 'white', fontSize: '14px', maxWidth: 160 }}
+                  >
                     {user?.displayName || user?.email?.split('@')[0] || 'User'}
                   </Text>
                 </Button>
@@ -246,7 +267,7 @@ const AppLayout = ({ children }) => {
       </Header>
 
       <Content style={{ 
-        padding: isMobile ? '2px' : '24px',
+        padding: isPhone ? '2px' : '24px',
         background: '#f5f5f5',
         minHeight: 'calc(100vh - 64px)'
       }}>
