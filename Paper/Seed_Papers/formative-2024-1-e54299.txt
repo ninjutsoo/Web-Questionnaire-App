@@ -1,0 +1,681 @@
+     JMIR FORMATIVE RESEARCH                                                                                                                Young et al
+
+     Original Paper
+
+     Remote Self-Administration of Cognitive Screeners for Older
+     Adults Prior to a Primary Care Visit: Pilot Cross-Sectional Study
+     of the Reliability and Usability of the MyCog Mobile Screening
+     App
+
+     Stephanie Ruth Young1, PhD; Elizabeth McManus Dworak1, PhD; Greg Joseph Byrne1, MA; Callie Madison Jones1,
+     BA; Lihua Yao1, PhD; Julia Noelani Yoshino Benavente2, MPH; Maria Varela Diaz1, MS; Laura Curtis2, MS; Richard
+     Gershon1, PhD; Michael Wolf2, MPH, PhD; Cindy J Nowinski1, MD, PhD
+     1
+      Department of Medical Social Sciences, Feinberg School of Medicine, Northwestern University, Chicago, IL, United States
+     2
+      Center for Applied Health Research on Aging, Feinberg School of Medicine, Northwestern University, Chicago, IL, United States
+
+     Corresponding Author:
+     Stephanie Ruth Young, PhD
+     Department of Medical Social Sciences
+     Feinberg School of Medicine
+     Northwestern University
+     625 North Michigan Avenue 21st Floor
+     Chicago, IL, 60611-3008
+     United States
+     Phone: 1 3125033303
+     Email: stephanieruth.young@northwestern.edu
+
+
+     Abstract
+     Background: Routine cognitive screening is essential in the early detection of dementia, but time constraints in primary care
+     settings often limit clinicians’ ability to conduct screenings. MyCog Mobile is a newly developed cognitive screening system
+     that patients can self-administer on their smartphones before a primary care visit, which can help save clinics’ time, encourage
+     broader screening practices, and increase early detection of cognitive decline.
+     Objective: The goal of this pilot study was to examine the feasibility, acceptability, and initial psychometric properties of
+     MyCog Mobile. Research questions included (1) Can older adults complete MyCog Mobile remotely without staff support? (2)
+     Are the internal consistency and test-retest reliability of the measures acceptable? and (3) How do participants rate the user
+     experience of MyCog Mobile?
+     Methods: A sample of adults aged 65 years and older (N=51) self-administered the MyCog Mobile measures remotely on their
+     smartphones twice within a 2- to 3-week interval. The pilot version of MyCog Mobile includes 4 activities: MyFaces measures
+     facial memory, MySorting measures executive functioning, MySequences measures working memory, and MyPictures measures
+     episodic memory. After their first administration, participants also completed a modified version of the Simplified System Usability
+     Scale (S-SUS) and 2 custom survey items.
+     Results: All participants in the sample passed the practice items and completed each measure. Findings indicate that the Mobile
+     Toolbox assessments measure the constructs well (internal consistency 0.73 to 0.91) and are stable over an approximately 2-week
+     delay (test-retest reliability 0.61 to 0.71). Participants’ rating of the user experience (mean S-SUS score 73.17, SD 19.27) indicated
+     that older adults found the usability of MyCog Mobile to be above average. On free-response feedback items, most participants
+     provided positive feedback or no feedback at all, but some indicated a need for clarity in certain task instructions, concerns about
+     participants’ abilities, desire to be able to contact a support person or use in-app technical support, and desire for additional
+     practice items.
+     Conclusions: Pilot evidence suggests that the MyCog Mobile cognitive screener can be reliably self-administered by older
+     adults on their smartphones. Participants in our study generally provided positive feedback about the MyCog Mobile experience
+     and rated the usability of the app highly. Based on participant feedback, we will conduct further usability research to improve
+     support functionality, optimize task instructions and practice opportunities, and ensure that patients feel comfortable using MyCog
+
+
+     https://formative.jmir.org/2024/1/e54299                                                                     JMIR Form Res 2024 | vol. 8 | e54299 | p. 1
+                                                                                                                     (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                             Young et al
+
+     Mobile. The next steps include a clinical validation study that compares MyCog Mobile to gold-standard assessments and tests
+     the sensitivity and specificity of the measures for identifying dementia.
+
+     (JMIR Form Res 2024;8:e54299) doi: 10.2196/54299
+
+     KEYWORDS
+     cognitive screening; cognitive; cognition; psychometric; usability; feasibility; early detection; dementia; Alzheimer’s disease,
+     Alzheimer's; Alzheimer’s disease and age-related dementia; mHealth, mobile health apps; detection; screening; mobile health;
+     mobile phone; app; apps; applications; applications; user experience; smartphone; smartphones; gerontology; geriatric; geriatrics;
+     older adult; older adults; elder; elderly; older person; older people; ageing; aging; aged
+
+                                                                             measures episodic memory, and Dimensional Change Card
+     Introduction                                                            Sorting (called MySorting in the mobile app), which measures
+     Primary care visits provide an important opportunity to detect          executive functioning. When combined with self-report, these
+     pathological cognitive decline in the early stages [1,2], yet less      2 measures have demonstrated good sensitivity and specificity
+     than half of all cases are detected in primary care [3]. Medicare       to detect cognitive impairment [16]. To expand the breadth of
+     covers cognitive screening as part of the Annual Wellness Visit         cognitive domains assessed, the pilot version of MyCog Mobile
+     for adults aged 65 years or older, however, primary care clinics        also includes 2 additional measures that are not in the original
+     face several barriers to conducting regular cognitive screenings        MyCog tablet app: a measure of working memory
+     with their patients, including constraints on time and clinic staff     (MySequences) and a measure of memory for faces (MyFaces).
+     [4]. Completing a screening remotely before a primary care visit        We modeled each of the MyCog Mobile measures on existing
+     offers several benefits to both patients and clinicians [5]. Patients   mobile measures in the Mobile Toolbox [17], a comprehensive
+     can complete the screening at their leisure in the privacy of their     research platform and assessment library that allows for remote
+     own homes, and providers can review the results before a visit.         cognitive measurement on a personal smartphone (see Measures
+     Critically, a complete screener before a visit benefits all             section).
+     stakeholders (eg, clinicians, patients, and support staff) by saving    MyCog Mobile is unique for 2 important reasons. First, it is a
+     time to address other important issues in person [6].                   clinical screener meant to be used to help primary care providers
+     Mobile apps offer an ideal mechanism for many older adults to           make appropriate referrals and care recommendations, as
+     complete at-home cognitive screeners. More than 60% of older            opposed to a pure research measure such as the Mobile Toolbox.
+     adults in the United States own a smartphone [7], and over 30%          Second, MyCog Mobile is intended to be self-administered in
+     regularly use mobile health apps [8]. Moreover, low-income              a completely unsupervised remote setting, as opposed to the
+     and minority groups are more likely to access their personal            MyCog tablet app which is used in clinics under staff
+     health information on smartphones compared to other electronic          supervision. As such, MyCog Mobile underwent an extensive
+     devices [9]. A small body of emerging research supports the             human-centered design process in which the platform and
+     feasibility of self-administered cognitive screeners on personal        measures were optimized to be used by older adults in this
+     smartphones in research contexts [10-12]. The cognitive                 context [5]. To ensure that the MyCog Mobile measures can be
+     assessments in these studies vary in administration frequency,          reliably self-administered by older adults in a remote setting,
+     length, and structure but tend to find high levels of adherence         we piloted the screener in a sample of 51 adults aged 65 years
+     (70% or higher), receive positive feedback in exit surveys, and         or older who completed the measures on their personal iOS
+     show convergent validity with established cognitive screening           (Apple) smartphones. This pilot study will inform a subsequent
+     measures [11,13,14]. However, no screeners to date have been            construct and clinical validations, in which the sensitivity and
+     validated for clinical use before a primary care visit [15]. Further    specificity of the screener will be tested against clinical gold
+     research is needed to determine if older adults will be able to         standards in a sample of healthy adults and used to differentiate
+     access the app and complete cognitive screeners independently,          healthy adults from those with cognitive impairment. Primary
+     if the data collected from these screeners are reliable, and how        research questions for this pilot study include (1) Can older
+     older adults will perceive the app from a usability and                 adults complete MyCog Mobile remotely on their smartphones?
+     acceptability perspective.                                              (2) Are the internal consistency and test-retest reliability of the
+                                                                             measures acceptable? and (3) How do participants rate the user
+     To encourage broader cognitive screening practices within               experience of MyCog Mobile?
+     primary care, the National Institute on Aging funded MyCog
+     Mobile (1R01AG074245-01), a cognitive screening app that                Methods
+     participants can self-administer remotely on personal
+     smartphones and sends results directly to their primary care            Ethical Considerations
+     provider’s electronic health record. MyCog Mobile is the                The research procedures were reviewed and approved by
+     smartphone-based counterpart to MyCog, a tablet-based app               Northwestern University’s institutional review board
+     that was developed for in-person self-administration in clinical        (STU00214921). All participants provided informed consent
+     settings [16]. MyCog Mobile uses 2 measures from MyCog                  and were compensated with a US $50 Visa gift card for their
+     adapted for remote assessment on a smartphone: Picture                  participation in this study. The data presented in this paper are
+     Sequence Memory (called MyPictures in the mobile app), which
+
+     https://formative.jmir.org/2024/1/e54299                                                                  JMIR Form Res 2024 | vol. 8 | e54299 | p. 2
+                                                                                                                  (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                              Young et al
+
+     anonymous and free of identifiers that could be linked to specific        thousands of older adults who had previously indicated interest
+     participants.                                                             in participation in research studies. Sample recruitment was
+                                                                               broadly stratified by age, gender, racial and ethnic identity, and
+     Sample                                                                    highest level of education. Inclusion criteria included (1) aged
+     We collaborated with a third-party market research agency to              65 years or older; (2) ownership of an iOS smartphone version
+     recruit older adults (N=51; Table 1) to take the measures on              14 or higher; (3) being English-speaking; and (4) willing to
+     their smartphones twice, about 2 to 3 weeks apart. The agency             complete the measures twice within approximately 2 to 3 weeks.
+     contacted potential participants in their large database of
+
+     Table 1. Descriptive samples and sample demographics of pilot study participants.
+         Demographics                                                                                           Total sample (N=51), n (%)
+         Age (years), mean (SD; range)                                                                          74.20 (6.25; 65-90)
+         Gender
+             Women                                                                                              29 (57)
+             Men                                                                                                22 (43)
+         Racial identity
+             Black or African American                                                                          9 (18)
+             White                                                                                              42 (82)
+         Ethnic identity
+             Hispanic or Latino (any race)                                                                      5 (10)
+             Not Hispanic or Latino (any race)                                                                  46 (90)
+         Education level
+
+             HSa diploma or GEDb                                                                                17 (33)
+
+             Some college                                                                                       10 (20)
+             4-year college degree                                                                              12 (23)
+             Graduate or professional degree                                                                    12 (23)
+
+     a
+         HS: high school.
+     b
+         GED: General Educational Development.
+
+                                                                               learning trial of MyFaces. Participants then complete, in order,
+     Procedure                                                                 MySorting, MySequences, 2 demographics questions (age and
+     Participants were asked to download the MyCog Mobile app                  education level), the recall subtests of MyFaces (see below),
+     onto their devices and complete the 4 activities in the battery           and, finally, MyPictures. After finishing their baseline MyCog
+     and answer 2 demographic questions (age and education level).             Mobile assessment, participants completed a usability survey
+     They received an email from this study’s staff with instructions          to provide feedback on their experiences. Participants were
+     to download the app and information on how to contact staff               asked to self-administer MyCog Mobile a second time within
+     for support if needed. The app shows 2 brief intro screens                2 to 3 weeks of their baseline administration.
+     (Figure 1) and then the cognitive screening begins with the
+
+
+
+
+     https://formative.jmir.org/2024/1/e54299                                                                   JMIR Form Res 2024 | vol. 8 | e54299 | p. 3
+                                                                                                                   (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                        Young et al
+
+     Figure 1. MyCog Mobile introduction screens.
+
+
+
+
+                                                                        approximately 5- to 10-minute delay, participants’ memories
+     Measures                                                           are tested in 3 subtests: the first subtest (recognition) asks the
+     MyFaces                                                            participant to select the person they saw in the learning trial
+                                                                        from 3 options. The second subtest (first letter) asks participants
+     MyFaces is an associative memory test originally developed by
+                                                                        to indicate the first letter of the name of the person presented
+     Rentz and colleagues [18] to predict cerebral amyloid beta
+                                                                        on the screen (Figure 2). The third subtest (name matching)
+     burden. The MyCog Mobile version of this task was adapted
+                                                                        asks participants to select the name of the person presented from
+     from the Mobile Toolbox Faces and Names test, which was also
+                                                                        among 3 possible response options. A raw accuracy score is
+     based on the original test [17]. Participants are first shown 12
+                                                                        given for each of the 3 subtests.
+     pictures of people paired with their names. After an
+
+
+
+
+     https://formative.jmir.org/2024/1/e54299                                                             JMIR Form Res 2024 | vol. 8 | e54299 | p. 4
+                                                                                                             (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                                Young et al
+
+     Figure 2. MyFaces first letter subtest example screen (face censored for publication).
+
+
+
+
+                                                                                 [17]. Respondents are asked to sort images across 2
+     MySorting                                                                   dimensions—shape and color—as quickly as they can. The
+     MySorting is a measure of executive function and cognitive                  relevant dimension for sorting is indicated by a cue word
+     flexibility adapted from the MyCog Dimensional Change Card                  (“shape” or “color”) that appears on the screen (Figure 3). Scores
+     Sorting [16] and the Mobile Toolbox Shape-Color Sorting test                are given for accuracy and response speed.
+     Figure 3. MySorting example screen.
+
+
+
+
+     https://formative.jmir.org/2024/1/e54299                                                                     JMIR Form Res 2024 | vol. 8 | e54299 | p. 5
+                                                                                                                     (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                        Young et al
+
+     MySequences                                                        arrange them in order, with the letters in alphabetical order first
+     MySequences is a measure of working memory adapted from            and then the numbers in ascending numerical order (Figure 4).
+     the Mobile Toolbox sequences test [17]. MySequences requires       Trials begin with strings of 3 alphanumeric characters and
+     participants to remember strings of letters and numbers and        increase in length, reaching a maximum difficulty of 10
+                                                                        characters. Scores reflect the number of correct trials.
+     Figure 4. MySequences response entry example screen.
+
+
+
+
+                                                                        the screen. Following this presentation, the images are
+     MyPictures                                                         scrambled, and the participant is asked to recall the original
+     MyPictures is a measure of episodic memory adapted from the        position of the images accordingly (Figure 5). There are 2 trials.
+     MyCog Picture Sequence Memory [16] and the arranging               Scores are given for exact match (the number of pictures in the
+     pictures task in the Mobile Toolbox [17]. A series of images       correct positions) as well as adjacent pairs (the number of
+     depicting independent, nonsequential activities is presented in    correctly ordered pairs of pictures next to each other) on each
+     a specific order and placed in specific, sequential locations on   trial.
+
+
+
+
+     https://formative.jmir.org/2024/1/e54299                                                             JMIR Form Res 2024 | vol. 8 | e54299 | p. 6
+                                                                                                             (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                        Young et al
+
+     Figure 5. MyPictures practice example screen.
+
+
+
+
+                                                                         Framework [20]. With 51 participants, we had 80% power to
+     Simplified System Usability Scale                                   detect effect sizes of 0.38 or greater, which was adequate to
+     The Simplified System Usability Scale (S-SUS) is a modified         evaluate our primary outcome of reliability metrics. Internal
+     version of the original System Usability Scale designed for         consistency was assessed using various methods that aligned
+     adults aged 65 years and older with or without cognitive            with each task’s paradigm. For MySorting and MySequences,
+     impairments [19]. Participants rate their level of agreement with   we calculated median Spearman-Brown correlations between
+     statements about their experience using MyCog Mobile on a           bootstrapped random split-half coefficients for the accuracy
+     5-point Likert scale. The original System Usability Scale has       scores. For MyPictures, we used the Pearson correlation between
+     demonstrated evidence of its internal consistency, sensitivity      trial 1 and trial 2 adjacent pairs’ scores to calculate the
+     to change, and concurrent validity with other usability measures.   Spearman-Brown split-half reliability (2r/(1+r)). For MyFaces,
+                                                                         we used a look-up table to find expected a posteriori scores and
+     Custom Usability Items
+                                                                         SDs based on the sum of the accuracy scores across the 3
+     We also asked participants to respond to 2 additional 5-point       subtests [21,22] and then calculated the empirical and mean
+     Likert-scale items regarding their experience using MyCog           marginal reliabilities [23]. We considered internal consistency
+     Mobile: “the time to complete the MyCog Mobile Cognitive            coefficients of 0.70 or greater to be acceptable [24]. We used
+     Screening was” (1=shorter than I expected, 3=about as much          intraclass correlations (ICCs) to evaluate test-retest reliability
+     time as I expected, and 5=longer than I expected); and “how         for each of the measures. ICCs and practice effects are reported
+     would you rate the experience of completing MyCog Mobile            for the MySorting total score, MySequences total score,
+     overall?” (1=very bad, 3=neutral, and 5=very good). Participants    MyPictures sum of adjacent pairs’ scores across trials 1 and 2,
+     also provided feedback on the experience in 3 free-response         and the total score across all 3 subtests for MyFaces. We
+     items: (“what would you do if the app wasn’t working or you         considered ICCs less than 0.50 to be poor, 0.50 to 0.75
+     weren’t sure what to do next?”; “is there anything you would        acceptable, 0.75 to 0.90 good, and above 0.90 excellent [25].
+     change about using the MyCog Mobile App to improve the              Practice effects were evaluated through paired 2-tailed t tests
+     experience?”; and “is there anything else you would like us to      of baseline and retest scores. CIs (95%) that contained 0 were
+     know about your experience using the MyCog Mobile app?”).           considered to indicate nonsignificant practice effects.
+     Analysis                                                            We also conducted exploratory analyses of the relations between
+     All analyses were conducted in R (R Core Team, 2023), and           test performance, usability, and education, respectively, using
+     packages and codes are available on the Open Science                Spearman ρ correlations. Spearman ρ correlations were used
+
+     https://formative.jmir.org/2024/1/e54299                                                             JMIR Form Res 2024 | vol. 8 | e54299 | p. 7
+                                                                                                             (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                                      Young et al
+
+     over Pearson r correlations because we were interested in
+     monotonic relationships between variables rather than strictly
+                                                                                     Results
+     linear ones. Correlations with age were not conducted due to                    Overview
+     the restriction of age range by study design. To assess the
+     usability of the screener, we examined the score distributions                  Most participants completed both administration time points
+     on the S-SUS and custom Likert-scale items and qualitatively                    within 15 days (meandays_between 15.09 days, SD 2.08; range
+     evaluated the results from custom usability survey items. A total               13.12-22.38). Further, 2 participants did not complete the second
+     score greater than 70 out of 100 possible points is considered                  MyCog Mobile assessment, leaving a sample of 49 participants
+     above average and an acceptable level of usability [26,27].                     for test-retest reliability analyses.
+     Further, 2 authors independently reviewed and coded the                         Psychometric Properties
+     free-response items. Codes were then reconciled, grouped, and
+     categorized by representative themes. Although we counted                       Internal consistency and test-retest reliability statistics were
+     each code’s frequency, the survey free-response items were an                   acceptable or better for each measure based on a priori cutoff
+     informal method of gathering feedback rather than a formal                      criteria (Table 2). Test-retest reliability was moderate for each
+     quantitative or qualitative study, and our analysis is exclusively              measure. Mean scores were not significantly different between
+     descriptive.                                                                    baseline and retest except for MyFaces, which demonstrated a
+                                                                                     mean improvement of 4.70 (SD 1.06) in the total score across
+                                                                                     all 3 subtests at the second administration. The performance
+                                                                                     demonstrated moderate correlations with education level on
+                                                                                     each of the measures except MyPictures, which did not
+                                                                                     demonstrate significant correlations with education.
+
+     Table 2. MyCog Mobile measures reliability, practice effects, and correlation with education.
+         Measure                  Internal consistencya (95%   Test-retest reliability (ICCb) (95% Practice effects (ΔM) (95% CI) Education (ρ) (95% CI)
+                                  CI)                          CI)
+         MyFaces                  0.73 (0.63 to 0.82)          0.61 (0.40 to 0.76)               4.70 (2.62 to 6.79)                0.33 (0.05 to 0.56)
+         MySorting                0.90 (0.83 to 0.94)          0.71 (0.54 to 0.82)               1.75 (–0.97 to 4.49)               0.45 (0.19 to 0.66)
+         MySequences              0.91 (0.85 to 0.95)          0.65 (0.46 to 0.78)               1.77 (–0.43 to 3.96)               0.36 (0.08 to 0.58)
+         MyPictures               0.81 (0.73 to 0.94)          0.70 (0.53 to 0.82)               0.44 (–0.94 to 1.82)               0.06 (–0.22 to 0.33)
+
+     a
+      Spearman-Brown corrected split-half correlations are reported for MySorting, MySequences, and MyPictures while empirical reliability is reported
+     for MyFaces. Test-retest analyses are based on a sample of n=49.
+     b
+         ICC: intraclass correlation.
+
+                                                                                     scale ratings in generally favorable directions (ie, positively
+     Usability                                                                       worded items were greater than the neutral rating of 3, and
+     The mean overall usability rating on the S-SUS was acceptable                   negatively worded items were less than 3; Table 3). On
+     (mean 73.17, SD 19.27). Ratings were not significantly                          additional custom Likert-scale items, participants indicated the
+     correlated with education or performance on any of the                          time it took to complete the S-SUS was slightly less than
+     measures. Analysis of the S-SUS items demonstrated Likert                       expected on average, and the overall experience was positive.
+
+
+
+
+     https://formative.jmir.org/2024/1/e54299                                                                           JMIR Form Res 2024 | vol. 8 | e54299 | p. 8
+                                                                                                                           (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                              Young et al
+
+     Table 3. Usability ratings of MyCog Mobile.
+      Measure and item                                                             Descriptive range                       Rating, mean (SD)
+      Simplified System Usability Scale
+           I would use the MyCog Mobile app before an appointment with my doctor   Neutral to agree                        3.53 (1.25)
+           The MyCog mobile app is too complex for me                              Disagree to strongly disagree           1.98 (1.16)
+           The MyCog mobile app was easy to use                                    Agree to strongly agree                 4.05 (0.97)
+           I really need help from someone to use the MyCog mobile app             Disagree to strongly disagree           1.67 (0.105)
+           The various parts of the MyCog mobile app were well integrated          Neutral to agree                        3.78 (0.97)
+           The MyCog Mobile app was confusing for me                               Disagree to strongly disagree           1.98 (1.01)
+           Learning to use the MyCog Mobile app was quick for me                   Neutral to agree                        3.75 (1.15)
+           The MyCog mobile app was hard to use                                    Disagree to strongly disagree           1.90 (1.04)
+           I felt confident using the MyCog mobile app                             Neutral to agree                        3.98 (1.12)
+           I will need to learn a lot before using the MyCog mobile app            Neutral to disagree                     2.04 (1.11)
+      Additional Likert-scale questions
+           The time to complete MyCog Mobile was...                                As much time as expected or less        2.84 (1.07)
+           How would you rate the experience of completing MyCog Mobile overall?   Good to very good                       4.00 (0.94)
+
+                                                                            itself was easy & straight forward to download and access the
+     Free-Response Feedback                                                 survey material, I would most likely defer its home use and
+     On the first free-response item, “what would you do if the app         prefer an ‘in doctor’s office’ cognitive testing experience”).
+     wasn’t working, or you weren’t sure what to do next?”                  However, another participant remarked on how easy it would
+     participants’ responses indicated several strategies they would        be to complete MyCog Mobile before the appointment (eg, “I
+     use for help (Table 4). Most expected to be able to directly           really don’t see that anything was difficult. The app would work
+     contact someone for support through an email or phone call.            very well prior to a doctor visit.”). Further, 3 participants offered
+     Several participants indicated they would use an in-app help           feedback on the process of participating in this pilot study,
+     resource or search for help resources online. Although most            which will be considered for future study administration but is
+     participants indicated they would try to solve the problem, 3          not relevant to the MyCog Mobile user experience specifically.
+     participants stated they would not finish MyCog Mobile if they
+     encountered a difficulty (eg, “[I would] disregard it and continue     On the final free-response item, “is there anything else you
+     on as I had before the app”).                                          would like us to know about your experience using the MyCog
+                                                                            Mobile app?” most participants did not provide any feedback.
+     On the second free-response item, “is there anything you would         As with the previous free-response item, several participants
+     change about using the MyCog Mobile App to improve the                 expressed concerns about their abilities (eg, “I found it to be
+     experience?” most participants did not offer any suggestions or        quite challenging, especially since my memory isn’t what it
+     gave positive feedback (Table 4). Several participants suggested       once was.”). Some commented the instructions were confusing
+     the instructions for the cognitive tests needed clarification (eg,     (eg, “no at 1st it was sort of confusing once I got into it, it was
+     “some of the exercises were not well explained or confusing.           easier”), and 2 wanted more opportunities to practice before
+     Particularly the ones where random letters and numbers were            starting the live items. (eg, “I would like to see more practice
+     given, and they had to be reorganized. Simplifying the                 questions to help the user feel more relaxed and confident”).
+     instructions would be helpful”). Some participants expressed           Further, 2 participants wanted more explanation around the
+     concerns about their memories in response to this question or          purpose of the test (eg, “perhaps a brief description of what the
+     commented on the difficulties of the test items (eg, “I just wish      test is designed for, for example: to test mental recall, to test
+     I was smarter [and] had a better memory”). Regarding visual            cognitive ability, to test onset of dementia or Alzheimer’s”).
+     accessibility of the app, 2 participants indicated difficulty with     Only 1 participant reported difficulties loading the app for this
+     the print size, and 1 indicated difficulty with the visual contrast    study. Conversely, many participants provided positive feedback
+     of the tasks. Of note, 1 participant remarked they would prefer        (eg, “it was simple and easy to use”).
+     to complete MyCog Mobile in the clinic (eg, “while the app
+
+
+
+
+     https://formative.jmir.org/2024/1/e54299                                                                  JMIR Form Res 2024 | vol. 8 | e54299 | p. 9
+                                                                                                                  (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                                         Young et al
+
+     Table 4. Free-response feedback on MyCog Mobilea.
+         Item and type of response                                                                                           Frequency, n
+         “What would you do if the app wasn’t working, or you weren’t sure what to do next?”
+             Contact a support administrator                                                                                 27
+             Self-troubleshoot or restart the app                                                                            13
+             Use in-app help or search online                                                                                7
+             Not finish or give up                                                                                           3
+         “Is there anything you would change about using the MyCog mobile app to improve the experience?”
+             No changes suggested or positive feedback                                                                       32
+             Clarify task instructions                                                                                       7
+             Concerns about own abilities or test difficulty                                                                 5
+             Visibility issues                                                                                               3
+             Concerns related to study administration                                                                        3
+             Preference for in-person experience                                                                             1
+         “Is there anything else you would like us to know about your experience using the MyCog mobile app?”
+             No feedback                                                                                                     24
+             Positive feedback                                                                                               14
+             Concerns about own abilities or test difficulty                                                                 5
+             Additional practice items                                                                                       2
+             Purpose of test unclear                                                                                         2
+             Difficulty loading app                                                                                          1
+
+     a
+         Participant responses could be coded for multiple themes; therefore, the frequency should not sum to the total sample size.
+
+                                                                                     defer the use of the app until their clinic visit if they encounter
+     Discussion                                                                      problems. Participants also indicated that they expect a help
+     Principal Findings                                                              resource within the app. Currently, participants can use the
+                                                                                     “Pause” icon to stop the activities and review the instructions.
+     The findings suggest most healthy older adults can reliably                     However, an additional button labeled “Help” may be easier to
+     complete the MyCog Mobile screener remotely on their                            navigate for older adults. Participants indicated that they would
+     smartphones. The 4 performance measures that comprise the                       use several strategies to troubleshoot on their own if they
+     MyCog Mobile screener demonstrated acceptable internal                          encountered difficulties (eg, restarting the app); however, clinics
+     consistency and test-retest reliability. The performance                        should expect some participants not to finish MyCog Mobile if
+     demonstrated positive correlations with education as expected,                  problems arise. For these patients, clinics will have to default
+     except for MyPictures, which did not correlate with education.                  to their previous screening workflows (eg, using in-person
+     Participants in our sample rated the usability of MyCog Mobile                  screeners like the MyCog tablet app or a traditional
+     as above average and rated the experience “Good” to “Very                       paper-and-pencil screener).
+     Good” overall. They indicated the time to complete MyCog
+     Mobile was about as long as they expected. These results                        Concerning what could be improved with the app, some
+     provide evidence of the feasibility and acceptability of remote                 participants offered feedback on the instructions for the activities
+     self-administration of the MyCog Mobile cognitive screener                      and asked for more opportunities to practice before completing
+     and support its further evaluation in larger clinical samples to                live items. Although this feedback came from a minority of
+     understand its diagnostic accuracy and construct validity.                      patients (7/51, 14%), we will conduct further cognitive
+                                                                                     interviewing to ensure instructions are optimized for all users.
+     The feedback on free-response items indicated that most                         Currently, participants are only allowed to try practice items
+     participants had a positive user experience and revealed several                again if they respond incorrectly. However, adding the
+     actionable insights for the next iteration of the MyCog Mobile                  opportunity to try the practice again even if the item is correct
+     app. First, participants expect a dedicated support representative              may be helpful for participants. Further, 2 participants also
+     to be available if they have difficulty using the app. Clinics that             reported trouble reading the print on a smartphone screen. To
+     implement MyCog Mobile into their workflows will have to                        address this, we increased the font size of the print to maximize
+     consider how to best respond to the needs of patients. For                      the readability of the text which will be implemented in the
+     example, clinics may choose to dedicate resources for support                   subsequent MyCog Mobile validation studies.
+     or inform patients that the screener is optional, and they may
+
+     https://formative.jmir.org/2024/1/e54299                                                                            JMIR Form Res 2024 | vol. 8 | e54299 | p. 10
+                                                                                                                             (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                            Young et al
+
+     Several participants provided feedback that reflected insecurities    validation, we will conduct a field test of MyCog Mobile, in
+     about their abilities or performance on the test. Some reported       which we will collect feedback on the acceptance of the app in
+     the items were too difficult, however, the item difficulties cannot   real-world contexts.
+     be changed to preserve the validity of the test. Instead of
+     changing the items, steps could be taken to assure patients that
+                                                                           Comparisons With Prior Work
+     it is normal for the items to be challenging. Based on feedback       Our findings are consistent with the small body of research on
+     in a previous study, we designed the introduction screen (Figure      the feasibility and acceptability of smartphone apps for cognitive
+     1) to alleviate potential concerns about the purpose of the test.     screening but also offer some novel contributions. Several
+     For the next iteration of MyCog Mobile, we will collect               studies have examined repeated cognitive assessments on
+     participant feedback on how to optimize the introduction screen       smartphones in research contexts for older adults, although these
+     to make patients feel comfortable and assured when completing         have primarily examined adherence [11,13,28]. Further, 1
+     the screener at home.                                                 ecological momentary assessment study found that both
+                                                                           cognitively normal and older adults with mild cognitive
+     Limitations                                                           impairment were able to complete cognitive assessments on
+     The generalizability of our findings is limited by the relative       their smartphones with an adherence rate of 85% in the context
+     homogeneity of our small sample about racial and ethnic               of a research study [29]. We observed a 96% adherence rate in
+     identities. Representation of racial identities other than White      our pilot study (albeit with only 2 administration time points),
+     was low or nonexistent, and representation of Hispanic or Latino      but it is unclear if patients will respond the same way when
+     populations was relatively small. Findings will need to be            MyCog Mobile is used in the context of a real-world primary
+     replicated in these populations in future studies to ensure MyCog     care visit, even if they are asked to complete the activities once
+     Mobile has equal validity evidence for these groups. Moreover,        annually.
+     due to the constraints of the grant, we developed the first version
+                                                                           Research on attitudes toward cognitive screening in primary
+     of MyCog Mobile for iOS devices (iPhones) only. iPhones are
+                                                                           care suggests that most older adults are open to cognitive
+     among the most expensive smartphones, which may have biased
+                                                                           screening in primary care if they perceive there is a benefit [30].
+     our sample toward higher-income participants (though we did
+                                                                           In our sample, the average response to “I would use the MyCog
+     not collect income information). Future work will focus on
+                                                                           Mobile app before an appointment with my doctor” skewed
+     developing and validating MyCog Mobile for Android.
+                                                                           positive, but 10 (20%) out of 51 participants responded with
+     In this small pilot study, we were not able to conduct qualitative    “Disagree” or “Strongly Disagree.” Future iterations of the app
+     interviews with patients but rather gave them opportunities to        will focus on communicating the benefits of cognitive screenings
+     provide feedback via free-response survey items. While                to older adults, especially in the absence of clinical staff to
+     free-response items can capture a breadth of spontaneous              explain the assessments when they are taken at home. Moreover,
+     viewpoints, they may not achieve the depth or nuanced                 clinics should expect there to be a portion of patients who do
+     understanding of participants’ experiences and perspectives that      not complete MyCog Mobile before the visit and will need to
+     can be gleaned from qualitative interviews. Consequently, our         complete usual-care cognitive screenings in the clinic. MyCog
+     findings might not encompass the subtleties or the full range of      Mobile is not intended to replace all in-person screening
+     participant experiences with MyCog Mobile.                            practices, but rather supplement such practices. Likewise,
+                                                                           MyCog Mobile is not intended to provide a clinical diagnosis,
+     The recruitment of older adults with cognitive impairments was
+                                                                           but rather to identify potential cognitive impairment, and lead
+     outside of the scope of our pilot study; however, it is important
+                                                                           to appropriate referrals for more comprehensive evaluation. For
+     to note that MyCog Mobile has yet to be researched in these
+                                                                           the portion of patients who are willing and able to complete
+     populations. We expect older adults who are currently struggling
+                                                                           MyCog Mobile on their smartphones before their appointment,
+     with cognitive decline will likely have difficulty using MyCog
+                                                                           clinics can use in-person time to focus on other important
+     Mobile, and the app may be more appropriate for participants
+                                                                           aspects of the visit.
+     who are cognitively intact or in the early stages of cognitive
+     decline. The forthcoming clinical validation of MyCog Mobile          Conclusions
+     will provide valuable information about the sensitivity and           Pilot evidence suggests the MyCog Mobile cognitive screener
+     specify the measures to detect cognitive decline as well as the       can be reliably self-administered by older adults on their
+     feasibility of using the app with cognitively impaired                smartphones. Participants in our study generally provided
+     populations.                                                          positive feedback about the MyCog Mobile experience and
+     Further, 1 potential limitation of the MyCog Mobile app is older      rated the usability of the app highly. Based on participant
+     adults’ familiarity with mobile health apps in general. Although      feedback, we will conduct further usability research to improve
+     smartphone ownership is increasingly more common across age           support functionality, optimize task instructions and practice
+     groups, some older adults still do not own smartphones or feel        opportunities, and make patients feel comfortable using MyCog
+     confident using them. The participants in our sample rated the        Mobile. Additional next steps include a clinical validation study
+     user experience highly; however, the acceptability of a remote        that compares MyCog Mobile to gold-standard assessments and
+     cognitive screening app is likely to be lower in a general            tests the sensitivity and specificity of the measures for
+     population sample that has not chosen to participate in a highly      identifying cognitive impairment.
+     controlled research study. Based on the results of the clinical
+
+
+     https://formative.jmir.org/2024/1/e54299                                                               JMIR Form Res 2024 | vol. 8 | e54299 | p. 11
+                                                                                                                (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                           Young et al
+
+     Acknowledgments
+     This study was supported by the National Institute on Aging (grant 1R01AG074245-01).
+
+     Data Availability
+     Given the small sample size, data are not publicly available to ensure participants’ privacy. For questions about the data set,
+     please contact the corresponding author.
+
+     Conflicts of Interest
+     None declared.
+
+     References
+     1.      Liss JL, Assunção SS, Cummings J, Atri A, Geldmacher DS, Candela SF, et al. Practical recommendations for timely,
+             accurate diagnosis of symptomatic Alzheimer's disease (MCI and dementia) in primary care: a review and synthesis. J
+             Intern Med. 2021;290(2):310-334. [FREE Full text] [doi: 10.1111/joim.13244] [Medline: 33458891]
+     2.      Porsteinsson AP, Isaacson RS, Knox S, Sabbagh MN, Rubino I. Diagnosis of early Alzheimer's disease: clinical practice
+             in 2021. J Prev Alzheimers Dis. 2021;8(3):371-386. [FREE Full text] [doi: 10.14283/jpad.2021.23] [Medline: 34101796]
+     3.      Lang L, Clifford A, Wei L, Zhang D, Leung D, Augustine G, et al. Prevalence and determinants of undetected dementia
+             in the community: a systematic literature review and a meta-analysis. BMJ Open. 2017;7(2):e011146. [FREE Full text]
+             [doi: 10.1136/bmjopen-2016-011146] [Medline: 28159845]
+     4.      Bradford A, Kunik ME, Schulz P, Williams SP, Singh H. Missed and delayed diagnosis of dementia in primary care:
+             prevalence and contributing factors. Alzheimer Dis Assoc Disord. 2009;23(4):306-314. [FREE Full text] [doi:
+             10.1097/WAD.0b013e3181a6bebc] [Medline: 19568149]
+     5.      Young SR, Lattie EG, Berry ABL, Bui L, Byrne GJ, Yoshino Benavente JN, et al. Remote cognitive screening of healthy
+             older adults for primary care with the MyCog mobile app: iterative design and usability evaluation. JMIR Form Res.
+             2023;7:e42416. [FREE Full text] [doi: 10.2196/42416] [Medline: 36626223]
+     6.      Wild K, Howieson D, Webbe F, Seelye A, Kaye J. Status of computerized cognitive testing in aging: a systematic review.
+             Alzheimers Dement. 2008;4(6):428-437. [FREE Full text] [doi: 10.1016/j.jalz.2008.07.003] [Medline: 19012868]
+     7.      Mobile Fact Sheet. Pew Research Center. URL: https://www.pewresearch.org/internet/fact-sheet/mobile/ [accessed
+             2023-03-03]
+     8.      Malani P, Kullgren J, Solway E, Lee P, Aikens J, Richardson C, et al. National Poll on Healthy Aging: Mobile health app
+             use among older adults. University of Michigan Library. 2022. URL: https://deepblue.lib.umich.edu/handle/2027.42/171628
+             [accessed 2024-01-11]
+     9.      Graetz I, Huang J, Brand RJ, Hsu J, Yamin CK, Reed ME. Bridging the digital divide: mobile access to personal health
+             records among patients with diabetes. Am J Manag Care. 2018;24(1):43-48. [FREE Full text] [Medline: 29350505]
+     10.     Brouillette RM, Foil H, Fontenot S, Correro A, Allen R, Martin CK, et al. Feasibility, reliability, and validity of a smartphone
+             based application for the assessment of cognitive function in the elderly. PLoS One. 2013;8(6):e65925. [FREE Full text]
+             [doi: 10.1371/journal.pone.0065925] [Medline: 23776570]
+     11.     Lancaster C, Koychev I, Blane J, Chinner A, Wolters L, Hinds C. Evaluating the feasibility of frequent cognitive assessment
+             using the Mezurio smartphone app: observational and interview study in adults with elevated dementia risk. JMIR mHealth
+             uHealth. 2020;8(4):e16142. [FREE Full text] [doi: 10.2196/16142] [Medline: 32238339]
+     12.     Schweitzer P, Husky M, Allard M, Amieva H, Pérès K, Foubert-Samier A, et al. Feasibility and validity of mobile cognitive
+             testing in the investigation of age-related cognitive decline. Int J Methods Psychiatr Res. 2017;26(3):e1521. [FREE Full
+             text] [doi: 10.1002/mpr.1521] [Medline: 27539327]
+     13.     Thompson LI, Harrington KD, Roque N, Strenger J, Correia S, Jones RN, et al. A highly feasible, reliable, and fully remote
+             protocol for mobile app-based cognitive assessment in cognitively healthy older adults. Alzheimers Dement (Amst).
+             2022;14(1):e12283. [FREE Full text] [doi: 10.1002/dad2.12283] [Medline: 35415201]
+     14.     Moore RC, Ackerman RA, Russell MT, Campbell LM, Depp CA, Harvey PD, et al. Feasibility and validity of ecological
+             momentary cognitive testing among older adults with mild cognitive impairment. Front Digit Health. 2022;4:946685.
+             [FREE Full text] [doi: 10.3389/fdgth.2022.946685] [Medline: 35990012]
+     15.     Sabbagh MN, Boada M, Borson S, Doraiswamy PM, Dubois B, Ingram J, et al. Early detection of mild cognitive impairment
+             (MCI) in an at-home setting. J Prev Alzheimers Dis. 2020;7(3):171-178. [FREE Full text] [doi: 10.14283/jpad.2020.22]
+             [Medline: 32463070]
+     16.     Curtis L, Opsasnick L, Benavente J, Nowinski C, O'Conor R, Stoeger J, et al. Preliminary results of MyCog, a brief
+             assessment for the detection of cognitive impairment in primary care. Innov Aging. 2020;4(Suppl 1):259-260. [FREE Full
+             text] [doi: 10.1093/geroni/igaa057.833]
+
+
+
+     https://formative.jmir.org/2024/1/e54299                                                              JMIR Form Res 2024 | vol. 8 | e54299 | p. 12
+                                                                                                               (page number not for citation purposes)
+XSL• FO
+RenderX
+     JMIR FORMATIVE RESEARCH                                                                                                                      Young et al
+
+     17.     Gershon RC, Sliwinski MJ, Mangravite L, King JW, Kaat AJ, Weiner MW, et al. The Mobile Toolbox for monitoring
+             cognitive function. Lancet Neurol. 2022;21(7):589-590. [FREE Full text] [doi: 10.1016/S1474-4422(22)00225-3] [Medline:
+             35716687]
+     18.     Rentz DM, Amariglio RE, Becker JA, Frey M, Olson LE, Frishe K, et al. Face-name associative memory performance is
+             related to amyloid burden in normal elderly. Neuropsychologia. 2011;49(9):2776-2783. [FREE Full text] [doi:
+             10.1016/j.neuropsychologia.2011.06.006] [Medline: 21689670]
+     19.     Holden RJ. A Simplified System Usability Scale (SUS) for cognitively impaired and older adults. Proc Int Symp Hum
+             Factors Ergon Health Care. 2020;9(1):180-182. [FREE Full text] [doi: 10.1177/2327857920091021]
+     20.     Young S. MyCog Mobile. Open Science Framework. URL: https://osf.io/vhx5r/ [accessed 2024-01-29]
+     21.     Chapman R. Expected a posteriori scoring in PROMIS. J Patient Rep Outcomes. 2022;6(1):59. [FREE Full text] [doi:
+             10.1186/s41687-022-00464-9] [Medline: 35657454]
+     22.     Cai L. Lord-Wingersky algorithm version 2.0 for hierarchical item factor models with applications in test scoring, scale
+             alignment, and model fit testing. Psychometrika. 2015;80(2):535-559. [FREE Full text] [doi: 10.1007/s11336-014-9411-3]
+             [Medline: 25233839]
+     23.     Bechger T, Maris G. Structural equation modelling of multiple facet data: extending models for multitrait-multimethod
+             data. Psicológica. 2004;25(2):253-274. [FREE Full text]
+     24.     Nunnally JC, Bernstein IH. Psychometric Theory. New York. McGraw-Hill; 1994.
+     25.     Koo TK, Li MY. A guideline of selecting and reporting intraclass correlation coefficients for reliability research. J Chiropr
+             Med. 2016;15(2):155-163. [FREE Full text] [doi: 10.1016/j.jcm.2016.02.012] [Medline: 27330520]
+     26.     Lewis JR. The system usability scale: past, present, and future. Int J Hum Comput Interact. 2018;34(7):577-590. [doi:
+             10.1080/10447318.2018.1455307]
+     27.     Bangor A, Kortum P, Miller J. Determining what individual SUS scores mean: adding an adjective rating scale. Journal of
+             User Experience. 2009;4(3):114-123. [FREE Full text]
+     28.     Nicosia J, Aschenbrenner AJ, Balota D, Sliwinski M, Tahan M, Adams S, et al. Unsupervised high-frequency
+             smartphone-based cognitive assessments are reliable, valid, and feasible in older adults at risk for Alzheimer disease.
+             PsyArXiv. Preprint posted online on January 5, 2022. 2022 [FREE Full text] [doi: 10.31234/osf.io/wtsyn]
+     29.     Fowler NR, Perkins AJ, Turchan HA, Frame A, Monahan P, Gao S, et al. Older primary care patients' attitudes and
+             willingness to screen for dementia. J Aging Res. 2015;2015:423265. [FREE Full text] [doi: 10.1155/2015/423265] [Medline:
+             25973274]
+     30.     Martin S, Kelly S, Khan A, Cullum S, Dening T, Rait G, et al. Attitudes and preferences towards screening for dementia:
+             a systematic review of the literature. BMC Geriatr. 2015;15:66. [FREE Full text] [doi: 10.1186/s12877-015-0064-6]
+             [Medline: 26076729]
+
+     Abbreviations
+               ICC: intraclass correlation
+               S-SUS: Simplified System Usability Scale
+
+
+
+
+               Edited by A Mavragani; submitted 15.11.23; peer-reviewed by S Borson, L Thompson; comments to author 04.01.24; revised version
+               received 05.01.24; accepted 09.01.24; published 07.02.24
+               Please cite as:
+               Young SR, Dworak EM, Byrne GJ, Jones CM, Yao L, Yoshino Benavente JN, Diaz MV, Curtis L, Gershon R, Wolf M, Nowinski CJ
+               Remote Self-Administration of Cognitive Screeners for Older Adults Prior to a Primary Care Visit: Pilot Cross-Sectional Study of the
+               Reliability and Usability of the MyCog Mobile Screening App
+               JMIR Form Res 2024;8:e54299
+               URL: https://formative.jmir.org/2024/1/e54299
+               doi: 10.2196/54299
+               PMID: 38324368
+
+
+
+
+     ©Stephanie Ruth Young, Elizabeth McManus Dworak, Greg Joseph Byrne, Callie Madison Jones, Lihua Yao, Julia Noelani
+     Yoshino Benavente, Maria Varela Diaz, Laura Curtis, Richard Gershon, Michael Wolf, Cindy J Nowinski. Originally published
+     in JMIR Formative Research (https://formative.jmir.org), 07.02.2024. This is an open-access article distributed under the terms
+     of the Creative Commons Attribution License (https://creativecommons.org/licenses/by/4.0/), which permits unrestricted use,
+     distribution, and reproduction in any medium, provided the original work, first published in JMIR Formative Research, is properly
+     cited. The complete bibliographic information, a link to the original publication on https://formative.jmir.org, as well as this
+     copyright and license information must be included.
+
+     https://formative.jmir.org/2024/1/e54299                                                                         JMIR Form Res 2024 | vol. 8 | e54299 | p. 13
+                                                                                                                          (page number not for citation purposes)
+XSL• FO
+RenderX
+
