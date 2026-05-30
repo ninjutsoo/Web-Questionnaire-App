@@ -2,7 +2,6 @@
 
 import { auth, googleProvider, db, isUnique } from "./firebase";
 import {
-  getAuth,
   signInWithEmailAndPassword,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
@@ -12,7 +11,6 @@ import {
   sendPasswordResetEmail,
 } from "firebase/auth";
 import {
-  getFirestore,
   collection,
   query,
   where,

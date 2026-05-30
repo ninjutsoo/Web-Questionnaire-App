@@ -2,3 +2,138 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --rme-matters: #003366;
+  --rme-medication: #005522;
+  --rme-mentation: #4B0082;
+  --rme-mobility: #8B4000;
+  --rme-review: #005A5A;
+  --rme-alert: #8B0000;
+  --rme-text: #1f2933;
+  --rme-muted: #4a5568;
+  --rme-border: #7a8694;
+  --rme-surface: #ffffff;
+  --rme-page: #f4f6f8;
+  --rme-focus: #ffbf47;
+  --rme-min-touch: 44px;
+}
+
+html {
+  font-size: 16px;
+}
+
+body {
+  color: var(--rme-text);
+  background: var(--rme-page);
+}
+
+button,
+a,
+[role="button"],
+.ant-btn,
+.ant-tabs-tab {
+  min-height: var(--rme-min-touch);
+}
+
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+.ant-btn:focus-visible,
+.ant-tabs-tab:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+.ant-input:focus-visible,
+.ant-input:focus {
+  outline: 3px solid var(--rme-focus) !important;
+  outline-offset: 2px;
+}
+
+.rme-button,
+.rme-button-secondary,
+.rme-button-danger,
+.rme-chip,
+.rme-action-bar button {
+  min-height: var(--rme-min-touch);
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.rme-button {
+  border: 2px solid var(--rme-review);
+  background: var(--rme-review);
+  color: #fff;
+}
+
+.rme-button-secondary {
+  border: 2px solid var(--rme-border);
+  background: #fff;
+  color: var(--rme-text);
+}
+
+.rme-button-danger {
+  border: 2px solid var(--rme-alert);
+  background: var(--rme-alert);
+  color: #fff;
+}
+
+.rme-chip {
+  border: 2px solid var(--rme-border);
+  background: #fff;
+  color: var(--rme-text);
+  padding: 10px 14px;
+  text-align: left;
+  white-space: normal;
+}
+
+.rme-chip-selected {
+  border-width: 3px;
+  box-shadow: 0 0 0 3px rgba(255, 191, 71, 0.45);
+}
+
+.rme-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 12px;
+  margin: 24px -16px -20px;
+  background: rgba(255, 255, 255, 0.97);
+  border-top: 2px solid #d8dee6;
+  box-shadow: 0 -6px 18px rgba(15, 23, 42, 0.1);
+}
+
+.rme-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 640px) {
+  .rme-action-bar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-left: -8px;
+    margin-right: -8px;
+  }
+}
+
+@media print {
+  header,
+  .rme-action-bar,
+  .rme-no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+}
+

@@ -1,12 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Tooltip } from 'antd';
 import { SoundOutlined } from '@ant-design/icons';
 
 function SpeechReader({ text }) {
+  const [status, setStatus] = useState('');
+
   const speakText = () => {
     const synth = window.speechSynthesis;
     if (!synth) {
-      alert('Speech synthesis is not supported in your browser.');
+      setStatus('Speech synthesis is not supported in this browser.');
       return;
     }
     // Stop any currently playing speech
@@ -43,8 +45,10 @@ function SpeechReader({ text }) {
       utterance.voice = pickBestVoice(voices);
       try {
         synth.speak(utterance);
-      } catch (err) {
-        alert('Unable to play speech. Your browser may have blocked audio or does not support speech synthesis.');
+        setStatus('');
+      } catch (error) {
+        console.error('Speech synthesis error:', error);
+        setStatus('Unable to play speech. Your browser may have blocked audio.');
       }
     };
 
@@ -52,42 +56,40 @@ function SpeechReader({ text }) {
   };
 
   return (
-    <Tooltip title="Tap to hear this question read aloud">
-      <button
-        onClick={speakText}
-        style={{
-          marginLeft: 4,
-          background: 'rgba(24, 144, 255, 0.1)',
-          border: '1px solid rgba(24, 144, 255, 0.2)',
-          borderRadius: 6,
-          padding: '4px 8px',
-          cursor: 'pointer',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 2,
-          color: '#1890ff',
-          fontSize: 10,
-          fontWeight: 600,
-          transition: 'all 0.2s ease',
-          minWidth: 48,
-          whiteSpace: 'nowrap'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(24, 144, 255, 0.15)';
-          e.currentTarget.style.borderColor = 'rgba(24, 144, 255, 0.4)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(24, 144, 255, 0.1)';
-          e.currentTarget.style.borderColor = 'rgba(24, 144, 255, 0.2)';
-        }}
-        aria-label="Read question aloud"
-      >
-        <SoundOutlined style={{ fontSize: 16 }} />
-        <span style={{ lineHeight: 1, whiteSpace: 'nowrap' }}>Listen</span>
-      </button>
-    </Tooltip>
+    <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 4 }}>
+      <Tooltip title="Hear this question read aloud">
+        <button
+          type="button"
+          onClick={speakText}
+          style={{
+            background: '#fff',
+            border: '2px solid var(--rme-review)',
+            borderRadius: 8,
+            padding: '8px 12px',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            color: 'var(--rme-review)',
+            fontSize: 16,
+            fontWeight: 700,
+            minHeight: 44,
+            minWidth: 96,
+            whiteSpace: 'nowrap'
+          }}
+          aria-label="Listen to this question"
+        >
+          <SoundOutlined style={{ fontSize: 18 }} aria-hidden="true" />
+          <span>Listen</span>
+        </button>
+      </Tooltip>
+      {status && (
+        <span role="status" style={{ fontSize: 14, color: 'var(--rme-alert)' }}>
+          {status}
+        </span>
+      )}
+    </span>
   );
 }
 

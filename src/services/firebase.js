@@ -2,8 +2,6 @@ import { initializeApp } from "firebase/app";
 import {
   getAuth,
   GoogleAuthProvider,
-  sendPasswordResetEmail,
-  updatePassword,
 } from "firebase/auth";
 import {
   getFirestore,
@@ -11,8 +9,6 @@ import {
   query,
   where,
   getDocs,
-  setDoc,
-  doc,
 } from "firebase/firestore";
 
 // Your web app's Firebase configuration

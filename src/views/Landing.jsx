@@ -30,10 +30,12 @@ const Landing = () => {
             </p>
             <div className="cta-row">
               <button className="cta-button cta-primary" onClick={() => navigate('/signup')}>
-                Get Started
+                <span>I'm New: Start Here</span>
+                <small>Create an account and begin your 4Ms questionnaire.</small>
               </button>
               <button className="cta-button cta-secondary" onClick={() => navigate('/signin')}>
-                Sign In
+                <span>Returning User: Sign In</span>
+                <small>Continue a saved questionnaire or update your profile.</small>
               </button>
             </div>
           </div>
@@ -42,11 +44,40 @@ const Landing = () => {
         {/* What are the 4M's Section */}
         <div className="four-ms-section">
           <h2>What are the 4M's?</h2>
+          <p className="four-ms-intro">
+            The 4Ms are four areas that help older adults and their Caregivers prepare for health visits.
+          </p>
+          <div className="four-ms-card-grid" aria-label="The four parts of the 4Ms framework">
+            <article className="four-m-card what-matters-card">
+              <span className="four-m-number">1</span>
+              <HeartOutlined aria-hidden="true" />
+              <h3>What Matters</h3>
+              <p>Your goals, preferences, worries, and what matters most in daily life and care decisions.</p>
+            </article>
+            <article className="four-m-card medication-card">
+              <span className="four-m-number">2</span>
+              <MedicineBoxOutlined aria-hidden="true" />
+              <h3>Medication</h3>
+              <p>Prescription medicines, over-the-counter medicines, supplements, questions, and side effects.</p>
+            </article>
+            <article className="four-m-card mentation-card">
+              <span className="four-m-number">3</span>
+              <BulbOutlined aria-hidden="true" />
+              <h3>Mentation</h3>
+              <p>Memory, mood, sleep, stress, confusion, and other changes in thinking or mental well-being.</p>
+            </article>
+            <article className="four-m-card mobility-card">
+              <span className="four-m-number">4</span>
+              <RiseOutlined aria-hidden="true" />
+              <h3>Mobility</h3>
+              <p>Walking, balance, strength, falls, activity, and movement challenges that affect daily routines.</p>
+            </article>
+          </div>
           <div className="four-ms-content">
             <div className="four-ms-image">
               <img 
                 src={landingImage} 
-                alt="4Ms Framework - What Matters, Medication, Mentation, Mobility" 
+                alt="Reference image showing the 4Ms Framework: What Matters, Medication, Mentation, and Mobility" 
                 className="framework-image"
               />
               <p className="citation">Source: <a href="https://www.ihi.org" target="_blank" rel="noopener noreferrer">IHI.org</a></p>

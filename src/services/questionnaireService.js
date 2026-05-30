@@ -576,16 +576,27 @@ export const getUserQuestionnaireContext = async (userId) => {
     };
     
     const sections = ['matters', 'medication', 'mind', 'mobility'];
+    const sectionLabels = {
+      matters: 'What Matters',
+      medication: 'Medication',
+      mind: 'Mentation',
+      mobility: 'Mobility'
+    };
     
     sections.forEach(sectionKey => {
       const sectionResponses = sessionData.responses[sectionKey] || {};
       const sectionQuestions = questionnaire?.sections?.[sectionKey]?.questions || {};
       
       // Only include sections that have answered questions
-      const answeredQuestions = Object.entries(sectionResponses).filter(([questionId, response]) => {
+      const answeredQuestions = Object.entries(sectionResponses).filter(([, response]) => {
         if (!response) return false;
         
         if (typeof response === 'object' && response !== null) {
+          if (Array.isArray(response)) {
+            return response.some((entry) =>
+              Object.values(entry || {}).some((entryValue) => String(entryValue || '').trim())
+            );
+          }
           // Tag + text questions - count as answered if has tags OR text
           return (response.tags && response.tags.length > 0) || (response.text && response.text.trim());
         } else if (typeof response === 'number' || (typeof response === 'string' && response.trim())) {
@@ -596,11 +607,14 @@ export const getUserQuestionnaireContext = async (userId) => {
       });
       
       if (answeredQuestions.length > 0) {
-        context.completedSections.push(sectionKey);
-        context.responses[sectionKey] = {};
+        const displaySection = sectionLabels[sectionKey] || sectionKey;
+        context.completedSections.push(displaySection);
+        context.responses[displaySection] = {};
         
         answeredQuestions.forEach(([questionId, response]) => {
-          const questionText = sectionQuestions[questionId]?.text || questionId;
+          const questionText = questionId === 'medicationEntries'
+            ? 'Medication details'
+            : sectionQuestions[questionId]?.text || questionId;
 
           // Do not include caregiverEmail in AI context
           if (sectionKey === 'mobility' && questionId === 'caregiverEmail') {
@@ -612,8 +626,24 @@ export const getUserQuestionnaireContext = async (userId) => {
 
           let formattedResponse = '';
           if (typeof response === 'object' && response !== null) {
+            if (questionId === 'medicationEntries' && Array.isArray(response)) {
+              formattedResponse = response
+                .map((entry, index) => {
+                  const details = [
+                    entry.category && `category: ${entry.category}`,
+                    entry.name && `name: ${entry.name}`,
+                    entry.dose && `dose: ${entry.dose}`,
+                    entry.frequency && `frequency: ${entry.frequency}`,
+                    entry.notes && `notes: ${entry.notes}`
+                  ].filter(Boolean).join(', ');
+                  return `Medication ${index + 1}${details ? ` (${details})` : ''}`;
+                })
+                .join('; ');
+            }
             if (response.tags && response.tags.length > 0) {
-              formattedResponse = `Selected: ${response.tags.join(', ')}`;
+              formattedResponse = formattedResponse
+                ? `${formattedResponse} | Selected: ${response.tags.join(', ')}`
+                : `Selected: ${response.tags.join(', ')}`;
             }
             if (response.text && response.text.trim()) {
               formattedResponse += formattedResponse ? ` | Additional notes: ${response.text}` : response.text;
@@ -624,7 +654,7 @@ export const getUserQuestionnaireContext = async (userId) => {
             formattedResponse = response;
           }
           
-          context.responses[sectionKey][questionText] = formattedResponse;
+          context.responses[displaySection][questionText] = formattedResponse;
         });
       }
     });

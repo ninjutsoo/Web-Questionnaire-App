@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Button, Avatar, Dropdown, Space, Typography, Badge, Drawer } from 'antd';
+import { Layout, Menu, Button, Avatar, Dropdown, Typography, Drawer } from 'antd';
 import { 
   FormOutlined, 
   RobotOutlined, 
@@ -7,7 +7,8 @@ import {
   LogoutOutlined,
   HomeOutlined,
   MessageOutlined,
-  MenuOutlined
+  MenuOutlined,
+  CloseOutlined
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { auth } from '../services/firebase';
@@ -120,7 +121,7 @@ const AppLayout = ({ children }) => {
     <Layout style={{ minHeight: '100vh' }}>
       <Header 
         style={{ 
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'var(--rme-review)',
           padding: isPhone ? '0 8px' : useDrawerNav ? '0 12px' : '0 24px',
           display: 'flex',
           alignItems: 'center',
@@ -159,10 +160,20 @@ const AppLayout = ({ children }) => {
         {useDrawerNav ? (
           <>
             <Button
-              icon={<MenuOutlined />}
-              style={{ color: 'white', border: 'none', background: 'transparent', fontSize: 22 }}
+            icon={<MenuOutlined />}
+              style={{
+                color: 'white',
+                border: '2px solid rgba(255,255,255,0.9)',
+                background: 'transparent',
+                fontSize: 18,
+                minHeight: 44,
+                padding: '0 12px',
+                fontWeight: 700
+              }}
               onClick={() => setMobileMenuOpen(true)}
-            />
+            >
+              Menu
+            </Button>
             <Drawer
               title={null}
               placement="left"
@@ -170,15 +181,37 @@ const AppLayout = ({ children }) => {
               onClose={() => setMobileMenuOpen(false)}
               open={mobileMenuOpen}
               bodyStyle={{ padding: 0 }}
-              width={240}
+              width={280}
             >
-              <div style={{ padding: '16px 16px 0 16px', borderBottom: '1px solid #f0f0f0', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ padding: '16px', borderBottom: '2px solid #d8dee6', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                   <div style={{ width: 32, height: 32, background: 'rgba(102,126,234,0.1)', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <MessageOutlined style={{ color: '#764ba2', fontSize: 18 }} />
+                    <MessageOutlined style={{ color: 'var(--rme-review)', fontSize: 18 }} />
                   </div>
-                  <span style={{ fontWeight: 700, fontSize: 16, color: '#764ba2' }}>4Ms Health</span>
+                  <span style={{ fontWeight: 700, fontSize: 18, color: 'var(--rme-review)', flex: 1 }}>4Ms Health</span>
+                  <Button
+                    icon={<CloseOutlined />}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rme-button-secondary"
+                    style={{ minHeight: 44 }}
+                  >
+                    Close
+                  </Button>
                 </div>
+              </div>
+              <div style={{ padding: '0 16px 8px' }}>
+                <Button
+                  block
+                  icon={<HomeOutlined />}
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    navigate('/home');
+                  }}
+                  className="rme-button-secondary"
+                  style={{ minHeight: 48, fontWeight: 700 }}
+                >
+                  Home
+                </Button>
               </div>
               <Menu
                 mode="vertical"
@@ -188,12 +221,18 @@ const AppLayout = ({ children }) => {
                 style={{ border: 'none', background: 'transparent', fontSize: 16 }}
                 theme="light"
               />
-              <div style={{ borderTop: '1px solid #f0f0f0', margin: '16px 0 0 0', padding: '16px' }}>
+              <div style={{ borderTop: '2px solid #d8dee6', margin: '16px 0 0 0', padding: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <Avatar size="small" icon={<UserOutlined />} style={{ backgroundColor: '#e6e6fa' }} />
                   <span style={{ fontWeight: 500, fontSize: 14 }}>{user?.displayName || user?.email?.split('@')[0] || 'User'}</span>
                 </div>
-                <Button type="text" icon={<LogoutOutlined />} onClick={handleLogout} style={{ color: '#764ba2', padding: 0 }}>
+                <Button
+                  block
+                  icon={<LogoutOutlined />}
+                  onClick={handleLogout}
+                  className="rme-button-danger"
+                  style={{ minHeight: 48, fontWeight: 700 }}
+                >
                   Logout
                 </Button>
               </div>
@@ -268,7 +307,7 @@ const AppLayout = ({ children }) => {
 
       <Content style={{ 
         padding: isPhone ? '2px' : '24px',
-        background: '#f5f5f5',
+        background: 'var(--rme-page)',
         minHeight: 'calc(100vh - 64px)'
       }}>
         {children}

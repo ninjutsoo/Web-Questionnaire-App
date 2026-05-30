@@ -61,7 +61,7 @@ export const lookupDrugByNDC = async (ndcCode) => {
           };
         }
       }
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
     // Try RxNorm API
     try {
       const rxnormResp = await fetch(`https://rxnav.nlm.nih.gov/REST/rxcui.json?idtype=NDC&id=${ndc}`);
@@ -92,7 +92,7 @@ export const lookupDrugByNDC = async (ndcCode) => {
           }
         }
       }
-    } catch (e) { /* ignore */ }
+    } catch { /* ignore */ }
   }
   // Fallback
   return {

@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Card, Input, Button, Typography, Space, Avatar, Spin, Alert, Divider, Tag, Switch, Tooltip } from 'antd';
-import { SendOutlined, RobotOutlined, UserOutlined, MessageOutlined, HeartOutlined, AudioOutlined, AudioMutedOutlined, ReloadOutlined, EnvironmentOutlined } from '@ant-design/icons';
+﻿import React, { useState, useRef, useEffect } from 'react';
+import { Card, Input, Button, Typography, Space, Avatar, Spin, Alert, Tooltip } from 'antd';
+import { RobotOutlined, UserOutlined, MessageOutlined, AudioOutlined, ReloadOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import axios from 'axios';
 import { auth } from '../services/firebase';
@@ -14,7 +14,7 @@ const { Title, Text } = Typography;
 
 /** Previous default welcome (localStorage migration). */
 const LEGACY_WELCOME_CONTENT =
-  "Hello! I'm your AI health assistant. I'm here to help you with health-related questions, provide information, or just chat. How can I assist you today? 💙";
+  "Hello! I'm your AI health assistant. I'm here to help you with health-related questions, provide information, or just chat. How can I assist you today? ðŸ’™";
 
 function isDashStyleWelcomeBanner(content) {
   return (
@@ -69,6 +69,7 @@ const AIChatbot = () => {
   const [userQuestionnaireData, setUserQuestionnaireData] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [recognition, setRecognition] = useState(null);
+  const [voiceStatus, setVoiceStatus] = useState('');
   const idleStopTimerRef = useRef(null);
   const transcriptRef = useRef('');
   const messagesEndRef = useRef(null);
@@ -138,7 +139,7 @@ const AIChatbot = () => {
   const sanitizeQuickQuestion = (s) => {
     if (typeof s !== 'string') return '';
     let q = s.trim();
-    q = q.replace(/^[\s\[\],"]+/, '').replace(/[\s\[\],"]+$/, '');
+    q = q.replace(/^[\s[\],"]+/, '').replace(/[\s[\],"]+$/, '');
     if (q.length > MAX_QUESTION_LENGTH) {
       const cut = q.slice(0, MAX_QUESTION_LENGTH);
       const lastSpace = cut.lastIndexOf(' ');
@@ -188,7 +189,7 @@ const AIChatbot = () => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       const recognitionInstance = new SpeechRecognition();
-      const IDLE_STOP_MS = 4000;
+      const IDLE_STOP_MS = 12000;
       
       // Keep listening through short pauses; we stop explicitly after idle timeout.
       recognitionInstance.continuous = true;
@@ -197,6 +198,7 @@ const AIChatbot = () => {
       
       recognitionInstance.onstart = () => {
         setIsListening(true);
+        setVoiceStatus('Recording. Speak now, or tap Tap to Stop when finished.');
         console.log('Voice recognition started');
       };
       
@@ -239,13 +241,16 @@ const AIChatbot = () => {
           idleStopTimerRef.current = null;
         }
         if (event.error === 'not-allowed') {
-          alert('Please allow microphone access to use voice input.');
+          setVoiceStatus('Microphone permission is needed for dictation. You can enable it in your browser settings.');
+        } else {
+          setVoiceStatus('Voice input stopped. You can try Dictate again or type your message.');
         }
       };
       
       recognitionInstance.onend = () => {
         setIsListening(false);
         console.log('Voice recognition ended');
+        setVoiceStatus('Voice input stopped. Your dictated text has been kept.');
         if (idleStopTimerRef.current) {
           clearTimeout(idleStopTimerRef.current);
           idleStopTimerRef.current = null;
@@ -255,6 +260,7 @@ const AIChatbot = () => {
       setRecognition(recognitionInstance);
     } else {
       console.log('Speech recognition not supported');
+      setVoiceStatus('Voice recognition is not supported in this browser. You can still type your message.');
     }
   }, []);
 
@@ -300,11 +306,11 @@ const AIChatbot = () => {
 
   // Load saved quick questions from Firebase
   const loadSavedQuickQuestions = async (userId) => {
-    console.log('🔍 loadSavedQuickQuestions called for userId:', userId);
+    console.log('ðŸ” loadSavedQuickQuestions called for userId:', userId);
     try {
       // First, try to load from localStorage cache for instant display
       const saved = localStorage.getItem('aiQuickQuestions');
-      console.log('🔍 localStorage cache:', saved);
+      console.log('ðŸ” localStorage cache:', saved);
       
       if (saved) {
         try {
@@ -312,31 +318,31 @@ const AIChatbot = () => {
           if (Array.isArray(parsed) && parsed.length > 0) {
             const cleaned = sanitizeQuickQuestions(parsed);
             setSuggestions(cleaned.length >= 4 ? cleaned : QUICK_QUESTIONS_FALLBACK);
-            console.log('✅ Loaded cached quick questions for instant display:', cleaned.length >= 4 ? cleaned : QUICK_QUESTIONS_FALLBACK);
+            console.log('âœ… Loaded cached quick questions for instant display:', cleaned.length >= 4 ? cleaned : QUICK_QUESTIONS_FALLBACK);
           }
         } catch (parseError) {
-          console.error('❌ Error parsing cached questions:', parseError);
+          console.error('âŒ Error parsing cached questions:', parseError);
         }
       }
       
       const sessionId = `${userId}_4ms_health`;
-      console.log('🔍 Checking Firebase document:', sessionId);
+      console.log('ðŸ” Checking Firebase document:', sessionId);
       const docRef = doc(db, 'Answers', sessionId);
       const docSnap = await getDoc(docRef);
       
-      console.log('🔍 Firebase document exists:', docSnap.exists());
+      console.log('ðŸ” Firebase document exists:', docSnap.exists());
       
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log('🔍 Firebase data:', data);
+        console.log('ðŸ” Firebase data:', data);
         
         if (data.quickQuestions && Array.isArray(data.quickQuestions) && data.quickQuestions.length > 0) {
           // Check if Firebase data is newer than cache
           const cacheTimestamp = localStorage.getItem('aiQuickQuestionsTimestamp');
           const firebaseTimestamp = data.quickQuestionsUpdatedAt;
           
-          console.log('🔍 Cache timestamp:', cacheTimestamp);
-          console.log('🔍 Firebase timestamp:', firebaseTimestamp);
+          console.log('ðŸ” Cache timestamp:', cacheTimestamp);
+          console.log('ðŸ” Firebase timestamp:', firebaseTimestamp);
           
           const cachedQuestions = JSON.parse(localStorage.getItem('aiQuickQuestions') || '[]');
           const isCachedDefault = JSON.stringify([...cachedQuestions].sort()) === JSON.stringify([...QUICK_QUESTIONS_FALLBACK].sort());
@@ -347,19 +353,19 @@ const AIChatbot = () => {
             setSuggestions(toUse);
             localStorage.setItem('aiQuickQuestions', JSON.stringify(toUse));
             localStorage.setItem('aiQuickQuestionsTimestamp', firebaseTimestamp);
-            console.log('✅ Loaded quick questions from Firebase:', toUse);
+            console.log('âœ… Loaded quick questions from Firebase:', toUse);
             if (isCachedDefault) {
-              console.log('✅ Overriding default cached questions with Firebase data');
+              console.log('âœ… Overriding default cached questions with Firebase data');
             }
           } else {
-            console.log('✅ Using cached quick questions (Firebase data is older)');
+            console.log('âœ… Using cached quick questions (Firebase data is older)');
           }
           return;
         } else {
-          console.log('⚠️ Firebase document exists but no quickQuestions found');
+          console.log('âš ï¸ Firebase document exists but no quickQuestions found');
         }
       } else {
-        console.log('⚠️ Firebase document does not exist');
+        console.log('âš ï¸ Firebase document does not exist');
       }
       
       if (!saved || !localStorage.getItem('aiQuickQuestions')) {
@@ -368,10 +374,10 @@ const AIChatbot = () => {
         localStorage.setItem('aiQuickQuestions', JSON.stringify(QUICK_QUESTIONS_FALLBACK));
         localStorage.setItem('aiQuickQuestionsTimestamp', new Date().toISOString());
       } else {
-        console.log('✅ Using existing cached questions');
+        console.log('âœ… Using existing cached questions');
       }
     } catch (error) {
-      console.error('❌ Error loading saved quick questions:', error);
+      console.error('âŒ Error loading saved quick questions:', error);
       if (!localStorage.getItem('aiQuickQuestions')) {
         setSuggestions(QUICK_QUESTIONS_FALLBACK);
         localStorage.setItem('aiQuickQuestions', JSON.stringify(QUICK_QUESTIONS_FALLBACK));
@@ -382,15 +388,15 @@ const AIChatbot = () => {
 
   // Save quick questions to Firebase
   const saveQuickQuestions = async (userId, questions) => {
-    console.log('💾 saveQuickQuestions called for userId:', userId);
-    console.log('💾 Questions to save:', questions);
+    console.log('ðŸ’¾ saveQuickQuestions called for userId:', userId);
+    console.log('ðŸ’¾ Questions to save:', questions);
     try {
       const sessionId = `${userId}_4ms_health`;
       const docRef = doc(db, 'Answers', sessionId);
       const timestamp = new Date().toISOString();
       
-      console.log('💾 Saving to Firebase document:', sessionId);
-      console.log('💾 Timestamp:', timestamp);
+      console.log('ðŸ’¾ Saving to Firebase document:', sessionId);
+      console.log('ðŸ’¾ Timestamp:', timestamp);
       
       await setDoc(docRef, {
         quickQuestions: questions,
@@ -401,10 +407,10 @@ const AIChatbot = () => {
       localStorage.setItem('aiQuickQuestionsTimestamp', timestamp);
       // Also save to localStorage cache for immediate access
       localStorage.setItem('aiQuickQuestions', JSON.stringify(questions));
-      console.log('✅ Saved quick questions to Firebase and cache:', questions);
+      console.log('âœ… Saved quick questions to Firebase and cache:', questions);
     } catch (error) {
-      console.error('❌ Error saving quick questions:', error);
-      console.error('❌ Error details:', error.message);
+      console.error('âŒ Error saving quick questions:', error);
+      console.error('âŒ Error details:', error.message);
     }
   };
 
@@ -422,7 +428,7 @@ const AIChatbot = () => {
           setSuggestionsLoading(false);
           didSetFromCache = true;
         }
-      } catch (parseError) {
+      } catch {
         // Ignore parse error, fallback to Firebase
       }
     }
@@ -460,7 +466,7 @@ const AIChatbot = () => {
   useEffect(() => {
     if (suggestions.length > 0) {
       localStorage.setItem('aiQuickQuestions', JSON.stringify(suggestions));
-      console.log('✅ Auto-saved suggestions to cache:', suggestions);
+      console.log('âœ… Auto-saved suggestions to cache:', suggestions);
     }
   }, [suggestions]);
 
@@ -490,11 +496,11 @@ const AIChatbot = () => {
             .join(', ');
         }
         setLocationText(address);
-      } catch (err) {
+      } catch {
         setLocationError('Failed to retrieve address.');
       }
       setLocationLoading(false);
-    }, (err) => {
+    }, () => {
       setLocationError('Unable to retrieve your location.');
       setLocationLoading(false);
     });
@@ -507,7 +513,6 @@ const AIChatbot = () => {
       setLocationText('');
       setLocationError(null);
     }
-    // eslint-disable-next-line
   }, [locationEnabled]);
 
   const sendMessage = async (messageContent = null) => {
@@ -530,20 +535,7 @@ const AIChatbot = () => {
     setIsOnCooldown(true);
 
     try {
-      // Prepare context for AI - let backend handle system prompt
-      let contextMessage = '';
-      if (userQuestionnaireData && userQuestionnaireData.completedSections.length > 0) {
-        contextMessage = `\n\n**User's Health Assessment Context:**\n`;
-        contextMessage += `This person has completed the following sections of their health assessment: ${userQuestionnaireData.completedSections.join(', ')}.\n\n`;
-        Object.entries(userQuestionnaireData.responses).forEach(([section, questions]) => {
-          contextMessage += `**${section.charAt(0).toUpperCase() + section.slice(1)} Section:**\n`;
-          Object.entries(questions).forEach(([question, answer]) => {
-            contextMessage += `- ${question}: ${answer}\n`;
-          });
-          contextMessage += '\n';
-        });
-      }
-      
+      // Prepare context for AI - let backend handle system prompt.
       // Add location to user context
       const userContextWithLocation = {
         ...userQuestionnaireData,
@@ -563,7 +555,7 @@ const AIChatbot = () => {
 
       // Log debug information from backend
       if (response.data.debug) {
-        console.log('🔧 BACKEND DEBUG INFO:');
+        console.log('ðŸ”§ BACKEND DEBUG INFO:');
         console.log('Model:', response.data.debug.model);
         console.log('Max Tokens:', response.data.debug.maxTokens);
         console.log('Temperature:', response.data.debug.temperature);
@@ -616,7 +608,7 @@ const AIChatbot = () => {
         console.error('Error starting speech recognition:', error);
       }
     } else {
-      alert('Voice recognition is not supported in your browser.');
+      setVoiceStatus('Voice recognition is not supported in this browser. You can still type your message.');
     }
   };
 
@@ -768,15 +760,13 @@ const AIChatbot = () => {
       await saveQuickQuestions(userQuestionnaireData.userId, questions);
       setSuggestionsLoading(false);
     } catch (error) {
-      console.error('❌ Error generating quick questions:', error);
+      console.error('âŒ Error generating quick questions:', error);
       setSuggestions(QUICK_QUESTIONS_FALLBACK);
       setSuggestionsLoading(false);
     }
   };
 
   const toolbarBtnHeight = isMobile ? 36 : 40;
-  const actionBtnSize = isNarrow ? 32 : isMobile ? 36 : 40;
-
   /** Short threads stay compact; from this count up, use the full viewport-limited height + scroll. */
   const CHAT_EXPAND_MESSAGE_COUNT = 3;
   const chatIsCompact =
@@ -917,6 +907,20 @@ const AIChatbot = () => {
         )}
 
         {/* Input Area */}
+        {voiceStatus && (
+          <div
+            role="status"
+            aria-live="polite"
+            style={{
+              marginBottom: 8,
+              fontSize: 16,
+              color: isListening ? 'var(--rme-alert)' : 'var(--rme-review)',
+              fontWeight: 700
+            }}
+          >
+            {voiceStatus}
+          </div>
+        )}
         <div
           style={{
             display: 'flex',
@@ -941,9 +945,10 @@ const AIChatbot = () => {
               autoSize={{ minRows: 1, maxRows: isMobile ? 3 : 4 }}
               style={{
                 width: '100%',
-                borderRadius: '20px',
+                borderRadius: 8,
                 resize: 'none',
-                fontSize: isMobile ? 13 : 14,
+                fontSize: 16,
+                minHeight: 44,
               }}
             />
           </div>
@@ -960,40 +965,48 @@ const AIChatbot = () => {
           >
             <Button
               type={isListening ? 'primary' : 'default'}
-              icon={isListening ? <AudioMutedOutlined /> : <AudioOutlined />}
+              icon={<AudioOutlined />}
               onClick={isListening ? stopListening : startListening}
+              className={isListening ? 'rme-button-danger' : 'rme-button-secondary'}
               style={{
-                borderRadius: '50%',
-                width: actionBtnSize,
-                height: actionBtnSize,
+                borderRadius: 8,
+                minHeight: 44,
+                padding: '0 14px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: isListening ? '#ff4d4f' : undefined,
-                borderColor: isListening ? '#ff4d4f' : undefined,
+                backgroundColor: isListening ? 'var(--rme-alert)' : '#fff',
+                borderColor: isListening ? 'var(--rme-alert)' : 'var(--rme-review)',
+                color: isListening ? '#fff' : 'var(--rme-review)',
+                fontWeight: 700,
               }}
               title={isListening ? 'Stop listening' : 'Start voice input'}
-            />
+            >
+              {isListening ? 'Tap to Stop' : 'Dictate'}
+            </Button>
             <Button
               type={isOnCooldown ? 'default' : 'primary'}
-              icon={isOnCooldown ? <span style={{ fontSize: '12px', fontWeight: 'bold' }}>{sendCooldown}</span> : <SendOutlined />}
               onClick={() => sendMessage()}
               loading={isLoading}
               disabled={!input.trim() || isOnCooldown}
+              className="rme-button"
               style={{
-                borderRadius: '50%',
-                width: actionBtnSize,
-                height: actionBtnSize,
+                borderRadius: 8,
+                minHeight: 44,
+                padding: '0 18px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: isOnCooldown ? '#f0f0f0' : undefined,
+                backgroundColor: isOnCooldown ? '#f0f0f0' : 'var(--rme-review)',
                 borderColor: isOnCooldown ? '#d9d9d9' : undefined,
-                color: isOnCooldown ? '#999' : undefined,
+                color: isOnCooldown ? '#666' : '#fff',
                 cursor: isOnCooldown ? 'not-allowed' : 'pointer',
+                fontWeight: 700,
               }}
               title={isOnCooldown ? `Please wait ${sendCooldown} seconds before sending another message` : 'Send message'}
-            />
+            >
+              {isOnCooldown ? `Wait ${sendCooldown}` : 'Send'}
+            </Button>
           </div>
         </div>
       </Card>
@@ -1006,16 +1019,15 @@ const AIChatbot = () => {
             <span>Quick Questions</span>
             <Button
               icon={<ReloadOutlined spin={suggestionsLoading} />}
-              size="small"
-              style={{ marginLeft: 8, border: 'none', background: 'none', color: '#1890ff' }}
+              style={{ marginLeft: 8, borderColor: 'var(--rme-review)', color: 'var(--rme-review)', minHeight: 44, fontWeight: 700 }}
               onClick={() => {
-                console.log('🔄 Refresh button clicked!');
+                console.log('ðŸ”„ Refresh button clicked!');
                 fetchQuickQuestions();
               }}
               loading={suggestionsLoading}
-              aria-label="Refresh quick questions"
-              title="Refresh quick questions"
-            />
+            >
+              More Questions
+            </Button>
           </div>
         }
         style={{
@@ -1060,18 +1072,20 @@ const AIChatbot = () => {
                 .replace(/,$/, '') // remove trailing comma if any
                 .trim();
               return (
-                <Tag
+                <button
+                  type="button"
                   key={index}
-                  color={isOnCooldown ? "default" : "blue"}
+                  disabled={isOnCooldown}
+                  className="rme-chip"
                   style={{
                     cursor: isOnCooldown ? 'not-allowed' : 'pointer',
                     padding: isMobile ? '8px 10px' : '10px 18px',
-                    borderRadius: '16px',
-                    fontSize: isMobile ? 13 : 15,
+                    borderRadius: 8,
+                    fontSize: 16,
                     whiteSpace: 'normal',
                     wordBreak: 'break-word',
                     textAlign: 'center',
-                    minHeight: isMobile ? 40 : 48,
+                    minHeight: 48,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1084,36 +1098,13 @@ const AIChatbot = () => {
                   onClick={() => !isOnCooldown && sendMessage(cleanSuggestion)}
                 >
                   {cleanSuggestion}
-                </Tag>
+                </button>
               );
             })
           )}
         </div>
       </Card>
 
-      {/* Health Tips */}
-      <Card
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: isMobile ? 14 : undefined }}>
-            <HeartOutlined style={{ color: '#ff4d4f' }} />
-            <span>Health Tip of the Day</span>
-          </div>
-        }
-        style={{
-          borderRadius: '12px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          borderLeft: '4px solid #ff4d4f',
-          marginBottom: isMobile ? 8 : undefined,
-        }}
-        styles={{
-          body: isMobile ? { padding: '12px 14px' } : undefined,
-        }}
-      >
-        <Text style={{ fontSize: isMobile ? 13 : 14, lineHeight: '1.55' }}>
-          💡 <strong>Stay Hydrated:</strong> Drinking enough water is crucial for your health, especially as you age.
-          Aim for 6-8 glasses of water daily. Dehydration can affect your energy levels, cognitive function, and overall well-being.
-        </Text>
-      </Card>
 
       <style>{`
         @keyframes fadeIn {

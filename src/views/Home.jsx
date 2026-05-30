@@ -46,7 +46,7 @@ export default function Home() {
             mind: {},
             mobility: {}
           });
-        } catch (err) {
+        } catch {
           // fallback: keep empty
         } finally {
           setLoading(false);
@@ -55,27 +55,6 @@ export default function Home() {
     });
     return () => unsubscribe();
   }, [navigate]);
-
-  const calculateProgress = (sectionKey) => {
-    if (!questionnaire || !sectionKey) {
-      return 0;
-    }
-    const sectionQuestions = questionnaire.sections?.[sectionKey]?.questions || {};
-    const totalQuestions = Object.keys(sectionQuestions).length;
-    if (totalQuestions === 0) return 0;
-    const sectionData = responses[sectionKey] || {};
-    let answered = 0;
-    Object.values(sectionData).forEach(value => {
-      if (typeof value === 'object' && value !== null) {
-        if ((value.tags && value.tags.length > 0) || (value.text && value.text.trim())) {
-          answered++;
-        }
-      } else if (typeof value === 'number' || (typeof value === 'string' && value.trim())) {
-        answered++;
-      }
-    });
-    return Math.round((answered / totalQuestions) * 100);
-  };
 
   const calculateOverallProgress = () => {
     if (!questionnaire) return 0;

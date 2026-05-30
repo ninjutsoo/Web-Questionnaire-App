@@ -23,10 +23,10 @@ function QRScanner({ onScan, onClose }) {
           scannerRef.current.stop();
           if (onClose) onClose();
         },
-        (error) => {
+        () => {
           // Optionally handle scan errors
         }
-      ).catch((err) => {
+      ).catch(() => {
         // Optionally handle start errors
       });
     };

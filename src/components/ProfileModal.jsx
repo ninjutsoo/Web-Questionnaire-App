@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Modal, Form, Input, Button, message } from 'antd';
-import { updateProfile, updateEmail, sendEmailVerification } from 'firebase/auth';
-import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { Modal, Form, Input, message } from 'antd';
+import { updateProfile, sendEmailVerification } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../services/firebase';
 
 const ProfileModal = ({ open, onClose, user }) => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [firestoreUser, setFirestoreUser] = useState(null);
+  const labelStyle = { fontSize: 16, fontWeight: 700, color: '#1f2a33' };
+  const inputStyle = { minHeight: 44, fontSize: 16 };
 
   useEffect(() => {
     if (user && open) {
@@ -21,7 +23,7 @@ const ProfileModal = ({ open, onClose, user }) => {
           } else {
             setFirestoreUser(null);
           }
-        } catch (e) {
+        } catch {
           setFirestoreUser(null);
         }
       };
@@ -88,21 +90,26 @@ const ProfileModal = ({ open, onClose, user }) => {
       okText="Save Changes"
       destroyOnClose
     >
-      <Form form={form} layout="vertical" initialValues={{ firstName: '', lastName: '', email: '', phone: '', caregiverEmail: '' }}>
-        <Form.Item label="First Name" name="firstName" rules={[{ required: true, message: 'Please enter your first name' }]}> 
-          <Input />
+      <Form
+        form={form}
+        layout="vertical"
+        validateTrigger={['onBlur', 'onChange']}
+        initialValues={{ firstName: '', lastName: '', email: '', phone: '', caregiverEmail: '' }}
+      >
+        <Form.Item label={<span style={labelStyle}>First Name</span>} name="firstName" rules={[{ required: true, message: 'Please enter your first name' }]}> 
+          <Input size="large" style={inputStyle} />
         </Form.Item>
-        <Form.Item label="Last Name" name="lastName" rules={[{ required: true, message: 'Please enter your last name' }]}> 
-          <Input />
+        <Form.Item label={<span style={labelStyle}>Last Name</span>} name="lastName" rules={[{ required: true, message: 'Please enter your last name' }]}> 
+          <Input size="large" style={inputStyle} />
         </Form.Item>
-        <Form.Item label="Email" name="email" rules={[{ required: true, type: 'email', message: 'Please enter a valid email' }]}> 
-          <Input />
+        <Form.Item label={<span style={labelStyle}>Email</span>} name="email" rules={[{ required: true, type: 'email', message: 'Please enter a valid email' }]}> 
+          <Input size="large" style={inputStyle} />
         </Form.Item>
-        <Form.Item label="Phone" name="phone"> 
-          <Input />
+        <Form.Item label={<span style={labelStyle}>Phone</span>} name="phone"> 
+          <Input size="large" style={inputStyle} />
         </Form.Item>
-        <Form.Item label="Caregiver Email" name="caregiverEmail" rules={[{ type: 'email', message: 'Please enter a valid email' }]}> 
-          <Input placeholder="Optional" />
+        <Form.Item label={<span style={labelStyle}>Caregiver Email (Optional)</span>} name="caregiverEmail" rules={[{ type: 'email', message: 'Please enter a valid email' }]}> 
+          <Input size="large" style={inputStyle} />
         </Form.Item>
       </Form>
     </Modal>

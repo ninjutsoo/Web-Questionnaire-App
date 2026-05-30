@@ -28,7 +28,7 @@ function MedicationScanner({ onMedScanned, visible, onClose }) {
       }
       try {
         await scannerRef.current.clear(); // Destroys the scanner and releases camera
-      } catch (error) {
+      } catch {
         // ignore
       }
       scannerRef.current = null;
@@ -93,12 +93,12 @@ function MedicationScanner({ onMedScanned, visible, onClose }) {
       ndcResult = await lookupDrugByNDC(code);
       if (ndcResult && ndcResult.success) return ndcResult;
       if (ndcResult && ndcResult.error) errorMessages.push(ndcResult.error);
-    } catch (e) { errorMessages.push('NDC lookup error'); }
+    } catch { errorMessages.push('NDC lookup error'); }
     try {
       upcResult = await lookupDrugByUPC(code);
       if (upcResult && upcResult.success) return upcResult;
       if (upcResult && upcResult.error) errorMessages.push(upcResult.error);
-    } catch (e) { errorMessages.push('UPC lookup error'); }
+    } catch { errorMessages.push('UPC lookup error'); }
     return { success: false, error: errorMessages.join('; ') || 'Not found in any database' };
   };
 

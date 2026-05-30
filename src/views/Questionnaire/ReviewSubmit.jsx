@@ -1,23 +1,24 @@
-import React from 'react';
-import { Card, Button, Space, Typography, Divider, Tag, Row, Col, message } from 'antd';
-import { CheckCircleOutlined, SendOutlined, EditOutlined } from '@ant-design/icons';
+import React, { useState } from 'react';
+import { Card, Button, Space, Typography, Divider, Tag, Row, Col, message, Alert } from 'antd';
+import { CheckCircleOutlined, DownloadOutlined, EditOutlined, HomeOutlined, PrinterOutlined, ShareAltOutlined } from '@ant-design/icons';
+import { SECTION_META, questionnaireSectionKeys } from '../../constants/rmeDesign';
 
 const { Title, Text, Paragraph } = Typography;
 
-export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }) {
-  // If legacy responses stored slider values as 0-100 percentages, normalize them into 1-10.
+export default function ReviewSubmit({ questionnaire, responses, onSave, onEdit, onHome }) {
+  const [shareStatus, setShareStatus] = useState('');
+
   const normalizeLikertValue = (value) => {
     if (typeof value !== 'number' || Number.isNaN(value)) return undefined;
     if (value > 10) {
-      const scaled = (value / 100) * 9 + 1; // map 0-100 -> 1-10
+      const scaled = (value / 100) * 9 + 1;
       return Math.min(10, Math.max(1, Math.round(scaled)));
     }
     if (value < 1) return 1;
     return Math.min(10, Math.round(value));
   };
 
-  // Used for showing the selected "button label" in the Review & Save screen.
-  const MIND_SLIDER_VALUE_LABELS = {
+  const mindSliderValueLabels = {
     happiness: {
       1: 'Not at all happy',
       3: 'A little happy',
@@ -45,352 +46,366 @@ export default function ReviewSubmit({ questionnaire, responses, onFinalSubmit }
     const questions = questionnaire?.sections?.[sectionKey]?.questions || {};
     const sliderOrder = ['happiness', 'memory', 'sleep'];
 
-    const sortedEntries = Object.entries(questions).sort(([keyA], [keyB]) => {
-      // Custom order for mind section: sliders first, then text questions.
-      if (sectionKey === 'mind') {
-        const indexA = sliderOrder.indexOf(keyA);
-        const indexB = sliderOrder.indexOf(keyB);
-
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-      }
-
-      // Custom order for mobility section: mobilityType first, then other questions.
-      if (sectionKey === 'mobility') {
-        if (keyA === 'mobilityType') return -1;
-        if (keyB === 'mobilityType') return 1;
-      }
-
-      // Numeric sorting for q1, q2, q3, etc.
-      const numA = keyA.match(/\d+/)?.[0];
-      const numB = keyB.match(/\d+/)?.[0];
-      if (numA && numB) return parseInt(numA, 10) - parseInt(numB, 10);
-
-      return keyA.localeCompare(keyB);
-    });
-
-    return sortedEntries.map(([key]) => key);
+    return Object.entries(questions)
+      .sort(([keyA], [keyB]) => {
+        if (sectionKey === 'mind') {
+          const indexA = sliderOrder.indexOf(keyA);
+          const indexB = sliderOrder.indexOf(keyB);
+          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+          if (indexA !== -1) return -1;
+          if (indexB !== -1) return 1;
+        }
+        if (sectionKey === 'mobility') {
+          if (keyA === 'mobilityType') return -1;
+          if (keyB === 'mobilityType') return 1;
+        }
+        const numA = keyA.match(/\d+/)?.[0];
+        const numB = keyB.match(/\d+/)?.[0];
+        if (numA && numB) return parseInt(numA, 10) - parseInt(numB, 10);
+        return keyA.localeCompare(keyB);
+      })
+      .map(([key]) => key);
   };
 
   const getSliderLabel = (questionKey, rawValue) => {
     const normalized = normalizeLikertValue(rawValue);
-    const labels = MIND_SLIDER_VALUE_LABELS[questionKey] || {};
+    const labels = mindSliderValueLabels[questionKey] || {};
     if (typeof normalized !== 'number') return '';
     if (labels[normalized]) return labels[normalized];
-
-    // Fallback: choose nearest defined button value label
-    const numericKeys = Object.keys(labels).map((k) => parseInt(k, 10));
-    if (numericKeys.length === 0) return '';
+    const numericKeys = Object.keys(labels).map((key) => parseInt(key, 10));
+    if (numericKeys.length === 0) return `${normalized}/10`;
     const nearest = numericKeys.reduce((closest, current) =>
       Math.abs(current - normalized) < Math.abs(closest - normalized) ? current : closest
     );
-    return labels[nearest] || '';
+    return labels[nearest] || `${normalized}/10`;
+  };
+
+  const isAnswered = (value) => {
+    if (typeof value === 'object' && value !== null) {
+      if (Array.isArray(value)) {
+        return value.some((entry) => Object.values(entry || {}).some((entryValue) => String(entryValue || '').trim()));
+      }
+      return Boolean(
+        (value.tags && value.tags.length > 0) ||
+        (value.text && value.text.trim()) ||
+        Object.values(value).some((entryValue) => typeof entryValue === 'string' && entryValue.trim())
+      );
+    }
+    return typeof value === 'number' || (typeof value === 'string' && value.trim());
   };
 
   const getSectionSummary = (sectionKey, sectionData) => {
-    if (!sectionData || Object.keys(sectionData).length === 0) {
-      return { answered: 0, total: getTotalQuestions(sectionKey) };
+    const total = Object.keys(questionnaire?.sections?.[sectionKey]?.questions || {}).length;
+    const answered = Object.entries(sectionData || {}).filter(([key, value]) => {
+      if (key === 'medicationEntries') return isAnswered(value);
+      return isAnswered(value);
+    }).length;
+    return { answered, total };
+  };
+
+  const sectionSummaries = questionnaireSectionKeys.map((sectionKey) => {
+    const summary = getSectionSummary(sectionKey, responses?.[sectionKey] || {});
+    return { sectionKey, ...summary };
+  });
+
+  const totals = sectionSummaries.reduce(
+    (acc, summary) => ({
+      answered: acc.answered + summary.answered,
+      total: acc.total + summary.total
+    }),
+    { answered: 0, total: 0 }
+  );
+  const overallPercentage = totals.total > 0 ? Math.round((totals.answered / totals.total) * 100) : 0;
+
+  const renderValue = (sectionKey, questionKey, value) => {
+    const questionType = questionnaire?.sections?.[sectionKey]?.questions?.[questionKey]?.type;
+
+    if (questionKey === 'medicationEntries' && Array.isArray(value)) {
+      return (
+        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+          {value.length === 0 ? (
+            <Text>No medication details added.</Text>
+          ) : (
+            value.map((entry, index) => (
+              <div key={`med-review-${index}`} style={{ padding: 10, border: '1px solid #d8dee6', borderRadius: 6 }}>
+                <Text strong>Medication {index + 1}</Text>
+                <div style={{ marginTop: 6, fontSize: 16 }}>
+                  <div>Category: {entry.category || 'Not provided'}</div>
+                  <div>Name: {entry.name || 'Not provided'}</div>
+                  <div>Dose: {entry.dose || 'Not provided'}</div>
+                  <div>Frequency: {entry.frequency || 'Not provided'}</div>
+                  <div>Notes: {entry.notes || 'Not provided'}</div>
+                </div>
+              </div>
+            ))
+          )}
+        </Space>
+      );
     }
 
-    let answered = 0;
-    Object.values(sectionData).forEach(value => {
-      if (typeof value === 'object' && value !== null) {
-        // Tag + text questions - count as answered if has tags OR text
-        if ((value.tags && value.tags.length > 0) || (value.text && value.text.trim())) {
-          answered++;
-        }
-      } else if (typeof value === 'number' || (typeof value === 'string' && value.trim())) {
-        // Slider or text questions - count if not empty
-        answered++;
+    if (typeof value === 'object' && value !== null) {
+      return (
+        <div>
+          {value.tags && value.tags.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              {value.tags.map((tag) => (
+                <Tag key={tag} style={{ marginBottom: 4, fontSize: 15, padding: '4px 8px' }}>
+                  {tag}
+                </Tag>
+              ))}
+            </div>
+          )}
+          {value.text && (
+            <Paragraph style={{ fontSize: 16, margin: 0, color: 'var(--rme-text)', backgroundColor: '#f7f9fb', padding: 10, borderRadius: 6 }}>
+              {value.text}
+            </Paragraph>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <Text style={{ fontSize: 16, color: 'var(--rme-text)', fontWeight: 700 }}>
+        {typeof value === 'number' && questionType === 'slider' ? getSliderLabel(questionKey, value) : value}
+      </Text>
+    );
+  };
+
+  const buildReportText = () => {
+    const lines = [
+      '4Ms Health Assessment Report',
+      `Generated: ${new Date().toLocaleString()}`,
+      ''
+    ];
+
+    questionnaireSectionKeys.forEach((sectionKey) => {
+      const meta = SECTION_META[sectionKey];
+      const sectionData = responses?.[sectionKey] || {};
+      lines.push(meta.label);
+      if (sectionKey === 'medication' && Array.isArray(sectionData.medicationEntries) && sectionData.medicationEntries.length > 0) {
+        lines.push('Medication Details:');
+        sectionData.medicationEntries.forEach((entry, index) => {
+          lines.push(`  Medication ${index + 1}:`);
+          lines.push(`    Category: ${entry.category || 'Not provided'}`);
+          lines.push(`    Name: ${entry.name || 'Not provided'}`);
+          lines.push(`    Dose: ${entry.dose || 'Not provided'}`);
+          lines.push(`    Frequency: ${entry.frequency || 'Not provided'}`);
+          lines.push(`    Notes: ${entry.notes || 'Not provided'}`);
+        });
       }
+      getOrderedQuestionKeys(sectionKey).forEach((questionKey) => {
+        const question = questionnaire?.sections?.[sectionKey]?.questions?.[questionKey];
+        const value = sectionData[questionKey];
+        if (!isAnswered(value)) return;
+        let formatted = '';
+        if (typeof value === 'object' && value !== null) {
+          const parts = [];
+          if (value.tags?.length) parts.push(`Selected: ${value.tags.join(', ')}`);
+          if (value.text?.trim()) parts.push(`Notes: ${value.text.trim()}`);
+          formatted = parts.join(' | ');
+        } else if (typeof value === 'number' && question?.type === 'slider') {
+          formatted = getSliderLabel(questionKey, value);
+        } else {
+          formatted = String(value);
+        }
+        lines.push(`- ${question?.text || questionKey}: ${formatted}`);
+      });
+      lines.push('');
     });
 
-    return { answered, total: getTotalQuestions(sectionKey) };
+    return lines.join('\n');
   };
 
-  const getTotalQuestions = (sectionKey) => {
-    if (!questionnaire?.sections?.[sectionKey]?.questions) return 0;
-    return Object.keys(questionnaire.sections[sectionKey].questions).length;
-  };
-
-  const getCompletionColor = (answered, total) => {
-    const percentage = (answered / total) * 100;
-    if (percentage === 0) return '#f0f0f0';
-    if (percentage < 50) return '#ff7875';
-    if (percentage < 100) return '#ffa940';
-    return '#52c41a';
-  };
-
-  const sections = [
-    {
-      key: 'matters',
-      title: 'What Matters',
-      icon: '🏷️',
-      color: '#1890ff'
-    },
-    {
-      key: 'medication', 
-      title: 'Medication',
-      icon: '💊',
-      color: '#52c41a'
-    },
-    {
-      key: 'mind',
-      title: 'Mind',
-      icon: '🧠',
-      color: '#722ed1'
-    },
-    {
-      key: 'mobility',
-      title: 'Mobility',
-      icon: '🚶‍♀️',
-      color: '#fa541c'
+  const handleShare = async () => {
+    const reportText = buildReportText();
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: '4Ms Health Assessment Report',
+          text: reportText
+        });
+        setShareStatus('Report shared.');
+      } else {
+        setShareStatus('Native sharing is not available in this browser. Use Print or Download.');
+      }
+    } catch (error) {
+      if (error?.name !== 'AbortError') {
+        console.error('Share failed:', error);
+        setShareStatus('Share failed. Use Print or Download instead.');
+      }
     }
-  ];
+  };
 
-  const renderSectionSummary = (section) => {
-    const sectionData = responses[section.key] || {};
-    const summary = getSectionSummary(section.key, sectionData);
-    const percentage = Math.round((summary.answered / summary.total) * 100);
+  const handlePrint = () => {
+    setShareStatus('Opening print dialog.');
+    window.print();
+  };
+
+  const handleDownload = () => {
+    const blob = new Blob([buildReportText()], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `4ms-health-assessment-${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setShareStatus('Report downloaded as a text file.');
+  };
+
+  const handleSave = async () => {
+    const saved = await onSave?.();
+    if (saved !== false) message.success('Assessment saved.');
+  };
+
+  const renderSectionSummary = (sectionKey) => {
+    const meta = SECTION_META[sectionKey];
+    const sectionData = responses?.[sectionKey] || {};
+    const summary = getSectionSummary(sectionKey, sectionData);
+    const percentage = summary.total > 0 ? Math.round((summary.answered / summary.total) * 100) : 0;
+    const questionKeys = getOrderedQuestionKeys(sectionKey).filter((key) =>
+      Object.prototype.hasOwnProperty.call(sectionData, key)
+    );
+    const hasMedicationEntries = sectionKey === 'medication' && Array.isArray(sectionData.medicationEntries);
 
     return (
       <Card
-        key={section.key}
-        style={{
-          marginBottom: '20px',
-          border: `2px solid ${getCompletionColor(summary.answered, summary.total)}`,
-          borderRadius: '12px'
-        }}
-        headStyle={{
-          textAlign: 'center',
-          paddingLeft: '0px',
-          paddingRight: '0px'
-        }}
+        key={sectionKey}
+        style={{ marginBottom: 20, border: `3px solid ${meta.color}`, borderRadius: 8 }}
         title={
-          <div style={{ 
-            fontSize: '20px', 
-            fontWeight: '600', 
-            color: section.color,
-            textAlign: 'center',
-            width: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center'
-          }}>
-            <span style={{ marginRight: '10px' }}>{section.icon}</span>
-            {section.title}
+          <div style={{ color: meta.color, fontSize: 20, fontWeight: 700 }}>
+            {meta.label}
           </div>
         }
         extra={
-          <div style={{ textAlign: 'right' }}>
-            <div style={{ 
-              fontSize: '18px', 
-              fontWeight: 'bold', 
-              color: getCompletionColor(summary.answered, summary.total)
-            }}>
-              {summary.answered}/{summary.total} Answered
-            </div>
-            <div style={{ fontSize: '14px', color: '#666' }}>
-              {percentage}% Complete
-            </div>
+          <div style={{ textAlign: 'right', color: 'var(--rme-text)' }}>
+            <strong>{summary.answered}/{summary.total} answered</strong>
+            <div>{percentage}% complete</div>
           </div>
         }
       >
-        {Object.keys(sectionData).length === 0 ? (
-          <Text style={{ fontSize: '16px', color: '#999', fontStyle: 'italic' }}>
-            No responses yet
-          </Text>
-        ) : (
-          <Space direction="vertical" size="small" style={{ width: '100%' }}>
-            {getOrderedQuestionKeys(section.key)
-              .filter((key) => Object.prototype.hasOwnProperty.call(sectionData, key))
-              .map((key) => {
-                const value = sectionData[key];
-                // Get the actual question text/type from the questionnaire structure
-                const question = questionnaire?.sections?.[section.key]?.questions?.[key];
-                const questionText = question?.text || key.replace(/([A-Z])/g, ' $1').trim();
-                const questionType = question?.type;
+        <Alert
+          type={percentage === 100 ? 'success' : percentage > 0 ? 'info' : 'warning'}
+          showIcon
+          message={percentage === 100 ? 'Complete' : percentage > 0 ? 'Started' : 'Not started'}
+          style={{ marginBottom: 14 }}
+        />
 
-                return (
-                  <div key={key} style={{ marginBottom: '15px', padding: '12px', backgroundColor: '#fafafa', borderRadius: '8px' }}>
-                    <Text strong style={{ fontSize: '15px', color: '#333', display: 'block', marginBottom: '8px' }}>
+        <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+          {hasMedicationEntries && (
+            <div style={{ padding: 12, backgroundColor: '#f7f9fb', borderRadius: 8 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+                <Text strong style={{ fontSize: 16 }}>Medication details</Text>
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() => onEdit?.('medication', 'medicationEntries')}
+                  className="rme-button-secondary"
+                  style={{ borderColor: meta.color, color: meta.color }}
+                >
+                  Edit Medication Details
+                </Button>
+              </div>
+              <div style={{ marginTop: 10 }}>{renderValue(sectionKey, 'medicationEntries', sectionData.medicationEntries)}</div>
+            </div>
+          )}
+
+          {questionKeys.length === 0 && !hasMedicationEntries ? (
+            <Text style={{ fontSize: 16, color: 'var(--rme-muted)', fontStyle: 'italic' }}>
+              No responses yet.
+            </Text>
+          ) : (
+            questionKeys.map((key) => {
+              const value = sectionData[key];
+              const question = questionnaire?.sections?.[sectionKey]?.questions?.[key];
+              const questionText = question?.text || key.replace(/([A-Z])/g, ' $1').trim();
+              return (
+                <div key={key} style={{ padding: 12, backgroundColor: '#f7f9fb', borderRadius: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>
+                    <Text strong style={{ fontSize: 16, color: 'var(--rme-text)', flex: '1 1 260px' }}>
                       {questionText}
                     </Text>
-                    <div style={{ marginTop: '4px', paddingLeft: '16px' }}>
-                      {typeof value === 'object' && value !== null ? (
-                        <div>
-                          {value.tags && value.tags.length > 0 && (
-                            <div style={{ marginBottom: '6px' }}>
-                              {value.tags.map(tag => (
-                                <Tag key={tag} color="blue" style={{ marginBottom: '2px' }}>
-                                  {tag}
-                                </Tag>
-                              ))}
-                            </div>
-                          )}
-                          {value.text && (
-                            <Paragraph
-                              style={{
-                                fontSize: '14px',
-                                margin: 0,
-                                color: '#666',
-                                backgroundColor: '#f0f0f0',
-                                padding: '8px',
-                                borderRadius: '4px',
-                                fontStyle: 'italic'
-                              }}
-                            >
-                              "{value.text}"
-                            </Paragraph>
-                          )}
-                        </div>
-                      ) : (
-                        <Text style={{ fontSize: '16px', color: '#1890ff', fontWeight: '600' }}>
-                          {typeof value === 'number'
-                            ? questionType === 'slider'
-                              ? getSliderLabel(key, value)
-                              : value
-                            : value}
-                        </Text>
-                      )}
-                    </div>
+                    <Button
+                      icon={<EditOutlined />}
+                      onClick={() => onEdit?.(sectionKey, key)}
+                      aria-label={`Edit ${meta.label}: ${questionText}`}
+                      className="rme-button-secondary"
+                      style={{ borderColor: meta.color, color: meta.color }}
+                    >
+                      Edit
+                    </Button>
                   </div>
-                );
-              })}
-          </Space>
-        )}
+                  {renderValue(sectionKey, key, value)}
+                </div>
+              );
+            })
+          )}
+        </Space>
       </Card>
     );
   };
 
-  const handleSubmit = () => {
-    // Calculate overall completion
-    let totalAnswered = 0;
-    let totalQuestions = 0;
-    
-    sections.forEach(section => {
-      const summary = getSectionSummary(section.key, responses[section.key]);
-      totalAnswered += summary.answered;
-      totalQuestions += summary.total;
-    });
-
-    const overallPercentage = Math.round((totalAnswered / totalQuestions) * 100);
-
-    if (overallPercentage === 0) {
-      message.warning('Please answer at least some questions before saving.');
-      return;
-    }
-
-    if (overallPercentage < 25) {
-      message.info(`You've completed ${overallPercentage}% of the assessment. You can save now or continue answering more questions.`);
-    }
-
-    onFinalSubmit();
-  };
-
-  // Calculate overall completion for header
-  let totalAnswered = 0;
-  let totalQuestions = 0;
-  
-  sections.forEach(section => {
-    const summary = getSectionSummary(section.key, responses[section.key]);
-    totalAnswered += summary.answered;
-    totalQuestions += summary.total;
-  });
-
-  const overallPercentage = Math.round((totalAnswered / totalQuestions) * 100);
-
   return (
-    <div style={{ padding: '20px' }}>
-      <div style={{ textAlign: 'center', marginBottom: '40px' }}>
-        <Title level={2} style={{ color: '#13c2c2', marginBottom: '10px' }}>
-          📋 Review Your Health Assessment
+    <div style={{ padding: '10px 4px 96px' }}>
+      <div style={{ textAlign: 'center', marginBottom: 28 }}>
+        <Title level={2} style={{ color: 'var(--rme-review)', marginBottom: 10 }}>
+          Review Your Health Assessment
         </Title>
-        <Text style={{ fontSize: '18px', color: '#666', marginBottom: '20px', display: 'block' }}>
-          Please review your responses below. You can go back to edit any section if needed.
+        <Text style={{ fontSize: 18, color: 'var(--rme-text)', display: 'block' }}>
+          Review your responses. Use Edit to go directly back to a section or question.
         </Text>
-        
-        <Card style={{ 
-          backgroundColor: overallPercentage >= 75 ? '#f6ffed' : overallPercentage >= 50 ? '#fff7e6' : '#fff2f0',
-          border: `2px solid ${getCompletionColor(totalAnswered, totalQuestions)}`,
-          marginBottom: '30px'
-        }}>
-          <div style={{ textAlign: 'center' }}>
-            <Title level={3} style={{ 
-              color: getCompletionColor(totalAnswered, totalQuestions),
-              margin: 0
-            }}>
-              Overall Progress: {totalAnswered}/{totalQuestions} Questions ({overallPercentage}%)
-            </Title>
-            {overallPercentage < 50 && (
-              <Text style={{ fontSize: '16px', color: '#fa8c16' }}>
-                💡 Remember: All questions are optional. You can save anytime or continue answering.
-              </Text>
-            )}
-          </div>
+        <Card style={{ backgroundColor: '#eef9f9', border: '2px solid var(--rme-review)', marginTop: 20 }}>
+          <Title level={3} style={{ color: 'var(--rme-review)', margin: 0 }}>
+            Overall Progress: {totals.answered}/{totals.total} Questions ({overallPercentage}%)
+          </Title>
+          {overallPercentage < 50 && (
+            <Text style={{ fontSize: 16, color: 'var(--rme-text)' }}>
+              All questions are optional. You can save now or continue answering.
+            </Text>
+          )}
         </Card>
       </div>
 
       <Row gutter={[24, 24]}>
-        <Col span={24}>
-          <Space direction="vertical" size="large" style={{ width: '100%' }}>
-            {sections.map(renderSectionSummary)}
-          </Space>
-        </Col>
+        <Col span={24}>{questionnaireSectionKeys.map(renderSectionSummary)}</Col>
       </Row>
 
-      <Divider style={{ margin: '40px 0' }} />
+      <Divider style={{ margin: '32px 0' }} />
 
-      <div style={{ textAlign: 'center' }}>
-        <Space size="large">
+      <div className="rme-no-print" style={{ textAlign: 'center' }}>
+        <Space size="middle" wrap style={{ justifyContent: 'center' }}>
           <Button
-            icon={<EditOutlined />}
-            size="large"
-            style={{ 
-              fontSize: '16px',
-              height: '50px',
-              padding: '0 30px',
-              backgroundColor: '#fa8c16',
-              borderColor: '#fa8c16',
-              color: 'white'
-            }}
-            onClick={() => message.info('Use the tabs above to edit any section')}
-          >
-            Edit Responses
-          </Button>
-          
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            size="large"
-            style={{ 
-              fontSize: '18px',
-              height: '50px',
-              padding: '0 40px',
-              backgroundColor: '#13c2c2',
-              borderColor: '#13c2c2',
-              color: 'white'
-            }}
-            onClick={handleSubmit}
+            icon={<CheckCircleOutlined />}
+            onClick={handleSave}
+            className="rme-button"
+            style={{ background: 'var(--rme-review)', borderColor: 'var(--rme-review)', color: '#fff' }}
           >
             Save Assessment
           </Button>
+          <Button icon={<ShareAltOutlined />} onClick={handleShare} className="rme-button-secondary">
+            Share Report
+          </Button>
+          <Button icon={<PrinterOutlined />} onClick={handlePrint} className="rme-button-secondary">
+            Print
+          </Button>
+          <Button icon={<DownloadOutlined />} onClick={handleDownload} className="rme-button-secondary">
+            Download
+          </Button>
+          <Button icon={<HomeOutlined />} onClick={onHome} className="rme-button-secondary">
+            Home
+          </Button>
         </Space>
-        
-        <div style={{ 
-          marginTop: '30px', 
-          padding: '20px',
-          backgroundColor: '#f0f9ff',
-          borderRadius: '8px',
-          border: '1px solid #bae7ff'
-        }}>
-          <CheckCircleOutlined style={{ color: '#13c2c2', fontSize: '20px', marginRight: '10px' }} />
-          <Text style={{ fontSize: '16px', color: '#006d75' }}>
-            Your responses are automatically saved. After saving, you can still return to update your assessment anytime.
+        {shareStatus && (
+          <div role="status" aria-live="polite" style={{ marginTop: 18, fontSize: 16, color: 'var(--rme-review)', fontWeight: 700 }}>
+            {shareStatus}
+          </div>
+        )}
+        <div style={{ marginTop: 22, padding: 16, backgroundColor: '#eef9f9', borderRadius: 8, border: '2px solid var(--rme-review)' }}>
+          <Text style={{ fontSize: 16, color: 'var(--rme-text)' }}>
+            You control where this report is shared. Native sharing uses your browser or device share options.
           </Text>
         </div>
       </div>
     </div>
   );
-} 
+}

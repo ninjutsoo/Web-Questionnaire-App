@@ -1,83 +1,80 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Tabs, Button, Progress, message, Tooltip } from 'antd';
-import { HomeOutlined, LeftOutlined, SaveOutlined } from '@ant-design/icons';
+import { Button, Progress, message } from 'antd';
+import { HomeOutlined, LeftOutlined, RightOutlined, SaveOutlined } from '@ant-design/icons';
 import { auth } from '../../services/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { getQuestionnaire, getUserSession, saveSectionResponses } from '../../services/questionnaireService';
 import FourMSection from './4msSection';
 import ReviewSubmit from './ReviewSubmit';
+import { SECTION_STEPS, getSectionMeta, questionnaireSectionKeys } from '../../constants/rmeDesign';
+
+const EMPTY_RESPONSES = {
+  matters: {},
+  medication: {},
+  mind: {},
+  mobility: {}
+};
 
 export default function Questionnaire() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('matters');
   const [questionnaire, setQuestionnaire] = useState(null);
   const [sessionId, setSessionId] = useState(null);
-  const [responses, setResponses] = useState({
-    matters: {},
-    medication: {},
-    mind: {},
-    mobility: {}
-  });
+  const [responses, setResponses] = useState(EMPTY_RESPONSES);
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  
-  // Refs to access child component data
+  const [saveStatus, setSaveStatus] = useState('');
+  const [focusQuestionKey, setFocusQuestionKey] = useState(null);
+  const sectionHeadingRef = useRef(null);
+
   const whatMattersRef = useRef(null);
   const medicationRef = useRef(null);
   const mindRef = useRef(null);
   const mobilityRef = useRef(null);
 
+  const sectionRefs = {
+    matters: whatMattersRef,
+    medication: medicationRef,
+    mind: mindRef,
+    mobility: mobilityRef
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
-        console.log("No user authenticated, redirecting to signin");
-        navigate("/signin");
+        navigate('/signin');
       } else {
-        console.log("User authenticated:", currentUser.uid, currentUser.email);
-        setUser(currentUser);
         initializeQuestionnaire(currentUser.uid);
       }
     });
     return () => unsubscribe();
   }, [navigate]);
 
+  useEffect(() => {
+    sectionHeadingRef.current?.focus();
+  }, [activeTab]);
+
   const initializeQuestionnaire = async (uid) => {
     try {
-      console.log('Initializing questionnaire for user:', uid);
-      // Load questionnaire structure and user session in parallel
       const [questionnaireData, sessionData] = await Promise.all([
         getQuestionnaire(),
         getUserSession(uid)
       ]);
-      
-      console.log('Questionnaire data loaded:', !!questionnaireData);
-      console.log('Session data loaded:', !!sessionData);
-      
-      if (questionnaireData) {
-        setQuestionnaire(questionnaireData);
-      } else {
-        console.error('No questionnaire data received');
+
+      if (!questionnaireData) {
         message.error('Failed to load questionnaire structure');
         return;
       }
-      
+
+      setQuestionnaire(questionnaireData);
+
       if (sessionData) {
         setSessionId(sessionData.sessionId);
-        setResponses(sessionData.data.responses || {
-          matters: {},
-          medication: {},
-          mind: {},
-          mobility: {}
-        });
+        setResponses({ ...EMPTY_RESPONSES, ...(sessionData.data.responses || {}) });
       } else {
-        console.error('No session data received');
         message.error('Failed to load user session');
-        return;
       }
-      
-      console.log('Questionnaire initialized successfully');
     } catch (error) {
       console.error('Error initializing questionnaire:', error);
       message.error('Failed to load questionnaire. Please check your internet connection and try again.');
@@ -86,225 +83,157 @@ export default function Questionnaire() {
     }
   };
 
-  // Simple function to update local responses (no automatic saving)
-  const updateResponses = (section, data) => {
-    const updatedResponses = {
-      ...responses,
-      [section]: data
-    };
-    setResponses(updatedResponses);
-  };
-
-  // Manual save function - only saves when user clicks save button
-  const handleSave = async () => {
-    if (!sessionId) {
-      message.error('No session found. Please refresh the page and try again.');
-      return;
-    }
-    
-    try {
-      message.loading('Saving your progress...', 1);
-      
-      // Collect current data from all child components
-      const currentData = {
-        matters: whatMattersRef.current?.getCurrentData() || {},
-        medication: medicationRef.current?.getCurrentData() || {},
-        mind: mindRef.current?.getCurrentData() || {},
-        mobility: mobilityRef.current?.getCurrentData() || {}
-      };
-      
-      const savePromises = Object.entries(currentData).map(([section, data]) => {
-        if (data && Object.keys(data).length > 0) {
-          return saveSectionResponses(sessionId, section, data);
-        }
-        return Promise.resolve();
-      });
-      
-      await Promise.all(savePromises);
-      
-      // Update local state after successful save
-      setResponses(currentData);
-      
-      message.success('All progress saved successfully!');
-    } catch (error) {
-      console.error('Error saving progress:', error);
-      message.error('Failed to save progress. Please try again.');
-    }
-  };
-
   const getCurrentSectionData = (sectionKey) => {
-    // Get current live data from child components (including unsaved changes)
-    switch(sectionKey) {
-      case 'matters':
-        return whatMattersRef.current?.getCurrentData() || responses.matters || {};
-      case 'medication':
-        return medicationRef.current?.getCurrentData() || responses.medication || {};
-      case 'mind':
-        return mindRef.current?.getCurrentData() || responses.mind || {};
-      case 'mobility':
-        return mobilityRef.current?.getCurrentData() || responses.mobility || {};
-      default:
-        return {};
-    }
+    if (!questionnaireSectionKeys.includes(sectionKey)) return {};
+    return sectionRefs[sectionKey]?.current?.getCurrentData() || responses[sectionKey] || {};
   };
 
-  const calculateProgress = (sectionKey) => {
-    if (!questionnaire || !sectionKey) {
-      return 0;
-    }
-    
-    const sectionQuestions = questionnaire.sections[sectionKey]?.questions || {};
-    const totalQuestions = Object.keys(sectionQuestions).length;
-    
-    if (totalQuestions === 0) return 0;
-    
-    const sectionData = getCurrentSectionData(sectionKey);
-    let answered = 0;
-    
-    Object.values(sectionData).forEach(value => {
-      if (typeof value === 'object' && value !== null) {
-        // Tag + text questions - count as answered if has tags OR text
-        if ((value.tags && value.tags.length > 0) || (value.text && value.text.trim())) {
-          answered++;
-        }
-      } else if (typeof value === 'number' || (typeof value === 'string' && value.trim())) {
-        // Slider or text questions - count if not empty
-        answered++;
+  const getCurrentLiveResponses = () => ({
+    matters: getCurrentSectionData('matters'),
+    medication: getCurrentSectionData('medication'),
+    mind: getCurrentSectionData('mind'),
+    mobility: getCurrentSectionData('mobility')
+  });
+
+  const hasAnswer = (value) => {
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === 'object' && value !== null) {
+      if (Array.isArray(value.medicationEntries)) {
+        return value.medicationEntries.some((entry) =>
+          Object.values(entry || {}).some((entryValue) => String(entryValue || '').trim())
+        );
       }
-    });
-    
-    return Math.round((answered / totalQuestions) * 100);
+      return Boolean(
+        (value.tags && value.tags.length > 0) ||
+        (value.text && value.text.trim()) ||
+        Object.values(value).some((item) => typeof item === 'string' && item.trim())
+      );
+    }
+    return typeof value === 'number' || (typeof value === 'string' && value.trim());
+  };
+
+  const calculateSectionStats = (sectionKey) => {
+    const sectionQuestions = questionnaire?.sections?.[sectionKey]?.questions || {};
+    const totalQuestions = Object.keys(sectionQuestions).length;
+    const sectionData = getCurrentSectionData(sectionKey);
+    const answered = Object.entries(sectionData).filter(([key, value]) => {
+      if (key === 'medicationEntries') {
+        return Array.isArray(value) && value.some((entry) =>
+          Object.values(entry || {}).some((entryValue) => String(entryValue || '').trim())
+        );
+      }
+      return hasAnswer(value);
+    }).length;
+    return { answered, total: totalQuestions, percent: totalQuestions > 0 ? Math.round((answered / totalQuestions) * 100) : 0 };
   };
 
   const calculateOverallProgress = () => {
     if (!questionnaire) return 0;
-    
-    const sections = ['matters', 'medication', 'mind', 'mobility'];
     let totalAnswered = 0;
     let totalQuestions = 0;
-    
-    sections.forEach(sectionKey => {
-      const sectionQuestions = questionnaire.sections[sectionKey]?.questions || {};
-      const sectionTotal = Object.keys(sectionQuestions).length;
-      totalQuestions += sectionTotal;
-      
-      const currentData = getCurrentSectionData(sectionKey);
-      
-      Object.values(currentData).forEach(value => {
-        if (typeof value === 'object' && value !== null) {
-          if ((value.tags && value.tags.length > 0) || (value.text && value.text.trim())) {
-            totalAnswered++;
-          }
-        } else if (typeof value === 'number' || (typeof value === 'string' && value.trim())) {
-          totalAnswered++;
-        }
-      });
+    questionnaireSectionKeys.forEach((sectionKey) => {
+      const stats = calculateSectionStats(sectionKey);
+      totalAnswered += stats.answered;
+      totalQuestions += stats.total;
     });
-    
     return totalQuestions > 0 ? Math.round((totalAnswered / totalQuestions) * 100) : 0;
   };
 
-  const getSectionBaseColor = (tabKey) => {
-    const baseColors = {
-      matters: '#1890ff',     // Bright Blue
-      medication: '#00b96b',  // Emerald Green
-      mind: '#9254de',        // Vivid Purple
-      mobility: '#ff4d4f',    // Red-Orange
-      review: '#13c2c2'       // Teal for review
-    };
-    return baseColors[tabKey] || '#1890ff';
-  };
-
-  const getTabColor = (tabKey) => {
-    const sectionData = responses[tabKey] || {};
-    const progress = calculateProgress(tabKey);
-    
-    if (progress === 0) return '#f0f0f0';
-    if (progress < 50) return '#ff7875';
-    if (progress < 100) return '#ffa940';
-    return getSectionBaseColor(tabKey);
-  };
-
-  // Function to trigger progress updates when local data changes
-  const triggerProgressUpdate = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
-
-  const tabItems = [
-    {
-      key: 'matters',
-      label: 'What Matters',
-      children: (
-        <FourMSection 
-          ref={whatMattersRef}
-          section="matters"
-          questionnaire={questionnaire}
-          responses={responses.matters}
-          onLocalChange={triggerProgressUpdate}
-        />
-      )
-    },
-    {
-      key: 'medication',
-      label: 'Medication',
-      children: (
-        <FourMSection 
-          ref={medicationRef}
-          section="medication"
-          questionnaire={questionnaire}
-          responses={responses.medication}
-          onLocalChange={triggerProgressUpdate}
-        />
-      )
-    },
-    {
-      key: 'mind',
-      label: 'Mind',
-      children: (
-        <FourMSection 
-          ref={mindRef}
-          section="mind"
-          questionnaire={questionnaire}
-          responses={responses.mind}
-          onLocalChange={triggerProgressUpdate}
-        />
-      )
-    },
-    {
-      key: 'mobility',
-      label: 'Mobility',
-      children: (
-        <FourMSection 
-          ref={mobilityRef}
-          section="mobility"
-          questionnaire={questionnaire}
-          responses={responses.mobility}
-          onLocalChange={triggerProgressUpdate}
-        />
-      )
-    },
-    {
-      key: 'review',
-      label: 'Review & Save',
-      children: (
-        <ReviewSubmit 
-          questionnaire={questionnaire}
-          responses={responses}
-          onSave={handleSave}
-        />
-      )
+  const saveAllCurrentResponses = async () => {
+    if (!sessionId) {
+      message.error('No session found. Please refresh the page and try again.');
+      return false;
     }
-  ];
+
+    try {
+      setSaveStatus('Saving your progress...');
+      const currentData = getCurrentLiveResponses();
+      await Promise.all(
+        Object.entries(currentData).map(([section, data]) => saveSectionResponses(sessionId, section, data || {}))
+      );
+      setResponses(currentData);
+      const time = new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+      setSaveStatus(`Saved at ${time}.`);
+      message.success('Progress saved.');
+      return true;
+    } catch (error) {
+      console.error('Error saving progress:', error);
+      setSaveStatus('Save failed. Please try again.');
+      message.error('Failed to save progress. Please try again.');
+      return false;
+    }
+  };
+
+  const triggerProgressUpdate = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  const currentIndex = SECTION_STEPS.indexOf(activeTab);
+  const currentMeta = getSectionMeta(activeTab);
+  const currentStats = activeTab === 'review'
+    ? { percent: calculateOverallProgress(), answered: 0, total: 0 }
+    : calculateSectionStats(activeTab);
+
+  const goToSection = async (sectionKey, questionKey = null) => {
+    if (!SECTION_STEPS.includes(sectionKey)) return;
+    if (questionnaireSectionKeys.includes(activeTab)) {
+      setResponses(getCurrentLiveResponses());
+    }
+    setFocusQuestionKey(questionKey);
+    setActiveTab(sectionKey);
+  };
+
+  const goNext = async () => {
+    if (activeTab === 'review') return;
+    setResponses(getCurrentLiveResponses());
+    const next = SECTION_STEPS[Math.min(currentIndex + 1, SECTION_STEPS.length - 1)];
+    setActiveTab(next);
+  };
+
+  const goBack = () => {
+    if (currentIndex <= 0) return;
+    setResponses(getCurrentLiveResponses());
+    setActiveTab(SECTION_STEPS[currentIndex - 1]);
+  };
+
+  const goHomeSafely = async () => {
+    const shouldSave = window.confirm('Save your current assessment progress before going Home?');
+    if (shouldSave) {
+      const saved = await saveAllCurrentResponses();
+      if (!saved) return;
+    }
+    navigate('/home');
+  };
+
+  const renderActiveSection = () => {
+    if (activeTab === 'review') {
+      return (
+        <ReviewSubmit
+          questionnaire={questionnaire}
+          responses={getCurrentLiveResponses()}
+          onSave={saveAllCurrentResponses}
+          onEdit={goToSection}
+          onHome={goHomeSafely}
+        />
+      );
+    }
+
+    return (
+      <FourMSection
+        ref={sectionRefs[activeTab]}
+        section={activeTab}
+        questionnaire={questionnaire}
+        responses={responses[activeTab]}
+        onLocalChange={triggerProgressUpdate}
+        focusQuestionKey={focusQuestionKey}
+        onFocusHandled={() => setFocusQuestionKey(null)}
+      />
+    );
+  };
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '18px'
-      }}>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: 18 }}>
         Loading your assessment...
       </div>
     );
@@ -312,16 +241,9 @@ export default function Questionnaire() {
 
   if (!questionnaire) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column',
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        height: '100vh',
-        fontSize: '18px'
-      }}>
-        <div style={{ marginBottom: '20px' }}>❌ Failed to load questionnaire</div>
-        <Button onClick={() => window.location.reload()}>
+      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', height: '100vh', fontSize: 18 }}>
+        <div style={{ marginBottom: 20 }}>Failed to load questionnaire.</div>
+        <Button onClick={() => window.location.reload()} className="rme-button-secondary">
           Try Again
         </Button>
       </div>
@@ -329,100 +251,125 @@ export default function Questionnaire() {
   }
 
   return (
-    <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative' }}>
-      {/* Progress Bar */}
-      <div style={{ 
-        backgroundColor: 'white',
-        padding: '15px',
-        borderRadius: '8px',
-        marginBottom: '20px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
-            Health Assessment Progress
-          </div>
-        </div>
-        <Progress 
-          percent={activeTab === 'review' ? calculateOverallProgress() : calculateProgress(activeTab)} 
-          strokeColor={getSectionBaseColor(activeTab)}
+    <div style={{ maxWidth: 1200, margin: '0 auto', position: 'relative' }}>
+      <div
+        data-refresh-trigger={refreshTrigger}
+        style={{
+          backgroundColor: '#fff',
+          padding: 16,
+          borderRadius: 8,
+          marginBottom: 18,
+          border: '2px solid #d8dee6',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+        }}
+      >
+        <h1
+          ref={sectionHeadingRef}
+          tabIndex={-1}
+          style={{ fontSize: 24, margin: '0 0 10px', color: currentMeta.color }}
+        >
+          Section {currentIndex + 1} of {SECTION_STEPS.length}: {currentMeta.label}
+        </h1>
+        <Progress
+          percent={currentStats.percent}
+          strokeColor={currentMeta.color}
           size="small"
-          showInfo={true}
-          format={(percent) => `${percent}% Complete`}
+          showInfo
+          format={(percent) => activeTab === 'review' ? `${percent}% overall` : `${percent}% complete`}
         />
+        <p style={{ margin: '10px 0 0', fontSize: 16, color: 'var(--rme-muted)' }}>
+          {activeTab === 'review'
+            ? 'Review, save, and share your assessment.'
+            : `${currentStats.answered} of ${currentStats.total} questions answered in ${currentMeta.label}. All questions are optional.`}
+        </p>
+        <div role="status" aria-live="polite" style={{ minHeight: 24, fontSize: 16, fontWeight: 700, color: 'var(--rme-review)' }}>
+          {saveStatus}
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div style={{ 
-        backgroundColor: 'white',
-        borderRadius: '8px',
-        padding: '20px',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-        minHeight: 'calc(100vh - 200px)'
-      }}>
-        <Tabs
-          activeKey={activeTab}
-          onChange={setActiveTab}
-          size="large"
-          type="card"
-          style={{
-            width: '100%'
-          }}
-          items={tabItems.map(item => ({
-            ...item,
-            label: (
-              <div style={{ 
-                padding: '8px 16px',
-                fontSize: '16px',
-                fontWeight: '600',
-                backgroundColor: getSectionBaseColor(item.key),
-                borderRadius: '6px',
-                color: 'white',
-                minWidth: '100px',
-                textAlign: 'center',
-                opacity: item.key === activeTab ? 1 : 0.7,
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis'
-              }}>
-                {item.label}
-              </div>
-            )
-          }))}
-        />
-      </div>
+      <nav
+        aria-label="Assessment sections"
+        className="rme-no-print"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+          gap: 10,
+          marginBottom: 18
+        }}
+      >
+        {SECTION_STEPS.map((sectionKey, index) => {
+          const meta = getSectionMeta(sectionKey);
+          const isActive = activeTab === sectionKey;
+          const stats = sectionKey === 'review' ? { percent: calculateOverallProgress() } : calculateSectionStats(sectionKey);
+          return (
+            <button
+              key={sectionKey}
+              type="button"
+              onClick={() => goToSection(sectionKey)}
+              aria-current={isActive ? 'step' : undefined}
+              className={`rme-chip ${isActive ? 'rme-chip-selected' : ''}`}
+              style={{
+                borderColor: isActive ? meta.color : 'var(--rme-border)',
+                color: isActive ? meta.color : 'var(--rme-text)',
+                background: isActive ? meta.bg : '#fff'
+              }}
+            >
+              <strong>{index + 1}. {meta.shortLabel}</strong>
+              <span style={{ display: 'block', marginTop: 4 }}>
+                {sectionKey === 'review' ? `${stats.percent}% overall` : `${stats.percent}% complete`}
+              </span>
+            </button>
+          );
+        })}
+      </nav>
 
-      {/* Sticky Save Button (not on review tab) */}
-      {activeTab !== 'review' && (
-        <Tooltip title="Tap to save your progress" placement="left">
-        <Button
-          type="primary"
-          onClick={handleSave}
-          style={{
-            position: 'fixed',
-            right: 32,
-            bottom: 32,
-            zIndex: 1000,
-            boxShadow: '0 4px 24px rgba(24, 144, 255, 0.18)',
-              borderRadius: 12,
-              height: 56,
-              padding: '0 24px',
-              fontSize: 16,
-              fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-              gap: 8,
-            background: 'linear-gradient(135deg, #1890ff 0%, #52c41a 100%)',
-            border: 'none',
-              transition: 'all 0.2s ease',
-          }}
+      <main
+        style={{
+          backgroundColor: '#fff',
+          borderRadius: 8,
+          padding: 16,
+          border: '2px solid #d8dee6',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+          minHeight: 'calc(100vh - 240px)'
+        }}
+      >
+        {renderActiveSection()}
+
+        <div className="rme-action-bar rme-no-print" aria-label="Assessment actions">
+          <Button
+            icon={<LeftOutlined />}
+            onClick={goBack}
+            disabled={currentIndex === 0}
+            className="rme-button-secondary"
           >
-            <SaveOutlined style={{ fontSize: 20 }} />
+            Back
+          </Button>
+          <Button
+            icon={<RightOutlined />}
+            onClick={goNext}
+            disabled={activeTab === 'review'}
+            style={{ background: currentMeta.color, borderColor: currentMeta.color, color: '#fff' }}
+            className="rme-button"
+          >
+            Next
+          </Button>
+          <Button
+            icon={<SaveOutlined />}
+            onClick={saveAllCurrentResponses}
+            className="rme-button-secondary"
+            style={{ borderColor: 'var(--rme-review)', color: 'var(--rme-review)' }}
+          >
             Save
           </Button>
-        </Tooltip>
-      )}
+          <Button
+            icon={<HomeOutlined />}
+            onClick={goHomeSafely}
+            className="rme-button-secondary"
+          >
+            Home
+          </Button>
+        </div>
+      </main>
     </div>
   );
-} 
+}

@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import { Button, Card, Typography, Space, Alert, Spin } from 'antd';
-import { useNavigate } from 'react-router-dom';
 import { migrateUserData, previewMigration, verifyMigration } from '../services/dataMigration';
 
 const { Title, Text, Paragraph } = Typography;
 
 export default function Migration() {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState(null);
   const [previewData, setPreviewData] = useState(null);
