@@ -198,7 +198,7 @@ const AIChatbot = () => {
       
       recognitionInstance.onstart = () => {
         setIsListening(true);
-        setVoiceStatus('Recording. Speak now, or tap Tap to Stop when finished.');
+        setVoiceStatus('Recording. Speak now.');
         console.log('Voice recognition started');
       };
       

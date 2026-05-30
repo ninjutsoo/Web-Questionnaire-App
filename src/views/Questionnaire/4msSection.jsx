@@ -112,7 +112,6 @@ function ChoiceButtonGroup({ label, options = [], selected, multiple = false, co
           >
             {isSelected && <CheckOutlined aria-hidden="true" style={{ marginRight: 8 }} />}
             {optionLabel}
-            {isSelected && <span style={{ fontWeight: 600 }}> selected</span>}
           </button>
         );
       })}
@@ -300,7 +299,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
     }
 
     activeVoiceTargetRef.current = targetKey;
-    setVoiceMessage('Recording. Speak now, or tap Tap to Stop when finished.');
+    setVoiceMessage('Recording. Speak now.');
     setIsListening({ [targetKey]: true });
 
     recognition.onresult = (event) => {
