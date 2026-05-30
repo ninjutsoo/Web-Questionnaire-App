@@ -412,6 +412,7 @@ const FourMSection = forwardRef(({ section, questionnaire, responses, onLocalCha
 
   const cardProps = (questionKey, question, index) => ({
     key: questionKey,
+    className: 'rme-question-card',
     ref: (node) => {
       if (node) questionRefs.current[questionKey] = node;
     },

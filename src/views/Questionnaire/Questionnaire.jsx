@@ -256,7 +256,7 @@ export default function Questionnaire() {
         data-refresh-trigger={refreshTrigger}
         style={{
           backgroundColor: '#fff',
-          padding: 16,
+          padding: 'clamp(8px, 2vw, 16px)',
           borderRadius: 8,
           marginBottom: 18,
           border: '2px solid #d8dee6',
