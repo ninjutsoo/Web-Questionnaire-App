@@ -34,17 +34,51 @@
 
 const express = require("express");
 const cors = require("cors");
-const axios = require("axios");
 const functions = require("firebase-functions");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 const sgMail = require("@sendgrid/mail");
 const { defineString } = require("firebase-functions/params");
+const aiRouter = require("./aiModelRouter");
 
 admin.initializeApp();
+aiRouter.initRouter(admin);
 
 // v7 params: set via .env in functions/ or prompt on deploy (e.g. .env.web-app-new-efb66)
-const geminiApiKeyParam = defineString("GEMINI_API_KEY", { default: "" });
+const openrouterApiKeyParam = defineString("OPENROUTER_API_KEY", { default: "" });
+
+function buildChatSystemPrompt(userContext) {
+  let systemPrompt = `
+You are a kind, supportive AI assistant for an elderly person with health and daily questions.
+
+RESPONSE RULES — FOLLOW THESE:
+• Be concise: keep your answer under 200 tokens.
+• Use simple, everyday language. Avoid medical jargon.
+• Use 1–2 short sentences if possible, or up to 5 short bullet points if needed.
+• Each bullet: start with a bolded key action/fact, keep it under 15 words.
+• Use emojis only if helpful, not in every sentence.
+• Do NOT start with general/motivational phrases. Jump right into advice.
+• No sub-bullets, no long paragraphs.
+• Be warm, friendly, and clear — like a helpful friend.
+`;
+
+  if (userContext?.location) {
+    systemPrompt += `\n\nThe person is currently located at: ${userContext.location}`;
+  }
+
+  if (userContext?.completedSections?.length > 0) {
+    systemPrompt += "\n\nIMPORTANT: You are a medical advisor for an elderly person who has completed a health assessment. Use the following information about this person to provide personalized, relevant advice:";
+    Object.entries(userContext.responses || {}).forEach(([section, questions]) => {
+      systemPrompt += `\n\n**${section.charAt(0).toUpperCase() + section.slice(1)} Assessment:**`;
+      Object.entries(questions || {}).forEach(([question, answer]) => {
+        systemPrompt += `\n- ${question}: ${answer}`;
+      });
+    });
+    systemPrompt += "\n\nWhen providing advice, consider this person's specific health situation, concerns, and needs. Tailor your recommendations to their mobility level, medication concerns, mental health status, and what matters most to them. Be empathetic and supportive while providing practical, actionable advice.";
+  }
+
+  return systemPrompt;
+}
 
 // Example tips for each transport method
 const transportTips = {
@@ -259,154 +293,104 @@ app.post("/send-daily-reminders-now", async (req, res) => {
 });
 
 // Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'OK', message: 'AI Chat Backend is running with Google Gemini API' });
+app.get("/api/health", (req, res) => {
+  res.json({ status: "OK", message: "AI Chat Backend is running with OpenRouter API" });
 });
 
-// Debug: check if Gemini key is set (does not reveal the key)
-app.get("/api/chat-status", (req, res) => {
-  const keySet = !!geminiApiKeyParam.value();
-  res.json({
-    geminiKeySet: keySet,
-    hint: keySet ? "Key is configured" : "Set GEMINI_API_KEY in functions/.env or when prompted on deploy",
-  });
+// Debug: check if OpenRouter key is set (does not reveal the key)
+app.get("/api/chat-status", async (req, res) => {
+  const keySet = !!openrouterApiKeyParam.value();
+  try {
+    const routing = keySet ? await aiRouter.getRoutingStatusForDebug() : null;
+    res.json({
+      openrouterKeySet: keySet,
+      primaryModel: aiRouter.FREE_MODELS[0],
+      paidFallbackModel: aiRouter.getPaidModel(),
+      routing,
+      hint: keySet ? "Key is configured" : "Set OPENROUTER_API_KEY in functions/.env and redeploy",
+    });
+  } catch (error) {
+    res.json({
+      openrouterKeySet: keySet,
+      primaryModel: aiRouter.FREE_MODELS[0],
+      hint: keySet ? "Key is configured" : "Set OPENROUTER_API_KEY in functions/.env and redeploy",
+      routingError: error.message,
+    });
+  }
 });
-
-// Google Gemini (Google AI Studio) - try in order; 2.5 may not be in all regions yet
-const GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
-const GEMINI_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
-
-// Convert chat messages to Gemini contents (user/model + parts)
-function messagesToGeminiContents(messages) {
-  return messages
-    .filter(m => m.role === 'user' || m.role === 'assistant')
-    .map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: typeof m.content === 'string' ? m.content : (m.content || '').toString() }]
-    }));
-}
 
 app.post("/api/chat", async (req, res) => {
   const { messages, userContext } = req.body;
-  const apiKey = geminiApiKeyParam.value();
 
-  if (!apiKey) {
-    console.error('❌ GEMINI_API_KEY not set. Set via: firebase functions:config:set gemini.api_key="..."');
+  if (!openrouterApiKeyParam.value()) {
+    console.error("OPENROUTER_API_KEY not set");
     return res.json({
       choices: [{
         message: {
           role: "assistant",
-          content: "I'm having trouble connecting to the AI service. Please set GEMINI_API_KEY in functions/.env or when prompted on deploy.",
+          content: "I'm having trouble connecting to the AI service. Please set OPENROUTER_API_KEY in functions/.env and redeploy.",
         },
       }],
     });
   }
 
+  const chatMessages = (messages || []).filter((m) => m.role === "user" || m.role === "assistant");
+  if (chatMessages.length === 0) {
+    return res.status(400).json({ error: "No messages provided" });
+  }
+
   try {
-    console.log("Attempting Gemini API call with", GEMINI_MODELS[0], "(and fallbacks)");
-    console.log('User messages:', messages?.length);
-    console.log('User context available:', !!userContext);
+    console.log("Attempting OpenRouter API call with global routing (free-first)");
+    console.log("User messages:", chatMessages.length);
+    console.log("User context available:", !!userContext);
 
-    let systemPrompt = `
-You are a kind, supportive AI assistant for an elderly person with health and daily questions.
+    const systemPrompt = buildChatSystemPrompt(userContext);
+    const result = await aiRouter.callOpenRouterWithRouting({
+      messages: [{ role: "system", content: systemPrompt }, ...chatMessages],
+      req,
+      temperature: 0.3,
+    });
 
-RESPONSE RULES — FOLLOW THESE:
-• Be concise: keep your answer under 200 tokens.
-• Use simple, everyday language. Avoid medical jargon.
-• Use 1–2 short sentences if possible, or up to 5 short bullet points if needed.
-• Each bullet: start with a bolded key action/fact, keep it under 15 words.
-• Use emojis only if helpful, not in every sentence.
-• Do NOT start with general/motivational phrases. Jump right into advice.
-• No sub-bullets, no long paragraphs.
-• Be warm, friendly, and clear — like a helpful friend.
-`;
-
-    if (userContext && userContext.location) {
-      systemPrompt += `\n\nThe person is currently located at: ${userContext.location}`;
-    }
-
-    if (userContext && userContext.completedSections && userContext.completedSections.length > 0) {
-      systemPrompt += '\n\nIMPORTANT: You are a medical advisor for an elderly person who has completed a health assessment. Use the following information about this person to provide personalized, relevant advice:';
-      Object.entries(userContext.responses || {}).forEach(([section, questions]) => {
-        systemPrompt += `\n\n**${section.charAt(0).toUpperCase() + section.slice(1)} Assessment:**`;
-        Object.entries(questions || {}).forEach(([question, answer]) => {
-          systemPrompt += `\n- ${question}: ${answer}`;
-        });
-      });
-      systemPrompt += '\n\nWhen providing advice, consider this person\'s specific health situation, concerns, and needs. Tailor your recommendations to their mobility level, medication concerns, mental health status, and what matters most to them. Be empathetic and supportive while providing practical, actionable advice.';
-    }
-
-    const contents = messagesToGeminiContents(messages || []);
-    if (contents.length === 0) {
-      return res.status(400).json({ error: 'No messages provided' });
-    }
-
-    const body = {
-      systemInstruction: { parts: [{ text: systemPrompt }] },
-      contents,
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1024 }
-    };
-    let response;
-    let usedModel;
-    let lastErr;
-
-    for (const model of GEMINI_MODELS) {
-      try {
-        console.log(`🔄 Trying Gemini model: ${model}`);
-        response = await axios.post(
-          `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`,
-          body,
-          { headers: { 'Content-Type': 'application/json' }, timeout: 60000 }
-        );
-        usedModel = model;
-        console.log(`✅ Gemini API success with ${model}`);
-        break;
-      } catch (err) {
-        lastErr = err;
-        const status = err.response?.status;
-        const msg = err.response?.data?.error?.message || err.message;
-        console.error(`❌ Gemini ${model} failed:`, status, msg);
-        if (status === 404 || status === 400) continue;
-        break;
-      }
-    }
-
-    if (!response) {
-      console.error('❌ All Gemini models failed. Last error:', lastErr?.response?.data || lastErr?.message);
+    if (result.error) {
+      console.error("OpenRouter chat failed:", result.lastError?.response?.data || result.lastError?.message);
       return res.json({
         choices: [{
           message: {
-            role: 'assistant',
-            content: "The AI service is temporarily unavailable. Please try again in a moment. If this keeps happening, set GEMINI_API_KEY in functions/.env and redeploy.",
-          }
+            role: "assistant",
+            content: "The AI service is temporarily unavailable. Please try again in a moment. If this keeps happening, set OPENROUTER_API_KEY in functions/.env and redeploy.",
+          },
         }],
-        _fallback: true
+        _fallback: true,
       });
     }
 
-    const candidate = response.data?.candidates?.[0];
-    const textPart = candidate?.content?.parts?.[0]?.text;
-    const assistantMessage = textPart?.trim() || "I couldn't generate a response at the moment. Please try again.";
+    const assistantMessage = result.response.data.choices[0]?.message?.content?.trim()
+      || "I couldn't generate a response at the moment. Please try again.";
 
     res.json({
       choices: [{
         message: {
-          role: 'assistant',
-          content: assistantMessage
-        }
+          role: "assistant",
+          content: assistantMessage,
+        },
       }],
-      debug: { model: usedModel }
+      debug: {
+        model: result.model,
+        routingMode: result.routingMode,
+        temperature: 0.3,
+        systemPrompt: systemPrompt.substring(0, 500) + "...",
+      },
     });
   } catch (error) {
-    console.error('❌ Gemini API Error (unexpected):', error.response?.data || error.message);
+    console.error("OpenRouter API Error (unexpected):", error.response?.data || error.message);
     res.json({
       choices: [{
         message: {
-          role: 'assistant',
-          content: "The AI service is temporarily unavailable. Please try again in a moment."
-        }
+          role: "assistant",
+          content: "The AI service is temporarily unavailable. Please try again in a moment.",
+        },
       }],
-      _fallback: true
+      _fallback: true,
     });
   }
 });
@@ -479,14 +463,13 @@ const QUICK_QUESTIONS_FALLBACK = [
 
 app.post("/api/quick-questions", async (req, res) => {
   const { userContext } = req.body;
-  const apiKey = geminiApiKeyParam.value();
 
-  if (!apiKey) {
+  if (!openrouterApiKeyParam.value()) {
     return res.json({ questions: QUICK_QUESTIONS_FALLBACK });
   }
 
   try {
-    console.log('🔄 Quick Questions request received (Gemini)');
+    console.log("Quick Questions request received (OpenRouter)");
 
     let prompt = `You are a helpful AI assistant. Based on the following user's health questionnaire answers, generate 4 to 6 short, helpful questions that this person would benefit from asking an AI health assistant.
 
@@ -500,47 +483,38 @@ Example: ["What exercises help balance?", "How can I sleep better?"]
 
 User's health assessment data:`;
 
-    if (userContext && userContext.location) {
+    if (userContext?.location) {
       prompt += `\n\nThe person is currently located at: ${userContext.location}`;
     }
-    if (userContext && userContext.responses) {
+    if (userContext?.responses) {
       Object.entries(userContext.responses).forEach(([section, questions]) => {
         prompt += `\n\n${section.charAt(0).toUpperCase() + section.slice(1)} Section:`;
         Object.entries(questions).forEach(([question, answer]) => {
-          prompt += `\n- ${question}: ${typeof answer === 'object' ? JSON.stringify(answer) : answer}`;
+          prompt += `\n- ${question}: ${typeof answer === "object" ? JSON.stringify(answer) : answer}`;
         });
       });
     } else {
-      prompt += '\n(No answers yet)';
+      prompt += "\n(No answers yet)";
     }
-    prompt += '\n\nGenerate 4 to 6 relevant questions (each under 100 characters), JSON array only:';
+    prompt += "\n\nGenerate 4 to 6 relevant questions (each under 100 characters), JSON array only:";
 
-    const body = { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.3, maxOutputTokens: 512 } };
-    let response;
-    for (const model of GEMINI_MODELS) {
-      try {
-        response = await axios.post(
-          `${GEMINI_BASE}/${model}:generateContent?key=${apiKey}`,
-          body,
-          { headers: { 'Content-Type': 'application/json' }, timeout: 30000 }
-        );
-        break;
-      } catch (err) {
-        console.error(`Quick questions: ${model} failed`, err.response?.status, err.response?.data?.error?.message);
-        if (err.response?.status === 404 || err.response?.status === 400) continue;
-        throw err;
-      }
-    }
+    const result = await aiRouter.callOpenRouterWithRouting({
+      messages: [{ role: "user", content: prompt }],
+      req,
+      temperature: 0.3,
+      maxTokens: 512,
+    });
 
-    if (!response) {
+    if (result.error) {
       return res.json({ questions: QUICK_QUESTIONS_FALLBACK });
     }
-    const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    const text = result.response.data.choices[0]?.message?.content || "";
     let questions = parseQuickQuestionsResponse(text);
     if (questions.length < MIN_QUESTIONS) questions = [...QUICK_QUESTIONS_FALLBACK];
     res.json({ questions: questions.slice(0, MAX_QUESTIONS) });
   } catch (error) {
-    console.error('❌ Gemini Quick Questions Error:', error.response?.data || error.message);
+    console.error("OpenRouter Quick Questions Error:", error.response?.data || error.message);
     res.json({ questions: QUICK_QUESTIONS_FALLBACK });
   }
 });
@@ -579,6 +553,13 @@ exports.sendDailyMedicationAndMobilityTips = onSchedule(
   { schedule: "every day 08:00", timeZone: "America/New_York" },
   async () => {
     await sendDailyMedicationAndMobilityReminders();
+  }
+);
+
+exports.probeFreeTierRecovery = onSchedule(
+  { schedule: "every 15 minutes", timeZone: "America/New_York" },
+  async () => {
+    await aiRouter.probeFreeTierRecovery();
   }
 );
 
