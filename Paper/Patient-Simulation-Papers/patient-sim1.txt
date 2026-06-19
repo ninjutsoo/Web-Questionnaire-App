@@ -1,0 +1,1388 @@
+ADVANCING AI TRUSTWORTHINESS THROUGH PATIENT SIMULATION:                                                            RISK
+ASSESSMENT OF CONVERSATIONAL AGENTS FOR ANTIDEPRESSANT SELECTION
+
+
+
+
+Md Tanvir Rouf Shawon*
+George Mason University (GMU), Computer Science (CS), mshawon@gmu.edu
+
+Mohammad Sabik Irbaz
+GMU, Information Sciences and Technology (IST), mirbaz@gmu.edu
+
+Hadeel R. A. Elyazori
+GMU, IST, helyazor@gmu.edu
+
+Keerti Reddy Resapu
+GMU, Health Administration and Policy (HAP), kresapu@gmu.edu
+
+Yili Lin
+GMU, HAP, ylin26@gmu.edu
+
+Vladimir Franzuela Cardenas
+GMU, HAP, vcarden@gmu.edu
+
+Farrokh Alemi
+GMU, HAP
+
+Kevin Lybarger
+GMU, IST klybarge@gmu.edu
+
+      CCS CONCEPTS • Artificial intelligence • Natural language generation • Natural language interfaces • Consumer
+health • Health informatics •
+      Additional Keywords and Phrases: Patient simulation, conversational agents, AI risk management, trustworthy AI, large
+language models, depression management
+
+
+
+
+*
+    Corresponding author.
+      ABSTRACT
+   Objective: This paper introduces a patient simulator for scalable, automated evaluation of healthcare conversational
+agents, generating realistic, controllable interactions that systematically vary across medical, linguistic, and behavioral
+dimensions to support risk assessment across populations.
+   Methods: Grounded in the NIST AI Risk Management Framework, the simulator integrates three profile components:
+(1) medical profiles constructed from All of Us electronic health records using risk-ratio gating; (2) linguistic profiles
+modeling health literacy and condition-specific communication; and (3) behavioral profiles representing cooperative,
+distracted, and adversarial engagement. Profiles were evaluated against NIST AI RMF trustworthiness requirements and
+assessed against an AI Decision Aid for antidepressant selection.
+   Results: Across 500 simulated conversations, the simulator revealed monotonic degradation in AI Decision Aid
+performance across health literacy levels: Rank-1 concept retrieval ranged from 47.6% (limited) to 81.9% (proficient),
+with corresponding recommendation degradation. Medical concept fidelity was high (96.6% across 8,210 concepts),
+validated by human annotators (0.73 κ) and an LLM judge with comparable agreement (0.78 κ). Behavioral profiles were
+reliably distinguished (0.93 κ), and linguistic profiles showed moderate agreement (0.61 κ).
+    Conclusions: The simulator exposes measurable performance risks in conversational healthcare AI. Health literacy
+emerged as a primary risk factor with direct implications for equitable AI deployment.
+
+
+  1    INTRODUCTION
+   Conversational AI systems are increasingly deployed in healthcare to support clinical decision-making, patient
+engagement, and care accessibility [30, 39, 61, 62]. Yet these systems face a fundamental evaluation gap: patients
+communicate the same clinical information in vastly different ways depending on health literacy, psychological state, and
+interaction style [26, 69]. However, there is no standardized systematic method to assess whether AI performance remains
+equitable across this variation [22, 60]. A patient who says, “my morning pill for my nerves” and one who reports “20 mg
+of fluoxetine for generalized anxiety disorder” may describe identical clinical realities, but a conversational agent that
+handles the second better than the first introduces a structural bias against vulnerable populations. LLM-based approaches
+lower barriers to building such systems [42, 68] but heighten the need for rigorous, scalable risk assessment that can
+characterize performance across diverse patient communication patterns.
+   Static benchmarks cannot capture these risks because they bypass the multi-turn dynamics through which
+communication variation compounds [18, 27]. Patient simulation offers a scalable alternative: simulated patients with
+controlled clinical, linguistic and behavioral characteristics can systematically probe system performance across
+populations that would be difficult, slow, or ethically complex to recruit for live evaluation, enabling identification of
+vulnerabilities [4, 24]. The National Institute of Standards and Technology (NIST) AI Risk Management Framework (AI
+RMF) provides structured, domain-agnostic guidance for identifying, assessing, and managing AI risks [58], but no existing
+patient simulation framework operationalizes this guidance with the multidimensional variation needed to expose
+communication- and interaction dependent failures. This work introduces such a framework, grounding patient simulation
+in the AI RMF to enable empirical risk assessment of conversational healthcare AI.
+    We present a patient simulator grounded in real-world clinical data from the All of Us Research Program [3], evaluated
+on a conversational decision aid for antidepressant selection in major depressive disorder (MDD). The simulator integrates
+three profile dimensions: (1) medical profiles generated by a novel Medical Artificial General Intelligence (MAGI)
+algorithm that constructs outcome-relevant clinical histories from electronic health record (EHR) data through risk-ratio
+gating and independence screening; (2) linguistic profiles modeling health literacy variation [23, 43] and condition-specific
+communication patterns [46, 50]; and (3) behavioral profiles representing empirically derived interaction patterns including
+cooperative, distracted, and adversarial engagement [49, 56]. While evaluated here on antidepressant selection, the
+framework generalizes across healthcare tasks and conditions. Building on prior work in patient simulation and NIST-
+aligned risk governance, this study addresses the following research questions:
+    RQ1. How effectively can structured EHR data be transformed into risk-aware medical profiles aligned with AI
+trustworthiness principles?
+    RQ2. How can simulated patients combining medical, linguistic, and behavioral information produce realistic and
+distinguishable conversational behavior?
+   RQ3. What performance risks and equity gaps does simulated patient evaluation reveal in a conversational clinical
+decision aid?
+This work contributes: (1) a patient simulator integrating medical, linguistic, and behavioral profiles to operationalize the
+NIST AI RMF MAP and MEASURE functions for conversational healthcare AI, (2) the MAGI algorithm for generating
+outcome-relevant, auditable medical profiles from EHR data through risk-ratio gating and independence screening, (3) a
+controlled perturbation methodology using ontology-aware semantic substitution for validating both human annotators and
+LLM judges, and (4) empirical evidence that health literacy creates a monotonic performance gradient in conversational
+clinical AI, identifying a concrete equity risk. The code, source data, and simulated interactions are publicly available1.
+
+
+2 RELATED WORK
+   User simulation provides scalable methods for evaluating conversational agents across domains; patient simulation
+adapts these methods for clinical dialogue and diagnostic reasoning.
+
+2.1 USER SIMULATION
+   User simulation enables controlled, scalable evaluation of interactive systems without requiring human trials.
+Foundational surveys span information access, dialogue modeling, and recommendation systems [4, 17, 41, 71], while
+recent work leverages LLMs to generate context-aware user behavior through dual-model architectures combining
+generators and verifiers [38, 52] and session-level search simulation [29, 76]. In healthcare, synthetic users with clinical
+profiles evaluate decision support and coaching systems [74], establishing user simulation as a critical method for assessing
+reliability and safety in AI systems.
+
+2.2 PATIENT SIMULATION
+   Patient simulation involves construction of virtual patients that engage in interactive clinical dialogues with human or
+automated clinicians [13]. Frameworks vary widely in patient state representation, from hand-crafted profiles to EHR-
+grounded models, and in how they control disclosure, tone, and clinical accuracy [28, 30, 35]. Prior work often treats
+patient simulation as a single unified problem, but it involves two distinct technical challenges: (1) constructing clinically
+valid patient representations and (2) simulating interactive dialogue that expresses those representations over time [35].
+Recent systems have integrated LLMs to enhance expressiveness and flexibility [21], constructed structured knowledge
+bases from clinical notes to support medical intake tasks [37], and embedded risk-aware feedback mechanisms [13].
+
+
+
+
+   1
+       GitHub link to be provided upon acceptance.
+2.2.1 Data-Driven Medical Realism
+   Early systems employed deterministic state machines or probabilistic sequence models to generate medical histories.
+Synthea [63] and SynSys [14] produce scalable, transparent timelines but reflect population-level distributions rather than
+individual patient data. EHR-grounded approaches improve realism. Generative Adversarial Network (GAN) variants [70,
+72] address missing features and mixed data types, achieving higher fidelity than rule-based methods on MIMIC-III/IV
+benchmarks [11], while SimSUM [48] combines Bayesian networks with prompted LLMs to synthesize clinical notes.
+Systems integrating EHR grounding with conversational retrieval, including ophthalmology simulators [37] and multi-
+agent knowledge graph pipelines [73], advance clinical accuracy but treat the encounter as a transactional data exchange
+rather than a dynamic, rapport-dependent interaction.
+
+2.2.2 Behavioral and Linguistic Modeling
+   Beyond medical profile construction, systems must express profiles through natural dialogue with appropriate
+communication style and conversational dynamics [8, 28]. Cognitive and persona-based approaches model psychological
+states to generate behaviorally coherent conversation. PATIENT Ψ [64] uses expert-designed cognitive schemas with GPT-
+4 to reproduce emotional fluctuations and resistant behaviors, while SFMSS [5] embeds Big Five traits to shape dialogue
+tone. These systems remain condition-specific (e.g., mental health) and lack medical grounding for clinical evaluation.
+Prompt-based approaches [13, 21] offer scalability but lack persistent patient state tracking and systematic control over
+linguistic and behavioral variation.
+
+2.2.3 Procedural and Workflow Control
+    A third class prioritizes procedural fidelity and clinical workflows through discrete agent roles and actions. Bao et al.
+[5] coordinate patient, nurse, and supervisor agents for outpatient triage, while iPDG [66] enforces clinical plausibility
+through manually defined domain rules. These systems achieve procedural coherence but sacrifice conversational
+flexibility and behavioral depth.
+
+2.2.4 Limitations and Gaps
+   Existing patient simulation systems exhibit two critical gaps that constrain trustworthy AI evaluation. First, no existing
+framework integrates medical realism, behavioral variation, and linguistic diversity within a unified architecture. Recent
+systems pair medical grounding with behavioral modeling or behavioral depth with linguistic variation, but this
+fragmentation creates evaluation blind spots. Existing systems cannot systematically test whether agents maintain
+diagnostic accuracy across complex comorbidities, varied health literacy, and adversarial behavior simultaneously. Multi-
+turn failures like context loss and inconsistent safety emerge precisely at these intersections.
+   Second, existing approaches prioritize medical outcomes over systematic risk management aligned with frameworks
+like the NIST AI RMF. They lack explicit risk mapping connecting simulation parameters to risk categories, auditability
+with traceable lineage to source data, and controllable risk probing through systematic variation. This prevents detection
+of consequential failures: agents may recommend different treatments when patients express identical conditions at
+different health literacy levels, or safety mechanisms may fail under adversarial conditions that only systematic variation
+can expose. We address both gaps through a unified framework whose medical, linguistic, and behavioral profiles
+operationalize the NIST AI RMF MAP and MEASURE functions, enabling risk assessment across medical accuracy,
+communication appropriateness, and behavioral robustness.
+3 METHODS
+
+3.1 Overview
+   The framework integrates a patient simulator with an AI Decision Aid to enable systematic evaluation of conversational
+clinical decision-making. The patient simulator produces controlled, profile-driven responses by combining medical,
+linguistic, and behavioral characteristics, while the AI Decision Aid conducts a structured conversational intake to elicit
+clinical history and generate antidepressant recommendations. Figure 1 illustrates this interaction. The remainder of this
+section details the patient simulator design, AI Decision Aid architecture, and evaluation methodology.
+
+
+
+
+            Figure 1: A schematic diagram of the conversation between patient simulator and the AI Decision Aid system.
+
+3.2 Data
+   Both the patient simulator medical profiles and the AI Decision Aid prediction models are derived from the All of Us
+Research Program Registered Tier v8 dataset, a national longitudinal study providing structured EHR data
+including conditions, medications, procedures, and demographics [3].
+   Cohort Selection: We extracted data from All of Us participants with major depressive disorder (SNOMED CT Code
+370143000 and its descendants). The resulting cohort includes 58,446 participants, contributing 466,752 antidepressant
+trials, with 18,471 diagnoses, 2,642 medications, and 5,001 procedures. Outcomes capture responses to 14 antidepressants
+and one category covering all remaining antidepressants (dataset cut-off: October 1, 2023). Antidepressant response was
+defined as taking the antidepressant for at least 10 weeks without switching or augmenting with another antidepressant [2].
+   Data Application: For patient simulator medical profiles, the dataset provides feature distributions, risk-ratio
+calculations for outcome-relevant predictor selection, and demographic distributions for age and gender initialization. The
+simulator was evaluated on the four most common antidepressants: fluoxetine, sertraline, trazodone, and duloxetine [79].
+For the AI Decision Aid, the same data train prediction models that generate treatment recommendations across all 14
+antidepressants. All data use complies with All of Us dissemination policies.
+
+3.3 Patient Simulator Design
+
+3.3.1 Design Rationale and NIST Alignment
+   The patient simulator design is grounded in the NIST AI RMF, which defines four core functions: (1) GOVERN –
+accountability and oversight, (2) MAP – risk identification, (3) MEASURE – risk assessment, and (4) MANAGE – risk
+mitigation [58]. We operationalize MAP and MEASURE through three profile dimensions, each addressing a distinct
+category of risk: medical profiles targeting clinical accuracy, linguistic profiles targeting communication-dependent risks,
+and behavioral profiles targeting interaction-dependent risks.
+   Medical Profile Requirements. Medical profiles provide the clinical foundation for risk assessment, requiring realistic
+and diverse medical contexts to evaluate performance across clinical heterogeneity. Generating such profiles from
+structured EHR data faces interconnected challenges: high-dimensional feature spaces (10⁵-10⁶ concept codes) with sparse
+task-relevant signals, data quality issues (missingness, inconsistent coding), and medically implausible feature
+combinations [32, 53, 57]. Our design adheres to five AI RMF-aligned trustworthiness requirements: (1) Controllability:
+emphasize task-relevant features while maintaining outcome diversity. (2) Coherence: maintain clinical plausibility across
+diagnoses, treatments, and temporal events, including rare but valid scenarios. (3) Variability: capture heterogeneous
+comorbidities and contextual factors to expose brittleness and subgroup bias. (4) Efficiency: balance clinical completeness
+with computational tractability for large-scale evaluation. (5) Transparency: Maintain traceable feature lineage to source
+distributions for targeted risk analysis. Table 1 maps these requirements to data challenges and mitigated risks.
+
+            Table 1. Medical profile generation requirements: NIST alignment, challenges addressed, and risks mitigated.
+
+          Requirement                     Data Challenge                            AI Risk
+          (NIST Functions)
+          Controllability                 High-dimensional feature space with       Spurious associations and overfitting;
+          (MAP, MEASURE)                  sparse task-relevant signal               inflated performance estimates
+          Coherence                       Coding inconsistencies and implausible    Medically contradictory profiles
+          (MAP, MEASURE)                  feature combinations                      masking safety vulnerabilities
+          Variability                     Skewed distributions and                  Subgroup disparities and incomplete
+          (MAP, MEASURE)                  underrepresentation                       risk detection
+          Efficiency                      Excessive record density limiting         Evaluation bottlenecks and reduced
+          (GOVERN, MEASURE)               evaluation scale                          oversight capacity
+          Transparency                    Obscured feature provenance and latent    Limited auditability and hidden bias
+          (GOVERN, MEASURE)               interactions                              propagation
+
+
+   Linguistic and Behavioral Profiles Requirements. Medical profiles establish clinical context but cannot capture
+communication-dependent and interaction-dependent risks, requiring two additional profile dimensions [34].
+   Communication-dependent risks emerge from heterogeneity in patient expression. Agents must maintain safety and
+comprehensibility across health literacy levels, condition-specific patterns, and vernacular variations [12, 40]. Linguistic
+profiles enable controlled assessment grounded in health literacy and psycholinguistic research [55].
+   Interaction-dependent risks emerge when patients manipulate information, test boundaries, or withhold details [77].
+Because evaluation cannot assess safety mechanism robustness without systematic behavioral variation, behavioral profiles
+are grounded in clinical and human-computer interaction research to probe agent resilience across conditions.
+    Implementation. The patient simulator integrates three profiles: medical profiles that model clinical history and risk
+factors using probabilistic generation aligned with EHR data, linguistic profiles that capture variation in health literacy and
+condition-specific expression, and behavioral profiles that represent engagement and interaction patterns. Profiles are
+operationalized through structured LLM prompting with hierarchical indexing for traceability. Simulator-provided markers
+are removed before being passed to the AI Decision Aid to ensure independent extraction. Figure 2 shows an abbreviated
+prompt structure (complete version in Appendix 9.1.1).
+   Patient Simulator Prompt Structure (Abbreviated)
+
+   You are simulating a patient based on three profiles:
+
+   1. Medical Profile (hierarchical indices for traceability):
+      1.1: Age: 34
+      2.1: Generalized Anxiety Disorder
+      3.2: Individual Psychotherapy
+      [... additional diagnoses, medications, procedures ...]
+
+   2. Linguistic Profile:
+      Style: Concrete, informal
+      Tone: Hesitant, conversational
+      [... vocabulary, structure specifications ...]
+
+   3. Behavioral Profile:
+      Adherence: High | Engagement: High | Focus: On-topic | Adversarial: Minimal
+
+   Response Generation:
+      Step 1: Identify relevant facts by index [e.g., 3.2]
+      Step 2: Apply linguistic style transfer
+      Step 3: Construct natural response with traceable references
+
+   Example Output:
+      "relevant_medical_history": ["[3.2] Individual Psychotherapy"]
+      "style_transferred": ["[3.2] talked to someone"]
+      "response": "<\s>talked to someone<\s> [3.2] for my anxiety"
+
+
+  Figure 2. Prompt Structure of Patient Simulator, abbreviated here for clarity. A more complete prompt is presented in Appendix 9.1.
+
+3.3.2 Medical Profiles
+   Phase 1 generates patient profiles that are outcome-relevant, coherent, and diverse across clinical characteristics. Phase
+2 applies probabilistic selection using a binomial distribution derived from All of Us antidepressant response data, ensuring
+the final cohort reflects realistic population-level variability.
+   Phase 1: Medical Profile Generation. Profile generation employs three core design principles [19, 20]: (1) prioritize
+outcome-relevant features, (2) enforce statistical independence among selected features, and (3) inject controlled diversity
+from residual features. These principles are implemented through a four-stage process: relevance filtering, demographic
+initialization, independence screening, and diversity expansion.
+    Stage 1: Top-K Filtering for Outcome Relevance. The algorithm restricts feature candidates to the top K predictors of
+the antidepressant response outcome, 𝑒₀ (K = 500). This relevance filter improves sample efficiency and focuses selection
+on features with demonstrated individual association to the target outcome aligning with the max‑relevance component of
+minimum‑redundancy‑maximum‑relevance (mRMR) feature selection [20].
+   Stage 2: Demographic Seeding. Each patient profile 𝑆 is initialized with age and gender sampled from All of Us
+demographic distributions, grounding profiles in realistic population characteristics.
+   Stage 3: Independence-Screened Selection. Features are added iteratively, with each candidate v screened for statistical
+independence from already-selected features. The risk ratio 𝑅𝑅(𝑠, 𝑣) quantifies association between features s and v with
+respect to antidepressant response:
+                                                               𝑃(𝑟𝑒𝑠𝑝𝑜𝑛𝑠𝑒|𝑠⋂𝑣)
+                                                  𝑅𝑅(𝑠, 𝑣) =
+                                                                𝑃(𝑟𝑒𝑠𝑝𝑜𝑛𝑠𝑒|𝑠)
+where values near 1 indicate independence, values > 1.5 indicate positive association, and values < 0.67 indicate negative
+association. Each candidate must satisfy:
+                                                1
+                                                   < 𝑅𝑅(𝑠, 𝑣) ≤ ℎ𝑖𝑔ℎ, ∀𝑠 ∈ 𝑆
+                                               1.5
+This symmetric band around unity excludes near-deterministic couplings (RR > high) and strong anticorrelations (RR <
+1/1.5), ensuring statistically independent and clinically coherent feature combinations [20]. The upper threshold (high) was
+set to 7.
+   Stage 4: Diversity Expansion. After forming a coherent set of outcome-related features, we add up to a fixed number of
+residual features from outside the Top-K set, retaining only those with a meaningful association with at least one already
+selected feature:
+                                                 𝑅𝑅(𝑠, 𝑢) > 1.5, ∃𝑠 ∈ 𝑆
+   This captures latent contextual variables that enrich patient heterogeneity without compromising coherence, ensuring
+profiles reflect realistic complexity while remaining clinically plausible. This mechanism introduces bounded
+heterogeneity through correlated residual features, enriching diversity while maintaining clinical plausibility [19, 20].
+Figure 3 shows an abbreviated algorithm: complete pseudocode and details are provided in Appendix 9.1.2.
+
+
+   Phase 2: Probabilistic Patient Selection. Phase 2 selects patients whose response probabilities collectively reproduce
+the population-level distribution observed in All of Us. Each Phase 1 patient has a response probability between 0 and 1.
+To ensure realistic population variability, the probability range is divided into seven sigma-bands of a binomial distribution
+𝐵(𝑛, 𝑝), where 𝑛 is the target cohort size and 𝑝 is the population mean response rate. Medical profile sampling is weighted
+to match expected binomial frequencies. For example, with n=100 and p=0.4 (μ=40, σ≈4.9), approximately 64% of patients
+fall within (𝜇 − 𝜎, 𝜇 + 𝜎], 15% in each adjacent band (𝜇 ± 1𝜎 𝑡𝑜 𝜇 ± 2𝜎], and <3% in the tails beyond 𝜇 ± 2𝜎. This
+stratified sampling preserves central tendency and natural variability, while avoiding over- or under-representation of
+extreme responders. Detailed sigma-band allocations appear in Appendix 9.1.2.
+
+
+   AI RMF Alignment: Controllability is achieved through outcome-relevant feature selection with diversity across
+response probability levels. Coherence is ensured through risk-ratio screening, with the average risk ratio capturing internal
+clinical consistency. Variability is assessed via the number of unique concept codes across the profiles. Efficiency is
+quantified by the average number of features per profile, balancing completeness with computational tractability.
+Transparency is maintained through explicit feature lineage across all generation components, enabling auditable profile
+construction.
+                  Algorithm: Medical Profile Generation
+
+                  Input: Target outcome e₀, number of patients N, top-K=500
+
+                  For each patient i = 1 to N:
+
+                        Stage 1: Top-K Filtering for Outcome Relevance
+                        V ← Top-K predictors of antidepressant response e₀
+
+                        Stage 2: Demographic Seeding Initialize
+                        S ← {age, gender} sampled from population distributions
+
+                        Stage 3: Independence-Screened Selection
+                        For each candidate v in V:
+                            If ∀s ∈ S: 1/1.5 < RR(s,v) ≤ high:
+                                Add v to S
+
+                        Stage 4: Diversity Expansion
+                        D ← number of expanded features
+                        R ← residual features (outside top-K)
+                        count ← 0
+                        For candidate u in R while count < D:
+                            If ∃s ∈ S: RR(s,u) > 1.5:
+                                Add u to S
+                                count ← count + 1
+
+                        Compute p ← predicted response probability for profile S
+
+                  Output: N patient profiles with associated response probabilities
+
+            Figure 3. Abbreviated medical profile generation algorithm. Complete algorithm details in Appendix 9.1.2.
+
+3.3.3 Linguistic Profiles
+   Conversational agents must maintain safety and comprehensibility across diverse patient expression styles [10, 67];
+systematic linguistic variation exposes blind spots and failure modes [31, 47]. The simulator implements a dual-axis
+linguistic framework with profiles along two independent dimensions: (1) a health literacy gradient capturing variation in
+comprehension, terminology, and discourse structure [9, 43, 44, 55] and (2) condition-specific communication reflecting
+linguistic patterns characteristic of depression and anxiety disorders derived from Linguistic Inquiry and Word Count
+(LIWC)-based clinical analyses [59]. Health literacy generalizes across clinical tasks as comprehension barriers affect
+patient-agent interaction regardless of medical condition. Condition-specific profiles capture diagnostic patterns (here
+depression and anxiety) adaptable to other conditions. Table 2 specifies the five linguistic profiles.
+                                    Table 2: Linguistic user profiles across multiple dimensions.
+
+Profile                     Key Linguistic Attributes                                               Example Response
+Health Literacy
+  Limited                   Style: Concrete, informal, sometimes vague.                             “Uh, just my morning pill… you
+                            Tone: Hesitant, uncertain, conversational.                              know, the one for my nerves.”
+                            Vocab: Everyday terms, slang, vague quantities.
+                            Structure: Short, fragmented sentences; frequent fillers.
+                            Patterns: Minimal elaboration unless prompted.
+  Functional                Style: Clear, basic descriptions of symptoms or routines.               “I take Prozac every morning. It helps
+                            Tone: Cooperative, open.                                                my mood, but I still have trouble
+                            Vocab: Mix of common and medical terms.                                 sleeping.”
+                            Structure: Simple narratives; occasional causal reasoning.
+                            Patterns: Provides coherent answers; asks clarifying questions.
+  Proficient                Style: Precise, clinical, well-organized.                               “I’m on fluoxetine, 20 milligrams
+                            Tone: Confident, analytical.                                            daily. It’s effective, though I’ve
+                            Vocab: Technical terms; qualifiers such as “likely” or “seems           noticed mild insomnia.”
+                            improved.”
+                            Structure: Multi-clause, logically sequenced sentences.
+                            Patterns: References timelines; anticipates follow-up questions.
+Condition-specific
+ Depression                Style: Brief, muted, sometimes resigned.                                 “Barely sleeping. My head won’t shut
+                           Tone: Flat, pessimistic, self-critical.                                  off.”
+                           Vocab: Negative emotion words; self-focused phrasing.
+                           Structure: Short, often past-tense statements.
+                           Patterns: Withdrawn responses; dismisses reassurance.
+  Illness Anxiety Disorder Style: Symptom-focused and repetitive.                                   “I felt a flutter… what if it’s heart
+                           Tone: Anxious, urgent.                                                   failure even though the test was
+                           Vocab: Symptom terms; “what if” speculation; absolutist wording.         normal?”
+                           Structure: Mix of run-on sentences and abrupt alarms.
+                           Patterns: Reassurance-seeking cycles; future-oriented worry.
+
+
+   AI RMF Alignment: This framework operationalizes Table 1 requirements through systematic, literature-grounded
+variation [9, 43, 44, 55, 59], enabling controllable assessment of communication-dependent risks.
+
+3.3.4 Behavioral Profiles
+   Conversational agents struggle when patients go off-topic, respond vaguely, or withhold information [15, 16].
+Systematic behavioral variation is essential for stress-testing agent robustness and assessing recovery from conversational
+breakdowns [33, 51]. We organized the 13 patient behaviors documented by Simpson et al. [54] into four behavioral
+categories (complete mapping in Appendix 10.1.3), with Structured and Cooperative as an additional fifth category. This
+study operationalizes three profiles: Distracted & Unfocused and Adversarial & Combative to capture challenging
+dynamics, with Structured & Cooperative as baseline. Each profile varies along four dimensions: conversational
+adherence, engagement, topical focus, and adversarial behavior, as detailed in Table 3.
+                                               Table 3: Behavioral user profile summary.
+
+Profile                   Key Attributes                                                         Example Response
+Structured &              Adherence: High                                                        “Yes, I take 20 mg of fluoxetine every
+Cooperative               Engagement: High                                                       morning around 8 AM. I haven’t
+                          Topical Focus: High                                                    missed a dose in the last three
+                          Adversarial / Toxic Behavior: Minimal                                  weeks.”
+Distracted &              Adherence: Low                                                         “I was… wait, which one? Oh right,
+Unfocused                 Engagement: Sporadic                                                   yeah I think? But yesterday I forgot —
+                          Topical Focus: Off-topic                                               also my dog wouldn’t eat.”
+                          Adversarial / Toxic Behavior: Inadvertent derailment of conversation
+Adversarial &             Adherence: Variable                                                    “What kind of dumb question is that?
+Combative                 Engagement: Variable                                                   Maybe if your system worked better, I
+                          Topical Focus: Variable                                                wouldn’t have to answer this again.”
+                          Adversarial / Toxic Behavior: Overtly confrontational or hostile
+
+
+   AI RMF Alignment: Operationalizes Table 1 requirements through empirically grounded behavioral variation [54]
+enabling controlled assessment of interaction-dependent risks including adversarial scenarios with transparent lineage.
+   Together, these three profile dimensions provide comprehensive MAP and MEASURE coverage for conversational
+healthcare AI risk assessment.
+
+3.4 CoT Prompting Strategy
+   We employ Chain-of-thought (CoT) prompting [65] to generate realistic patient responses through a structured process.
+For each question posed by the AI Decision Aid, the prompt directs the model to (1) identify relevant indexed medical
+attributes, (2) apply controlled term-level linguistic transformations, and (3) construct a natural language response with
+explicit references. Behavioral constraints are enforced as rules governing interaction, while linguistic constraints shape
+the form of expression. All outputs use a fixed JSON schema, enabling traceability and systematic evaluation (details in
+Appendix 9.1.1).
+
+3.5 AI Decision Aid
+   The AI Decision Aid is a multi-agent conversational platform for antidepressant selection, serving as the system under
+evaluation in this black-box assessment. The system conducts structured intake through six sequential stages: establishing
+rapport, collecting illness history, gathering antidepressant history, documenting current medications, recording clinical
+procedures, and generating personalized recommendations. Each stage employs LLM-guided dialogue to elicit clinical
+information and a Retrieval-Augmented Generation (RAG) system to normalize medical concepts into an analytical
+reasoning system for estimating antidepressant response. The analytical advice system is based on the Medical Artificial
+General Intelligence Algorithm (MAGI) [Citation removed to preserve anonymity], which estimates dependent Bayesian
+relationships among medical concepts to support clinical reasoning under partial observability. Alternative
+recommendation models (e.g. logistic regression) are compatible. System specifications and code are publicly available2.
+
+
+
+
+   2
+       GitHub link to be provided upon acceptance.
+3.6 Evaluation Framework
+   The evaluation framework examines patient simulator performance across medical, linguistic, and behavioral
+dimensions. Medical profiles are assessed through human and LLM-based annotation applying a three-label schema
+(Accurate, Inaccurate, Unsupported). Linguistic and behavioral profiles are evaluated through human annotation,
+quantitative metrics, and visual clustering to assess profile distinctiveness. This multi-method approach validates both
+simulator compliance with specified characteristics and clinical realism while maintaining interpretability and scalability.
+
+3.6.1 Human Annotation
+   All annotations were performed by two annotators with complementary domain expertise: one with a graduate degree
+in Psychology and one a licensed Nurse Practitioner. Each sample was doubly annotated, with disagreements resolved
+through adjudication.
+
+3.6.2 Medical Profile Evaluation
+   The patient simulator CoT process: (1) identifies relevant medical concepts, (2) rephrases each concept according to
+the linguistic profile, and (3) constructs a natural language response based on linguistic and behavioral characteristics. For
+each conversational turn, annotators assess whether medical concepts identified by the simulator as relevant are accurately
+expressed in the final response. For each conversational turn, the simulator outputs (a) the set of medical concepts identified
+as relevant to the current question, referenced numerically (e.g., [2.3]), and (b) a natural language response with inline
+spans marking where each concept is expressed. These spans serve as annotation units: annotators label each span as
+Accurate or Inaccurate based on whether the underlying medical fact is faithfully expressed. Annotators additionally flag
+any medical content appearing outside tagged spans that does not correspond to the patient's profile as Unsupported,
+capturing hallucinated or fabricated clinical details. Table 4 summarizes the labels. Minor colloquialisms (e.g., "happy
+pills" for "Prozac") are acceptable only if core meaning is preserved. Unsupported concepts appear in the responses without
+corresponding references or indicating spans. This approach evaluates expression fidelity conditioned on correct concept
+retrieval. Concept recall, the proportion of patient profile concepts expressed during the conversation, is computed
+programmatically from the simulator’s traced outputs, with 95% of concepts in the medical profile appearing at least once
+in the generated conversations.
+
+                                Table 4. Labels for evaluating the medical profile in patient simulator
+
+Label           Definition
+Accurate        Medical fact present in the reference medical history and correctly expressed with realistic phrasing. Minor
+                conversational simplifications (e.g., "happy pills" for "Prozac") permitted if core clinical meaning is preserved.
+Inaccurate      Medical fact present in the reference medical history but misrepresented, distorting critical clinical details or using
+                implausible phrasing.
+Unsupported     Medical fact not present in the reference medical history; fabricated, speculative, or unrelated to the provided profile.
+
+
+    Controlled Error Injection for System Validation. The patient simulator expresses nearly all medical concepts
+retrieved by the CoT approach accurately, so annotators could achieve artificially high inter-annotator agreement (IAA)
+by labeling all concepts as Accurate, and the LLM judge validation would lack discriminative power. To enable rigorous
+evaluation, we introduce controlled semantic perturbations by replacing clinical concepts with semantically similar but
+clinically distinct alternatives. For example, "hypertension" might be replaced with "prehypertension" or "diabetes
+mellitus" with "prediabetes," conditions that are semantically related but sufficiently clinically distinct to detect as
+Inaccurate.
+   Perturbations are selected through a two-stage process. First, semantic search over a vector database of SNOMED CT
+and CPT4 concepts identifies the top 20 semantically similar candidates. Second, candidates are randomly shuffled before
+ontology-based filtering removes hierarchical ancestors or descendants and enforces minimum hierarchical distance: the
+first qualifying candidate is selected, ensuring perturbations vary rather than defaulting to the nearest semantic neighbor.
+If no candidate qualifies, the similarity threshold is relaxed or the candidate pool is expanded. The resulting perturbed
+profiles maintain linguistic realism while introducing subtle clinical inaccuracies for evaluating both human annotation
+quality and LLM judge performance.
+
+3.6.3 Linguistic Profile Evaluation
+Linguistic profiles are evaluated through human annotation, where annotators classify each conversation into one of five
+predefined linguistic profiles. Five automated metrics are also used:
+   1. Reading Level: Flesch–Kincaid Grade Level (FKGL) [25] estimates school grade level and is calculated per response
+turn and averaged per conversation.
+   2. Average Response Length: Average words per turn using NLTK’s English tokenizer [36].
+   3. Medical Term Density: Clinical term count via greedy n-gram matching (up to 6-grams) against the study medical
+lexicon (all concept codes present in the database).
+   4. Depression Score: Mean turn-level probability from an XLM-RoBERTa-based depressive symptom classifier [78].
+   5. t-SNE: Projects linguistic features to two dimensions using cosine distance colored by profile. Multiple random
+seeds tested to identify the run with lowest KL divergence.
+
+3.6.4 Behavioral Profile Evaluation
+   Annotators classify each conversation into one of three behavior profiles. Three automated metrics quantify behavioral
+patterns:
+   1. On-topic similarity: Average cosine similarity between each AI Decision Aid turn and the patient simulator
+response.
+   2. Toxicity: Mean turn-level probability from the XLM-RoBERTa-based toxicity classifier [6].
+   3. t-SNE: Analogous to linguistic t-SNE, projecting behavioral features and color-coding by behavioral profile.
+
+3.6.5 LLM Judge Evaluation
+   LLM-based judges have demonstrated strong performance in healthcare evaluation tasks [7, 45, 75]. We employ a
+separate LLM, Claude Opus 4.6, as an automated judge, applying the same annotation schema across medical, linguistic,
+and behavioral dimensions. The judge prompt was developed on 45 held-out conversations without human annotations.
+Judge alignment was then validated against human annotations on the full evaluation set, with results in Section 4.
+
+3.7 Experimental Paradigm
+   Experiments used 60 medical profiles evaluated across four antidepressants (Sertraline 17%, Trazodone 15%,
+Fluoxetine 13%, and Duloxetine 11%) selected to reflect common clinical practice [79]. For each antidepressant, we
+simulated a pool of patient profiles and down-sampled to 15 profiles per drug by stratifying across response probability
+bands. With ℎ𝑖𝑔ℎ = 7 and 3-5 residual features per medical profile, generation yielded an average of 8-9 clinical features
+per profile, consistent with reports that outpatient visits address 5.4 -7.1 clinical items per encounter [1]. This feature
+density reflects plausible patient disclosure and contrasts with All of Us records (approximately 98.88 features per patient).
+  The design comprises three evaluation settings: (1) linguistic variation – five linguistic profiles with fixed Structured
+& Cooperative behavior (300 conversations), (2) behavioral variation – three behavioral profiles with fixed Functional
+Health Literacy (180 conversations), and (3) intersectional analysis – combined linguistic-behavioral variation across a
+representative subset (150 conversations). After accounting for shared profiles across settings, the design yields 500 unique
+simulated conversations. The patient simulator and AI Decision Aid are powered by GPT-4.1, while Claude Opus 4.6 is
+used as the LLM-based judge. All embedding-based analyses, including linguistic and behavioral t-SNE projections and
+on-topic similarity, use OpenAI's text-embedding-3-small model, which also supports RAG-based concept normalization
+in the AI Decision Aid. The conversational AI Decision Aid and patient simulator are implemented as separate agents within
+LangGraph3.
+
+
+4 RESULTS
+
+4.1 Simulated Medical Profile Validation
+   Across 60 medical profiles, the framework demonstrates systematic risk characterization aligned with the NIST AI
+RMF MAP and MEASURE functions. Controllability was achieved by emphasizing outcome-related features comprising
+37.16% of features per profile, while maintaining outcome diversity across response probability bands for each
+antidepressant. Coherence was reflected in an average risk ratio of 2.64 among outcome-related features, consistent with
+the risk-ratio gating. Variability was maintained through concept diversity, with profiles containing 292 unique concept
+codes across the 60 profiles. Efficiency was demonstrated by an average of 8.08 features per profile, substantially lower
+than the 98.88 features in a typical All of Us record. Transparency was maintained by explicitly preserving feature
+provenance and distributional fidelity across all generation components: demographic attributes followed All of Us
+distributions (ages 13-19: 0.14%, 20-40: 25.32%, 41-64: 41.46%, 65-79: 27.95%, 80-89: 5.13%; gender: male: 37.33%,
+female: 62.67% ); outcome relevance was enforced using the Top-K set; residual features were drawn from the non-Top-
+K pool; and outcome probabilities matched antidepressant-specific binomial distributions derived from All of Us:
+fluoxetine (0.28-0.57, mean 0.41), sertraline (0.30-0.59, mean 0.44), duloxetine (0.28-0.57, mean 0.43), and trazodone
+(0.16-0.42, mean 0.29).
+
+4.2 Medical Profile Validation
+Medical profile fidelity was assessed through 1,786 simulator-generated medical concepts with annotated spans across 100
+conversations, including 292 perturbed concepts. Table 5 shows IAA between human annotators and the LLM judge.
+Across all concepts, human IAA was high (0.73 κ, 0.93 F1). Agreement decreased for perturbed concepts (0.30 κ, 0.76
+F1), reflecting the difficulty of subtle semantic substitutions. Human-LLM judge agreement followed the same pattern:
+0.78 κ, 0.93 F1 overall; 0.24 κ, 0.77 F1 on perturbed concepts. Annotators identified 109 unique Unsupported cases,
+predominantly incidental medication mentions (e.g., Tylenol, ibuprofen, vitamins) and minor symptom references (e.g.,
+headache, neck pain) not present in the medical profiles (IAA of 0.75 F1). The LLM judge identified 76 Unsupported cases
+of the same type (0.58 F1 against adjudicated human annotations). Individual annotator-LLM agreement (0.70-0.71 κ
+across all 1,786 concepts) did not differ significantly from human-human agreement by paired bootstrap (p = 0.21, p =
+
+
+   3
+       https://github.com/langchain-ai
+0.32), nor did LLM agreement differ between the two annotators (p = 0.63). LLM-human agreement was comparable to
+human-human agreement.
+
+                                 Table 5. Agreement metrics for unperturbed and perturbed concepts
+
+      Evaluation     Concepts      n             Cohen’s κ        Accurate     Inaccurate      Unsupported         Overall
+                     Set                                          F1           F1              F1                  F1
+     Human-          Perturbed     292           0.30             0.45         0.85            -                   0.76
+     Human           Full          1786          0.73             0.96         0.76            0.75                0.93
+                     Perturbed     292           0.24             0.37         0.87                                0.77
+     Human-LLM
+                     Full          1786          0.78             0.97         0.81            0.58                0.93
+
+
+   LLM Judge Evaluation of Medical Profiles. Across 8,210 expressed concepts, 96.61% were labeled Accurate, 1.07%
+Inaccurate, and 2.31% Unsupported. Table 6 shows medical profile fidelity across linguistic profiles under fixed
+Structured & Cooperative behavior. The simulator maintained high accuracy (96-99%) and low error rates across all
+profiles. Within this range, concept expression frequency increases across the literacy gradient, peaking with Proficient.
+Error types diverge modestly by profile: Proficient shows the highest Unsupported rate (1.0%) due to greater medical term
+density, while Illness Anxiety Disorder produces the highest inaccuracy rate (2.5%) due to its repetitive tone. The
+Depression profile produces the fewest expressed concepts with minimal errors.
+
+      Table 6: LLM Judge Evaluation of Medical profile across the linguistic profiles under Structured & Cooperative behavior
+     Profile Name \ Evaluation Metrics                   Total        Accurate          Inaccurate          Unsupported
+                         Limited                         863            98.4%               1.3%            0.3%
+     Health Literacy     Functional                      952            98.2%               1.4%            0.4%
+                         Proficient                      981            98.7%               0.3%            1.0%
+                         Depression                      842            98.1%               1.1%            0.8%
+     Condition-specific
+                         Illness Anxiety Disorder        1,192          96.1%               2.5%            1.3%
+     TOTAL                                               4,830          97.8%               1.4%            0.8%
+
+
+  Table 7 reveals that behavioral variation drives reliability shifts under Functional Health Literacy profile. Structured
+& Cooperative ensures stability, while Distracted & Unfocused behavior introduces frequent Unsupported outputs.
+Adversarial & Combative minimizes errors, likely because confrontational responses tend to be terse and narrowly
+responsive, limiting opportunities for Unsupported or Inaccurate content.
+
+   Table 7: LLM Judge Evaluation of Medical Profile across the behavioral profiles under a Functional Health Literacy linguistics
+               Behavioral Profile                Total            Accurate        Inaccurate         Unsupported
+               Structured & Cooperative          952              98.2%           1.4%               0.4%
+               Distracted & Unfocused            988              89.5%           0.5%               10.0%
+               Adversarial & Combative           1,095            99.3%           0.0%               0.7%
+               TOTAL                             3,035            95.7%           0.6%               3.7%
+   Figure 4 shows that the intersection of linguistic and behavioral profiles shapes the type of error rather than overall
+accuracy, which remains high across all combinations. Distracted & Unfocused behavior produces elevated Unsupported
+rates concentrated in health literacy profiles, particularly Limited and Functional, where conversational drift introduces
+content outside the medical profile. Adversarial & Combative behavior drives inaccuracies, concentrated in Proficient and
+Illness Anxiety profiles where confrontational responses distort rather than fabricate clinical content. Structured &
+Cooperative behavior yields the lowest error rates overall, though Illness Anxiety produces Unsupported content even
+under cooperative conditions.
+                           Figure 4: Results from the intersection of Linguistic and Behavioral Profiles
+
+4.3 Linguistic Profile Validation
+  Human annotators showed moderate agreement on linguistic profile classification (0.61 κ, 0.70 micro F1). Human-
+LLM agreement was comparable (0.63 κ, 0.70 micro F1) in linguistic profile classification. When adjudicated labels were
+compared to the simulator’s predefined profiles, classification reached 0.87 micro F1, indicating consistent expression of
+intended linguistic profiles. The LLM judge achieved 0.95 micro F1 across 500 conversations.
+  Table 8 shows linguistic variation under fixed Structured & Cooperative behavior. Reading level increases
+monotonically across the literacy gradient from Limited (3.59 FKGL) to Proficient (11.90 FKGL). Response length and
+medical term density increase across the health literacy gradient (Limited: 34.34 words, 4.33 medical terms; Proficient:
+38.91 words, 11.68 medical terms). The Depression profile produces the shortest responses (21.48 words) with a
+comparable depression score (0.20), whereas Illness Anxiety Disorder produces the longest responses (65.05 words) with
+the highest medical term density (14.27) and a similar depression score (0.25), reflecting greater health-related elaboration.
+                     Table 8 Evaluation of linguistic profiles under a Structured & Cooperative behavioral condition.
+
+Profile Name \ Evaluation Metrics                    Reading Level      Response Length        Medical Term             Depression Score
+                                                     (FKGL)                                    Density
+Health Literacy         Limited                      3.59               34.34                  4.33                     0.01
+                        Functional                   7.63               28.70                  9.83                     0.00
+                        Proficient                   11.90              38.91                  11.68                    0.00
+Condition-specific      Depression                   4.49               21.48                  6.17                     0.20
+                        Illness Anxiety Disorder     8.11               65.05                  14.27                    0.25
+
+
+   Figure 5 shows t-SNE clustering where linguistic profiles form distinct clusters. Overlap between Functional and
+Proficient Health Literacy profiles reflect their shared characteristics. The Depression profile overlaps partially with lower
+literacy profiles, while Illness Anxiety Disorder forms a distinct cluster. Together, agreement scores, quantitative metrics,
+and embedding separation confirm that the simulator produces graded, distinct linguistic profiles.
+
+
+
+
+ Figure 5: t-SNE visualization of response embeddings for linguistic profiles under a Structured & Cooperative behavioral condition.
+
+4.4 Behavioral Profile Validation
+   Human annotators showed high agreement on behavioral profile classification (0.93 κ, 0.96 micro F1). Human-LLM
+agreement was identical (0.93 κ, 0.96 micro F1). Classification against predefined profiles reached 0.98 micro F1. Table 9
+shows behavioral variation under fixed Functional Health Literacy. Structured & Cooperative achieves baseline on-topic
+similarity (0.51) and the lowest toxicity (0.0003). Distracted & Unfocused shows slightly reduced on-topic similarity
+(0.50), consistent with conversational drift, while maintaining low toxicity (0.0035). Adversarial & Combative exhibits
+substantially higher toxicity (0.0564) while retaining the highest topical relevance (0.52).
+                 Table 9. Evaluation of behavioral profiles under a Functional Health Literacy linguistic condition.
+
+ Profile                                    On-topic Similarity                          Toxicity
+ Structured & Cooperative                   0.51                                         0.0003
+ Distracted & Unfocused                     0.50                                         0.0035
+ Adversarial & Combative                    0.52                                         0.0564
+
+
+   Figure 6 shows t-SNE clustering with clear separation among behavioral profiles. Agreement scores, quantitative
+metrics, and embedding separation confirm distinct behavioral profiles under fixed linguistic conditions.
+
+
+
+
+ Figure 6: t-SNE visualization of response embeddings showing clear separation among behavioral profiles under a fixed Functional
+                                                   Health Literacy condition.
+
+4.5 Profile Interactions
+   Figure 7 presents intersectional evaluation across linguistic and behavioral profile combinations. Key interaction patterns
+emerge: Distracted & Unfocused producing the longest responses across all linguistic profiles (61-82 words vs. 21-66 for
+Structured & Cooperative). Depression profiles consistently produce the shortest responses across behaviors (21–32
+words) while maintaining elevated depression scores (0.18–0.25). Toxicity shows the strongest behavioral dominance,
+with Adversarial & Combative profiles exhibiting elevated toxicity (0.03-0.11) regardless of linguistic profile. Reading
+level and depression scores remain largely determined by linguistic profiles, with minimal behavioral modulation. On-
+topic similarity shows modest behavioral effects, with Structured & Cooperative achieving slightly higher alignment than
+Distracted & Unfocused. These patterns demonstrate that the simulator maintains profile independence where intended
+(linguistic features preserved across behaviors) while capturing realistic interactions (behavioral effects on engagement
+and tone).
+                                  Figure 7. Intersection of Linguistic and Behavioral Profiles.
+
+4.6 AI Decision Aid Performance: Risk Measurement Across Patient Variation
+   This section evaluates AI Decision Aid performance across 500 simulated conversations.
+   Concept Retrieval Coverage. Table 10 shows AI Decision Aid recall in identifying simulator-generated reference
+concepts. Overall recall reached 93%, indicating that approximately 7% of concepts were not identified. Diagnoses
+achieved the highest recall (94%), while medications were the lowest (84%). The system introduced 151 medical history
+concepts not in the predefined medical profiles, primarily medications (84) and procedures (57), reflecting conversational
+elaboration. These patterns reveal strong baseline coverage with medication retrieval as a relative vulnerability.
+
+                        Table 10: AI Decision Aid Recall Using Simulator-Generated Reference Concepts
+
+                  Category        n                 Recall            Concepts Introduced Outside Profile
+                  Diagnosis       2,077             94.3%             10
+                  Medication      173               84.4%             84
+                  Procedure       569               91.0%             57
+                  Overall         2,819             93.0%             151
+   Retrieval Accuracy and Health Literacy Effects. Table 11 evaluates retrieval performance for concepts identified by
+the AI Decision Aid. Performance is reported over the full set of simulator-generated reference concepts (n = 2,819), with
+unidentified concepts contributing to overall outcomes. Overall Rank-1 accuracy was 65.9%; however, 80.2% of concepts
+appeared within the top 20 candidates, indicating that retrieval failures are primarily due to ranking imprecision rather than
+missing semantic coverage. Retrieval accuracy increases with health literacy level. Rank-1 accuracy ranges from 47.6%
+(Limited) to 81.9% (Proficient). Condition-specific profiles fall between: Depression at 62.0% and Illness Anxiety Disorder
+at 63.7%. This gradient reflects the decision aid’s reliance on precise terminology and structured expression for accurate
+retrieval. Vague or affect-heavy language reduces ranking accuracy.
+
+          Table 11: AI Decision Aid Retrieval Performance for Identified Concepts (Reported over All Reference Concepts)
+      Linguistic                                                                                 Not           Mean Rank
+                                                      n          Rank-1         Top-20
+      Profile                                                                                 Retrieved       (non-Rank-1)
+                    Limited                          460         47.6%          71.5%          12.0%              14.5
+      Health
+                    Functional                      1023         69.6%          83.1%           8.8%               8.5
+      Literacy
+                    Proficient                       453         81.9%          85.2%          10.2%               9.2
+      Condition-    Depression                       440         62.0%          79.5%           9.8%               9.6
+      specific      Illness Anxiety Disorder         443         63.7%          77.9%           9.9%              13.0
+      Overall                                       2,819        65.9%          80.2%           9.9%              11.2
+
+
+   Figure 8 shows retrieval risk across profile intersections. Patients with Limited Health Literacy or Depression use
+colloquial, fragmented, or affect-heavy language that misaligns with the system’s canonical concept vocabulary. Because
+Top-20 retrieval does not fully close this gap, the system introduces a structural bias: retrieval is reliable for patients who
+use precise medical terminology but degrades for populations expressing equivalent clinical content through less structured
+language.
+             Figure 8: Rank-1 and Rank-20 accuracy for linguistic profiles, behavioral profiles, and their intersections.
+
+   Downstream Risk to Antidepressant Recommendation. Figure 9 reports weighted F1 scores for antidepressant
+recommendation across linguistic and behavioral profiles. Recommendations are produced by MAGI over 15
+antidepressants plus a No Recommendation category (probability < 0.1), making downstream performance sensitive to
+information loss introduced during intake. Performance improves with higher health literacy, with Proficient achieving the
+highest performance (0.73 F1 under Structured & Cooperative), while Limited shows consistently lower performance (0.48
+F1). Behavioral profiles further modulate this risk: Structured & Cooperative yields stabler outcomes, while Distracted &
+Unfocused and Adversarial & Combative conditions are each associated with performance shifts that vary by linguistic
+profile.
+  Figure 9: F1 Scores for antidepressant recommendation before and after AI Decision Aid processing across linguistic and behavioral
+                                                       profile combinations.
+
+
+5 DISCUSSION
+   We developed a patient simulator integrating medical, linguistic, and behavioral profiles to operationalize the NIST AI
+RMF for evaluating conversational healthcare AI. Across 500 simulated conversations, the framework produced coherent,
+distinguishable, and controllable simulations that exposed measurable performance variability in the target AI Decision
+Aid. Validation combined independent expert annotation, automated metrics, and an LLM judge.
+
+5.1 Medical Profile Generation
+   The MAGI algorithm generates clinically coherent profiles through risk-ratio gating and independent screening rather
+than generative modeling. By prioritizing interpretability over distributional fidelity, profiles possess explicit feature
+lineage traceable to source EHR data. This advantage over black-box generative methods is practical for risk assessment,
+where auditors must trace feature origins. Evaluation confirmed high fidelity to medical profiles. To validate both annotator
+and LLM judge performance, we used controlled error injection. Semantically similar but clinically distinct perturbations
+(e.g., hypertension → pre-hypertension) tested sensitivity to subtle clinical differences. Lower annotator agreement on
+perturbed concepts (0.76 F1) compared to the full concept set (0.93 F1) reflects the intended difficulty, approximating real-
+world concept ambiguity.
+
+5.2 Linguistic and Behavioral Profile Effectiveness
+   The simulator produced measurably distinct profiles across both linguistic and behavioral dimensions. Behavioral
+profiles achieved high annotator agreement (0.93 κ), while linguistic profiles achieved moderate agreement (0.61 κ).
+Behavioral profiles produced categorically different conversational dynamics, while linguistic profiles yielded a
+continuous gradient across health literacy levels. Functional and Proficient profiles overlap because they are genuinely
+similar along this continuum, not because of poor specification.
+   Cross-dimensional analysis validated the compositional design combining linguistics and behaviors. Linguistic features
+(reading level, depression scores) remained stable across behavioral conditions, and behavioral features (toxicity, response
+length) remained stable across linguistic conditions. Two interaction effects emerged: Distracted & Unfocused behavior
+consistently increased response length, and Adversarial & Combative behavior increased toxicity regardless of linguistic
+profile.
+5.3 Health Literacy as Risk Factor for Clinical AI
+   The patient simulator revealed a monotonic degradation in AI Decision Aid performance across the health literacy
+gradient. Rank-1 concept retrieval ranged from 47.6% (Limited) to 69.6% (Functional) to 81.9% (Proficient). This pattern
+persisted in downstream antidepressant recommendation, exposing a concrete equity risk. The gradient reflects the
+system’s reliance on precise terminology. When a patient says “my morning pill for my nerves” rather than “20 mg of
+fluoxetine for generalized anxiety disorder,” the retrieval system must resolve a larger semantic distance. This implies the
+MANAGE function of the AI RMF requires interventions, such as clarification prompting, terminology normalization, or
+multi-pass retrieval to maintain equitable performance. Condition-specific profiles showed intermediate retrieval
+performance (Depression 62.0%, Illness Anxiety Disorder 63.7%), suggesting affective expression also degrades
+performance, though less severely than low health literacy.
+
+5.4 LLM judge Viability
+   The LLM judge aligned strongly with human annotators overall (0.93 F1) but showed lower agreement on perturbed
+concepts (0.77 F1), mirroring divergence among human annotators. The LLM judge was able to detect Unsupported
+content related to incidental medications and minor symptoms. These results support deploying the LLM judge for large-
+scale screening, with human review reserved for edge cases.
+
+5.5 Limitations
+   We have not validated simulated conversations against real patient interactions. While profiles are grounded in clinical
+data and literature, ecological validity remains untested and will be evaluated in a planned real-world trial. Second, we
+evaluated a single clinical task (intake for depression management); health literacy effects may manifest differently in
+other clinical domains and conditions. Third, the AI Decision Aid evaluated only four antidepressants, though many
+additional antidepressants are available in clinical practice. Fourth, medical profiles relied exclusively on structured EHR
+data, excluding unstructured narratives that often contain nuanced clinical context. Finally, the independence screening
+criterion may exclude valid coupled comorbidities (e.g., diabetes and diabetic neuropathy), potentially underrepresenting
+patients with strongly correlated conditions.
+
+
+6 CONCLUSION
+   This work presents a patient simulator integrating medical, linguistic, and behavioral profiles for systematic evaluation
+of conversational healthcare AI within the NIST AI RMF. The simulator produced 500 coherent, controllable, and
+distinguishable simulations validated by human annotation and an LLM-based judge. Results revealed a monotonic
+degradation in both concept retrieval and downstream recommendation accuracy across health literacy levels. Rank-1
+retrieval ranged from 47.6% (Limited) to 81.9% (Proficient), identifying health literacy as a concrete equity risk for AI-
+driven clinical intake where systems relying on precise terminology degrade for patients expressing equivalent clinical
+content through less structured language. The framework also contributes reusable infrastructure, including the MAGI
+algorithm for auditable medical profile generation, a controlled perturbation methodology for annotation validation, and
+an LLM judge achieving human-level agreement, that generalizes beyond antidepressant selection. These findings point
+directly to MANAGE-function interventions, including clarification prompting, terminology normalization, and adaptive
+retrieval, to be validated through the same simulation framework. All code, source data, and conversation logs are publicly
+available to facilitate reuse across clinical evaluation settings4.
+
+
+7 ACKNOWLEDGMENTS
+      Research reported in this article was funded through a Patient-Centered Outcomes Research Institute (PCORI)
+Award (ME-2024C1-36732). The views in this article are solely the responsibility of the authors and do not necessarily
+represent the views of the PCORI, its Board of Governors or Methodology Committee.
+    The study used data from the All of Us Research Program’s Registered Tier Dataset v8, available to all authorized
+users on the Researcher Workbench. We gratefully acknowledge All of Us participants for their contributions, without
+whom this research would not have been possible. We also thank the National Institutes of Health’s All of Us Research
+Program for making available the participant data examined in this study.
+   IRB review: This project was examined by George Mason University’s Institutional Review Board (study 2154028-1
+for work on All-of-Us database and study 00000437 for evaluation of text of the advice through annotation) was considered
+“not research” in the context of the definition of research on human subjects by the United States Department of Health
+and Human Services.
+
+
+8 HISTORY DATES
+
+REFERENCES
+[1] Elmer D. Abbo, Qi Zhang, Martin Zelder, and Elbert S. Huang. 2008. The increasing number of clinical items
+    addressed during the time of adult primary care visits. J. Gen. Intern. Med. 23, 12 (December 2008), 2058–2065.
+    https://doi.org/10.1007/s11606-008-0805-8
+[2] Farrokh Alemi, Mai Aljuaid, Naren Durbha, Melanie Yousefi, Hua Min, Louisa G. Sylvia, and Andrew A.
+    Nierenberg. 2021. A surrogate measure for patient reported symptom remission in administrative data. BMC
+    Psychiatry 21, (March 2021), 121. https://doi.org/10.1186/s12888-021-03133-1
+[3] All of Us Research Program Investigators, Joshua C. Denny, Joni L. Rutter, David B. Goldstein, Anthony Philippakis,
+    Jordan W. Smoller, Gwynne Jenkins, and Eric Dishman. 2019. The “All of Us” Research Program. N. Engl. J. Med.
+    381, 7 (August 2019), 668–676. https://doi.org/10.1056/NEJMsr1809937
+[4] Krisztian Balog and ChengXiang Zhai. 2023. User Simulation for Evaluating Information Access Systems. In
+    Proceedings of the Annual International ACM SIGIR Conference on Research and Development in Information
+    Retrieval in the Asia Pacific Region (SIGIR-AP ’23), November 26, 2023. Association for Computing Machinery,
+    New York, NY, USA, 302–305. https://doi.org/10.1145/3624918.3629549
+[5] Zhijie Bao, Qingyun Liu, Xuanjing Huang, and Zhongyu Wei. 2025. SFMSS: Service Flow aware Medical Scenario
+    Simulation for Conversational Data Generation. In Findings of the Association for Computational Linguistics:
+    NAACL 2025, April 2025. Association for Computational Linguistics, Albuquerque, New Mexico, 4586–4604.
+    https://doi.org/10.18653/v1/2025.findings-naacl.259
+[6] Janek Bevendorff, Xavier Bonet Casals, Berta Chulvi, Daryna Dementieva, Ashraf Elnagar, Dayne Freitag, Maik
+    Fröbe, Damir Korencic, Maximilian Mayerl, Animesh Mukherjee, Alexander Panchenko, Martin Potthast, Francisco
+    Rangel, Paolo Rosso, Alisa Smirnova, Efstathios Stamatatos, Benno Stein, Mariona Taulé, Dmitry Ustalov, Matti
+    Wiegmann, and Eva Zangerle. 2024. Overview of PAN 2024: Multi-author Writing Style Analysis, Multilingual Text
+    Detoxification, Oppositional Thinking Analysis, and Generative AI Authorship Verification - Extended Abstract. In
+    Advances in Information Retrieval - 46th European Conference on Information Retrieval, ECIR 2024, Glasgow, UK,
+    March 24-28, 2024, Proceedings, Part VI (Lecture Notes in Computer Science), 2024. Springer, 3–10.
+    https://doi.org/10.1007/978-3-031-56072-9_1
+
+
+
+   4
+       Link to be provided upon acceptance.
+[7] Savita Bhat and Vasudeva Varma. 2023. Large Language Models As Annotators: A Preliminary Evaluation For
+     Annotating Low-Resource Language Content. In Proceedings of the 4th Workshop on Evaluation and Comparison
+     of NLP Systems, November 2023. Association for Computational Linguistics, Bali, Indonesia, 100–107.
+     https://doi.org/10.18653/v1/2023.eval4nlp-1.8
+[8] Anna Bodonhelyi, Christian Stegemann-Philipps, Alessandra Sonanini, Lea Herschbach, Marton Szep, Anne
+     Herrmann-Werner, Teresa Festl-Wietek, Enkelejda Kasneci, and Friederike Holderried. 2025. Modeling Challenging
+     Patient Interactions: LLMs for Medical Communication Training. ArXiv E-Prints (March 2025), arXiv:2503.22250.
+     https://doi.org/10.48550/arXiv.2503.22250
+[9] CDC. 2024. National Action Plan to Improve Health Literacy. Health Literacy. Retrieved November 4, 2025 from
+     https://www.cdc.gov/health-literacy/php/develop-plan/national-action-plan.html
+[10] Kevin E. Cevasco, Rachel E. Morrison Brown, Rediet Woldeselassie, and Seth Kaplan. 2024. Patient Engagement
+     with Conversational Agents in Health Applications 2016–2022: A Systematic Review and Meta-Analysis. J. Med.
+     Syst. 48, 1 (2024), 40. https://doi.org/10.1007/s10916-024-02059-x
+[11] Xingran Chen, Zhenke Wu, Xu Shi, Hyunghoon Cho, and Bhramar Mukherjee. 2025. Generating synthetic electronic
+     health record data: a methodological scoping review with benchmarking on phenotype data and open-source software.
+     J. Am. Med. Inform. Assoc. 32, 7 (July 2025), 1227–1240. https://doi.org/10.1093/jamia/ocaf082
+[12] Young-Min Cho, Sunny Rai, Lyle Ungar, João Sedoc, and Sharath Chandra Guntuku. 2023. An Integrative Survey
+     on Mental Health Conversational Agents to Bridge Computer Science and Medical Perspectives. Proc. Conf. Empir.
+     Methods Nat. Lang. Process. Conf. Empir. Methods Nat. Lang. Process. 2023, (December 2023), 11346–11369.
+     https://doi.org/10.18653/v1/2023.emnlp-main.698
+[13] David A Cook, Joshua Overgaard, V Shane Pankratz, Guilherme Del Fiol, and Chris A Aakre. 2025. Virtual Patients
+     Using Large Language Models: Scalable, Contextualized Simulation of Clinician-Patient Dialogue With Feedback.
+     J. Med. Internet Res. 27, (April 2025), e68486. https://doi.org/10.2196/68486
+[14] Jessamyn Dahmen and Diane Cook. 2019. SynSys: A Synthetic Data Generation System for Healthcare Applications.
+     Sensors 19, 5 (January 2019), 1181. https://doi.org/10.3390/s19051181
+[15] David DeVault, Ron Artstein, Grace Benn, Teresa Dey, Ed Fast, Alesia Gainer, Kallirroi Georgila, Jon Gratch, Arno
+     Hartholt, Margaux Lhommet, Gale Lucas, Stacy Marsella, Fabrizio Morbini, Angela Nazarian, Stefan Scherer, Giota
+     Stratou, Apar Suri, David Traum, Rachel Wood, Yuyu Xu, Albert Rizzo, and Louis-Philippe Morency. 2014.
+     SimSensei kiosk: a virtual human interviewer for healthcare decision support. In Proceedings of the 2014
+     international conference on Autonomous agents and multi-agent systems (AAMAS ’14), May 05, 2014. International
+     Foundation for Autonomous Agents and Multiagent Systems, Richland, SC, 1061–1068. Retrieved March 18, 2026
+     from https://dl.acm.org/doi/10.5555/2615731.2617415
+[16] Kathleen Kara Fitzpatrick, Alison Darcy, and Molly Vierhile. 2017. Delivering Cognitive Behavior Therapy to Young
+     Adults With Symptoms of Depression and Anxiety Using a Fully Automated Conversational Agent (Woebot): A
+     Randomized Controlled Trial. JMIR Ment. Health 4, 2 (June 2017), e7785. https://doi.org/10.2196/mental.7785
+[17] Chen Gao, Xiaochong Lan, Nian Li, Yuan Yuan, Jingtao Ding, Zhilun Zhou, Fengli Xu, and Yong Li. 2024. Large
+     language models empowered agent-based modeling and simulation: a survey and perspectives. Humanit. Soc. Sci.
+     Commun. 11, 1 (September 2024), 1259. https://doi.org/10.1057/s41599-024-03611-3
+[18] Shengyue Guan, Haoyi Xiong, Jindong Wang, Jiang Bian, Bin Zhu, and Jian-guang Lou. 2025. Evaluating LLM-
+     based Agents for Multi-Turn Conversations: A Survey. https://doi.org/10.48550/arXiv.2503.22458
+[19] Isabelle Guyon and André Elisseeff. 2003. An introduction to variable and feature selection. J Mach Learn Res 3,
+     null (March 2003), 1157–1182.
+[20] Hanchuan Peng, Fuhui Long, and C. Ding. 2005. Feature selection based on mutual information criteria of max-
+     dependency, max-relevance, and min-redundancy. IEEE Trans. Pattern Anal. Mach. Intell. 27, 8 (August 2005),
+     1226–1238. https://doi.org/10.1109/TPAMI.2005.159
+[21] Friederike Holderried, Christian Stegemann-Philipps, Anne Herrmann-Werner, Teresa Festl-Wietek, Martin
+     Holderried, Carsten Eickhoff, and Moritz Mahling. 2024. A Language Model–Powered Simulated Patient With
+     Automated Feedback for History Taking: Prospective Study. JMIR Med. Educ. 10, (August 2024), e59213.
+     https://doi.org/10.2196/59213
+[22] Yining Hua, Winna Xia, David Bates, George Luke Hartstein, Hyungjin Tom Kim, Michael Li, Benjamin W. Nelson,
+     Charles Stromeyer Iv, Darlene King, Jina Suh, Li Zhou, and John Torous. 2025. Standardizing and Scaffolding Health
+     Care AI-Chatbot Evaluation: Systematic Review. JMIR AI 4, 1 (November 2025), e69006.
+     https://doi.org/10.2196/69006
+[23] Institute of Medicine (US) Committee on Health Literacy. 2004. Health Literacy: A Prescription to End Confusion.
+     National      Academies     Press    (US),     Washington      (DC).     Retrieved February 8, 2026 from
+     http://www.ncbi.nlm.nih.gov/books/NBK216032/
+[24] Mark Kalinich, James Luccarelli, Frank Moss, and John Torous. 2025. Leveraging simulation to provide a practical
+     framework for assessing the novel scope of risk of LLMs in healthcare. 2025.11.10.25339903.
+     https://doi.org/10.1101/2025.11.10.25339903
+[25] J. P. Kincaid, Jr Fishburne, Richard L. Rogers, and Brad S. Chissom. 1975. Derivation of New Readability Formulas
+     (Automated Readability Index, Fog Count and Flesch Reading Ease Formula) for Navy Enlisted Personnel. (February
+     1975). Retrieved February 10, 2026 from https://apps.dtic.mil/sti/html/tr/ADA006655/
+[26] Abukari Kwame and Pammla M. Petrucka. 2021. A literature-based study of patient-centered care and
+     communication in nurse-patient interactions: barriers, facilitators, and the way forward. BMC Nurs. 20, (September
+     2021), 158. https://doi.org/10.1186/s12912-021-00684-2
+[27] Wai-Chung Kwan, Xingshan Zeng, Yuxin Jiang, Yufei Wang, Liangyou Li, Lifeng Shang, Xin Jiang, Qun Liu, and
+     Kam-Fai Wong. 2024. MT-Eval: A Multi-Turn Capabilities Evaluation Benchmark for Large Language Models. In
+     Proceedings of the 2024 Conference on Empirical Methods in Natural Language Processing, 2024. Association for
+     Computational Linguistics, Miami, Florida, USA, 20153–20177. https://doi.org/10.18653/v1/2024.emnlp-main.1124
+[28] Daeun Kyung, Hyunseung Chung, Seongsu Bae, Jiho Kim, Jae Ho Sohn, Taerim Kim, Soo Kyung Kim, and Edward
+     Choi. 2025. PatientSim: A Persona-Driven Simulator for Realistic Doctor-Patient Interactions.
+     https://doi.org/10.48550/arXiv.2505.17818
+[29] Sahiti Labhishetty. 2023. Models and evaluation of user simulation in information retrieval. Thesis. University of
+     Illinois at Urbana-Champaign. Retrieved November 29, 2025 from https://hdl.handle.net/2142/120103
+[30] Liliana Laranjo, Adam G Dunn, Huong Ly Tong, Ahmet Baki Kocaballi, Jessica Chen, Rabia Bashir, Didi Surian,
+     Blanca Gallego, Farah Magrabi, Annie Y S Lau, and Enrico Coiera. 2018. Conversational agents in healthcare: a
+     systematic review. J. Am. Med. Inform. Assoc. JAMIA 25, 9 (July 2018), 1248–1258.
+     https://doi.org/10.1093/jamia/ocy072
+[31] Seanie Lee, Minsu Kim, Lynn Cherif, David Dobre, Juho Lee, Sung Ju Hwang, Kenji Kawaguchi, Gauthier Gidel,
+     Yoshua Bengio, Nikolay Malkin, and Moksh Jain. 2025. LEARNING DIVERSE ATTACKS ON LARGE
+     LANGUAGE MODELS FOR ROBUST RED-TEAMING AND SAFETY TUNING. (2025).
+[32] Abigail E Lewis, Nicole Weiskopf, Zachary B Abrams, Randi Foraker, Albert M Lai, Philip R O Payne, and Aditi
+     Gupta. 2023. Electronic health record data quality assessment and tools: a systematic review. J. Am. Med. Inform.
+     Assoc. 30, 10 (October 2023), 1730–1740. https://doi.org/10.1093/jamia/ocad120
+[33] Yusheng Liao, Yutong Meng, Yuhao Wang, Hongcheng Liu, Yanfeng Wang, and Yu Wang. 2024. Automatic
+     Interactive Evaluation for Large Language Models with State Aware Patient Simulator.
+     https://doi.org/10.48550/arXiv.2403.08495
+[34] Ernest Lim, Yajie Vera He, Jared Joselowitz, Kate Preston, Mohita Chowdhury, Louis Williams, Aisling Higham,
+     Katrina Mason, Mariane Melo, Tom Lawton, Yan Jia, and Ibrahim Habli. 2025. MATRIX: Multi-Agent simulaTion
+     fRamework         for    safe     Interactions    and      conteXtual       clinical   conversational    evaluation.
+     https://doi.org/10.48550/arXiv.2508.19163
+[35] Lei Liu, Xiaoyan Yang, Junchi Lei, Yue Shen, Jian Wang, Peng Wei, Zhixuan Chu, Zhan Qin, and Kui Ren. 2024.
+     A Survey on Medical Large Language Models: Technology, Application, Trustworthiness, and Future Directions.
+     https://doi.org/10.48550/arXiv.2406.03712
+[36] Edward Loper and Steven Bird. 2002. NLTK: The Natural Language Toolkit. In Proceedings of the ACL-02
+     Workshop on Effective Tools and Methodologies for Teaching Natural Language Processing and Computational
+     Linguistics, July 2002. Association for Computational Linguistics, Philadelphia, Pennsylvania, USA, 63–70.
+     https://doi.org/10.3115/1118108.1118117
+[37] Ming-Jie Luo, Shaowei Bi, Jianyu Pang, Lixue Liu, Ching-Kit Tsui, Yunxi Lai, Wenben Chen, Yahan Yang, Kezheng
+     Xu, Lanqin Zhao, Ling Jin, Duoru Lin, Xiaohang Wu, Jingjing Chen, Rongxin Chen, Zhenzhen Liu, Yuxian Zou,
+     Yangfan Yang, Yiqing Li, and Haotian Lin. 2025. A large language model digital patient system enhances
+     ophthalmology history taking skills. Npj Digit. Med. 8, 1 (August 2025), 502. https://doi.org/10.1038/s41746-025-
+     01841-6
+[38] Xiang Luo, Zhiwen Tang, Jin Wang, and Xuejie Zhang. 2024. DuetSim: Building User Simulator with Dual Large
+     Language Models for Task-Oriented Dialogues. In Proceedings of the 2024 Joint International Conference on
+     Computational Linguistics, Language Resources and Evaluation (LREC-COLING 2024), May 2024. ELRA and
+     ICCL, Torino, Italia, 5414–5424. Retrieved August 14, 2025 from https://aclanthology.org/2024.lrec-main.481/
+[39] Subhankar Maity and Manob Jyoti Saikia. 2025. Large Language Models in Healthcare and Medical Applications: A
+     Review. Bioengineering 12, 6 (June 2025), 631. https://doi.org/10.3390/bioengineering12060631
+[40] Birger Moëll and Fredrik Sand Aronsson. 2025. Harm Reduction Strategies for Thoughtful Use of Large Language
+     Models in the Medical Domain: Perspectives for Patients and Clinicians. J. Med. Internet Res. 27, 1 (July 2025),
+     e75849. https://doi.org/10.2196/75849
+[41] Miquel Montaner, Beatriz López, and Josep Lluís de la Rosa. 2026. EVALUATION OF RECOMMENDER
+     SYSTEMS THROUGH SIMULATED USERS. March 18, 2026. 303–308. Retrieved March 18, 2026 from
+     https://www.scitepress.org/Link.aspx?doi=10.5220/0002622703030308
+[42] Tom Nadarzynski, Nicky Knights, Deborah Husbands, Cynthia A. Graham, Carrie D. Llewellyn, Tom Buchanan, Ian
+     Montgomery, and Damien Ridge. 2024. Achieving health equity through conversational AI: A roadmap for design
+     and implementation of inclusive chatbots in healthcare. PLOS Digit. Health 3, 5 (May 2024), e0000492.
+     https://doi.org/10.1371/journal.pdig.0000492
+[43] Don Nutbeam. 2000. Health literacy as a public health goal: a challenge for contemporary health education and
+     communication strategies into the 21st century. Health Promot. Int. 15, 3 (September 2000), 259–267.
+     https://doi.org/10.1093/heapro/15.3.259
+[44] Michael K. Paasche-Orlow and Michael S. Wolf. 2007. The causal pathways linking health literacy to health
+     outcomes. Am. J. Health Behav. 31 Suppl 1, (2007), S19-26. https://doi.org/10.5555/ajhb.2007.31.supp.S19
+[45] Maja Pavlovic and Massimo Poesio. 2024. The Effectiveness of LLMs as Annotators: A Comparative Overview and
+     Empirical Analysis of Direct Representation. In Proceedings of the 3rd Workshop on Perspectivist Approaches to
+     NLP (NLPerspectives) @ LREC-COLING 2024, May 2024. ELRA and ICCL, Torino, Italia, 100–110. Retrieved
+     February 11, 2026 from https://aclanthology.org/2024.nlperspectives-1.11/
+[46] James W. Pennebaker, Matthias R. Mehl, and Kate G. Niederhoffer. 2003. Psychological Aspects of Natural
+     Language Use: Our Words, Our Selves. Annu. Rev. Psychol. 54, Volume 54, 2003 (February 2003), 547–577.
+     https://doi.org/10.1146/annurev.psych.54.101601.145041
+[47] Ethan Perez, Saffron Huang, Francis Song, Trevor Cai, Roman Ring, John Aslanides, Amelia Glaese, Nat McAleese,
+     and Geoffrey Irving. 2022. Red Teaming Language Models with Language Models. In Proceedings of the 2022
+     Conference on Empirical Methods in Natural Language Processing, 2022. Association for Computational
+     Linguistics, Abu Dhabi, United Arab Emirates, 3419–3448. https://doi.org/10.18653/v1/2022.emnlp-main.225
+[48] Paloma Rabaey, Stefan Heytens, and Thomas Demeester. 2025. SimSUM: Simulated Benchmark with Structured
+     and Unstructured Medical Records. https://doi.org/10.48550/arXiv.2409.08936
+[49] Debra Roter and Judith A. Hall. 2006. Doctors Talking with Patients/Patients Talking with Doctors. (2006), 1–256.
+[50] Stephanie Rude, Eva-Maria Gortner, and James Pennebaker. 2004. Language use of depressed and depression-
+     vulnerable       college    students.     Cogn.     Emot.      18,     8     (December     2004),      1121–1133.
+     https://doi.org/10.1080/02699930441000030
+[51] Ruvini Sanjeewa, Ravi Iyer, Pragalathan Apputhurai, Nilmini Wickramasinghe, and Denny Meyer. 2024. Empathic
+     Conversational Agent Platform Designs and Their Evaluation in the Context of Mental Health: Systematic Review.
+     JMIR Ment. Health 11, 1 (September 2024), e58974. https://doi.org/10.2196/58974
+[52] Jost Schatzmann, Karl Weilhammer, Matt Stuttle, and Steve Young. 2006. A survey of statistical user simulation
+     techniques for reinforcement-learning of dialogue management strategies. Knowl. Eng. Rev. 21, 2 (June 2006), 97–
+     126. https://doi.org/10.1017/S0269888906000944
+[53] Yuqi Si, Jingcheng Du, Zhao Li, Xiaoqian Jiang, Timothy Miller, Fei Wang, W. Jim Zheng, and Kirk Roberts. 2021.
+     Deep representation learning of patient data from Electronic Health Records (EHR): A systematic review. J. Biomed.
+     Inform. 115, (March 2021), 103671. https://doi.org/10.1016/j.jbi.2020.103671
+[54] Scott Simpson and Anna McDowell. 2019. The Clinical Interview: Skills for More Effective Patient Encounters.
+     Routledge, New York. https://doi.org/10.4324/9780429437243
+[55] Kristine Sørensen, Stephan Van den Broucke, James Fullam, Gerardine Doyle, Jürgen Pelikan, Zofia Slonska, Helmut
+     Brand, and (HLS-EU) Consortium Health Literacy Project European. 2012. Health literacy and public health: a
+     systematic review and integration of definitions and models. BMC Public Health 12, (January 2012), 80.
+     https://doi.org/10.1186/1471-2458-12-80
+[56] Richard L. Street, Gregory Makoul, Neeraj K. Arora, and Ronald M. Epstein. 2009. How does communication heal?
+     Pathways linking clinician–patient communication to health outcomes. Patient Educ. Couns. 74, 3 (March 2009),
+     295–301. https://doi.org/10.1016/j.pec.2008.11.015
+[57] Rehan Syed, Rebekah Eden, Tendai Makasi, Ignatius Chukwudi, Azumah Mamudu, Mostafa Kamalpour, Dakshi
+     Kapugama Geeganage, Sareh Sadeghianasl, Sander J. J. Leemans, Kanika Goel, Robert Andrews, Moe Thandar
+     Wynn, Arthur Ter Hofstede, and Trina Myers. 2023. Digital Health Data Quality Issues: Systematic Review. J. Med.
+     Internet Res. 25, (March 2023), e42615. https://doi.org/10.2196/42615
+[58] Elham Tabassi. 2023. Artificial Intelligence Risk Management Framework (AI RMF 1.0). NIST (January 2023).
+     Retrieved October 28, 2025 from https://www.nist.gov/publications/artificial-intelligence-risk-management-
+     framework-ai-rmf-10
+[59] Yla R. Tausczik and James W. Pennebaker. 2010. The Psychological Meaning of Words: LIWC and Computerized
+     Text      Analysis       Methods.      J.    Lang.     Soc.    Psychol.      29,    1     (March     2010),   24–54.
+     https://doi.org/10.1177/0261927X09351676
+[60] Tara Templin, Sophia Fort, Prasanna Padmanabham, Pratyush Seshadri, Ram Rimal, Junier Oliva, Kristin Hassmiller
+     Lich, Sean Sylvia, and Nasa Sinnott-Armstrong. 2025. Framework for bias evaluation in large language models in
+     healthcare settings. Npj Digit. Med. 8, 1 (July 2025), 414. https://doi.org/10.1038/s41746-025-01786-w
+[61] Arun James Thirunavukarasu, Darren Shu Jeng Ting, Kabilan Elangovan, Laura Gutierrez, Ting Fang Tan, and Daniel
+     Shu Wei Ting. 2023. Large language models in medicine. Nat. Med. 29, 8 (August 2023), 1930–1940.
+     https://doi.org/10.1038/s41591-023-02448-8
+[62] Tao Tu, Mike Schaekermann, Anil Palepu, Khaled Saab, Jan Freyberg, Ryutaro Tanno, Amy Wang, Brenna Li,
+     Mohamed Amin, Yong Cheng, Elahe Vedadi, Nenad Tomasev, Shekoofeh Azizi, Karan Singhal, Le Hou, Albert
+     Webson, Kavita Kulkarni, S. Sara Mahdavi, Christopher Semturs, Juraj Gottweis, Joelle Barral, Katherine Chou,
+     Greg S. Corrado, Yossi Matias, Alan Karthikesalingam, and Vivek Natarajan. 2025. Towards conversational
+     diagnostic artificial intelligence. Nature 642, 8067 (June 2025), 442–450. https://doi.org/10.1038/s41586-025-08866-
+     7
+[63] Jason Walonoski, Mark Kramer, Joseph Nichols, Andre Quina, Chris Moesel, Dylan Hall, Carlton Duffett,
+     Kudakwashe Dube, Thomas Gallagher, and Scott McLachlan. 2018. Synthea: An approach, method, and software
+     mechanism for generating synthetic patients and the synthetic electronic health care record. J. Am. Med. Inform.
+     Assoc. 25, 3 (March 2018), 230–238. https://doi.org/10.1093/jamia/ocx079
+[64] Ruiyi Wang, Stephanie Milani, Jamie C. Chiu, Jiayin Zhi, Shaun M. Eack, Travis Labrum, Samuel M Murphy, Nev
+     Jones, Kate V Hardy, Hong Shen, Fei Fang, and Zhiyu Chen. 2024. PATIENT-ψ: Using Large Language Models to
+     Simulate Patients for Training Mental Health Professionals. In Proceedings of the 2024 Conference on Empirical
+     Methods in Natural Language Processing, November 2024. Association for Computational Linguistics, Miami,
+     Florida, USA, 12772–12797. https://doi.org/10.18653/v1/2024.emnlp-main.711
+[65] Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed H. Chi, Quoc V. Le, and
+     Denny Zhou. 2022. Chain-of-thought prompting elicits reasoning in large language models. In Proceedings of the
+     36th International Conference on Neural Information Processing Systems (NIPS ’22), November 28, 2022. Curran
+     Associates Inc., Red Hook, NY, USA, 24824–24837.
+[66] Janusz Wojtusiak. 2016. Towards Intelligent Patient Data Generator. Machine Learning and Inference Laboratory,
+     George Mason University, Fairfax, VA. Retrieved March 18, 2026 from https://www.mli.gmu.edu/papers/2016/16-
+     9.pdf
+[67] Michael S. Wolf and Stacy Cooper Bailey. 2009. The Role of Health Literacy in Patient Safety. Role Health Lit.
+     Patient Saf. (March 2009). Retrieved February 11, 2026 from https://psnet.ahrq.gov/perspective/role-health-literacy-
+     patient-safety
+[68] Michael Wornow, Yizhe Xu, Rahul Thapa, Birju Patel, Ethan Steinberg, Scott Fleming, Michael A. Pfeffer, Jason
+     Fries, and Nigam H. Shah. 2023. The shaky foundations of large language models and foundation models for
+     electronic health records. NPJ Digit. Med. 6, (July 2023), 135. https://doi.org/10.1038/s41746-023-00879-8
+[69] Matthew K. Wynia and Chandra Y. Osborn. 2010. Health Literacy and Communication Quality in Health Care
+     Organizations. J. Health Commun. 15, Suppl 2 (2010), 102–115. https://doi.org/10.1080/10810730.2010.499981
+[70] Chao Yan, Ziqi Zhang, Steve Nyemba, and Zhuohang Li. 2024. Generating Synthetic Electronic Health Record Data
+     Using Generative Adversarial Networks: Tutorial. JMIR AI 3, (April 2024), e52615. https://doi.org/10.2196/52615
+[71] Sirui Yao, Yoni Halpern, Nithum Thain, Xuezhi Wang, Kang Lee, Flavien Prost, Ed H. Chi, Jilin Chen, and Alex
+     Beutel.       2021.       Measuring       Recommender         System       Effects      with     Simulated     Users.
+     https://doi.org/10.48550/arXiv.2101.04526
+[72] Jinsung Yoon, Michel Mizrahi, Nahid Farhady Ghalaty, Thomas Jarvinen, Ashwin S. Ravi, Peter Brune, Fanyu Kong,
+     Dave Anderson, George Lee, Arie Meir, Farhana Bandukwala, Elli Kanal, Sercan Ö Arık, and Tomas Pfister. 2023.
+     EHR-Safe: generating high-fidelity and privacy-preserving synthetic electronic health records. Npj Digit. Med. 6, 1
+     (August 2023), 141. https://doi.org/10.1038/s41746-023-00888-7
+[73] Huizi Yu, Jiayan Zhou, Lingyao Li, Shan Chen, Jack Gallifant, Anye Shi, Xiang Li, Jingxian He, Wenyue Hua,
+     Mingyu Jin, Guang Chen, Yang Zhou, Zhao Li, Trisha Gupte, Ming-Li Chen, Zahra Azizi, Yongfeng Zhang, Yanqiu
+     Xing, Themistocles L. Danielle S. Bitterman, Themistocles L. Assimes, Xin Ma, Lin Lu, and Lizhou Fan. 2025.
+     Simulated patient systems are intelligent when powered by large language model-based AI agents.
+     https://doi.org/10.48550/arXiv.2409.18924
+[74] Taedong Yun, Eric Yang, Mustafa Safdari, Jong Ha Lee, Vaishnavi Vinod Kumar, S. Sara Mahdavi, Jonathan Amar,
+     Derek Peyton, Reut Aharony, Andreas Michaelides PhD, Logan Douglas Schneider, Isaac Galatzer-Levy, Yugang
+     Jia, John Canny, Arthur Gretton, and Maja Mataric. 2025. Sleepless Nights, Sugary Days: Creating Synthetic Users
+     with Health Conditions for Realistic Coaching Agent Interactions. In Findings of the Association for Computational
+     Linguistics: ACL 2025, July 2025. Association for Computational Linguistics, Vienna, Austria, 14159–14181.
+     https://doi.org/10.18653/v1/2025.findings-acl.729
+[75] Ruoyu Zhang, Yanzeng Li, Yongliang Ma, Ming Zhou, and Lei Zou. 2023. LLMaAA: Making Large Language
+     Models as Active Annotators. https://doi.org/10.48550/arXiv.2310.19596
+[76] Yinan Zhang, Xueqing Liu, and ChengXiang Zhai. 2017. Information Retrieval Evaluation as Search Simulation: A
+     General Formal Framework for IR Evaluation. In Proceedings of the ACM SIGIR International Conference on Theory
+     of Information Retrieval (ICTIR ’17), October 01, 2017. Association for Computing Machinery, New York, NY,
+     USA, 193–200. https://doi.org/10.1145/3121050.3121070
+[77] Xuhui Zhou, Hyunwoo Kim, Faeze Brahman, Liwei Jiang, Hao Zhu, Ximing Lu, Frank Xu, Bill Yuchen Lin, Yejin
+     Choi, Niloofar Mireshghallah, Ronan Le Bras, and Maarten Sap. 2025. HAICOSYSTEM: An Ecosystem for
+     Sandboxing Safety Risks in Human-AI Interactions. https://doi.org/10.48550/arXiv.2409.16427
+[78] 2023. malexandersalazar/xlm-roberta-base-cls-depression · Hugging Face. Retrieved February 11, 2026 from
+     https://huggingface.co/malexandersalazar/xlm-roberta-base-cls-depression
+[79] Top 10 Most Common Antidepressants Dispensed in the U.S. Retrieved November 11, 2025 from
+     https://www.definitivehc.com/resources/healthcare-insights/top-antidepressants-by-prescription-volume
+
+
+
+9    APPENDICES
+
+9.1 Patient Simulator
+   We present the detailed system architecture and the core system prompt, which follows a Chain-of-thought driven
+reasoning mechanism to integrate three distinct profiles and enable structured interaction with the AI Decision Aid.
+
+9.1.1 Architecture and System Prompt
+   The Patient Simulator architecture operationalizes the generation of psychologically realistic patient responses through
+the coordinated integration of medical, linguistic, and behavioral profiles. This modular design ensures that each simulated
+interaction remains clinically grounded, linguistically differentiated, and behaviorally consistent. Figure 10 shows the
+structure of the system prompt used to enforce this alignment, with a brief description of its components provided below.
+Concretely, the system prompt is organized around three profile components that constrain content, expression, and
+interaction behavior:
+   1. Medical Profile: The simulator uses a structured medical history represented by hierarchical indices (e.g., [2.3],
+[3.1]), where each code corresponds to a specific clinical fact or condition. These indices are crucial for traceability and
+annotation, allowing evaluators or downstream models to link simulated responses back to precise clinical data points.
+   2. Linguistic Profile: The linguistic profile defines how medical facts are style-transferred to reflect the patient’s
+expressive characteristics such as tone, vocabulary, and sentence complexity. This ensures that the same underlying
+medical information can appear differently across patients (e.g., formal vs. colloquial language) while maintaining factual
+alignment.
+   3. Behavioral Profile: The behavioral layer determines how the simulated patient engages with the conversation,
+controlling elements such as adherence, emotional engagement, topical focus, and adversarial tendencies. By enforcing
+behavioral constraints, the simulator produces psychologically credible dialogue patterns ranging from cooperative to
+avoidant or argumentative behaviors.
+   Question-Response Logic:
+   For each intake question, the simulator follows a structured reasoning pipeline:
+     1.   Identify Relevant Medical Facts: Locate facts from the medical profile that relate to the current query, referencing
+          them by their index (e.g., [3.2] Depression diagnosis).
+     2.   Apply Style Transfer: For each fact, rephrase the medical term or phrase according to the linguistic profile while
+          preserving its factual meaning.
+     3.   Construct a Natural Response: Integrate the style-transferred facts into a contextually appropriate, natural-
+          language answer that aligns with both linguistic and behavioral traits. Each style-transferred phrase is wrapped
+        in <\s>...</\s> for traceability and followed by its [X.Y] reference tag.
+   Response Format:
+   All outputs adhere to a strict JSON schema to ensure transparency, reproducibility, and structured analysis. This output
+format is essential for the annotation process, as it allows annotators to review each conversational turn, examine the
+corresponding medical history, and verify the accuracy and consistency of the patient simulator’s responses. The output
+JSON contains:
+     •    "relevant_medical_history" – the original indexed facts used in the response.
+     •    "style_transferred_medical_history" – the linguistically modified versions of those facts.
+     •    "response" – the final natural-language utterance embedding both versions for clarity and interpretability.
+   You are simulating a psychologically realistic patient based on three profiles: Medical, Behavioral,
+   and Linguistic.
+
+   1. Medical Profile:
+            Demographics:
+                     1.1: Age: 34
+                     1.2: Gender: Male
+                      ... ... ...
+            Diagnosis History:
+                     2.1: Generalized Anxiety Disorder
+                     2.2: Hyperlipidemia variants
+                     ... ... ...
+            Procedures:
+                     3.1: Psychiatric Diagnostic Interview Examination
+                     3.2: Individual Psychotherapy
+                     ... ... ...
+   2. Linguistic Profile:
+            Style: Concrete, informal, sometimes vague.
+            Tone: Hesitant, uncertain, conversational.
+            Vocab: Everyday terms, slang, vague quantities.
+            Structure: Short, fragmented sentences; frequent fillers.
+            Patterns: Minimal elaboration unless prompted.
+   3. Behavioral Profile:
+            Conversational Adherence: Follows prompts; stays structured.
+            Engagement: Highly engaged; adds helpful details.
+            Topical Focus: Stays on topic; avoids tangents.
+            Adversarial/Toxic Behavior: None; consistently polite.
+
+   For each of the questions:
+      ➔ Step 1: Identify relevant medical facts using their assigned index (e.g., [3.2] Individual
+   Psychotherapy).
+      ➔ Step 2: For each identified fact, apply style transfer according to the linguistic profile.
+      ➔ Step 3: Construct a natural language response that embeds the style-transferred facts embedding
+   the linguistic and behavioral profile. Each style-transferred phrase must be **wrapped in `<\s>`
+   ... `<\s>`** and must also include the **[X.Y]** reference right after it.
+
+   Response format:
+            "relevant_medical_history": [
+                     "[1.2] Gender: Male",
+            "[3.2] Individual Psychotherapy"]
+            "style_transferred_medical_history": [
+                     "[1.2] male",
+                     "[3.2] talked to someone"],
+            "response": "Final response using the above style-transferred facts with inline references
+   and <\s> tags,
+
+
+
+                                        Figure 10 Prompt Structure of Patient Simulator
+
+9.1.2 Medical Profiles
+   This section presents the medical profile generation procedure used by the analytical advice system in detail. The
+method follows a staged selection strategy that balances outcome relevance, statistical coherence, and controlled diversity
+to produce clinically plausible and informative profiles.
+    Outcome Relevance (Top-K Filter): The algorithm first restricts the candidate space to the Top‑K predictors of the
+antidepressant response outcome e₀ (here, K = 500). This filter improves sample efficiency and signal‑to‑noise by focusing
+subsequent selection on variables with demonstrated individual association to e₀. As in classical filter style feature
+selection, an initial relevance screen improves downstream generalization and reduces variance in later steps [1]. In spirit,
+this aligns with the “max‑relevance” component of minimum‑redundancy‑maximum‑relevance (mRMR), which explicitly
+prioritizes features that are informative about the target before addressing redundancy [20].
+   Coherence and Approximate Independence via a Symmetric Risk‑Ratio Gate: New candidates are screened using a
+symmetric acceptance band around unity based on aggregated pairwise risk ratios with respect to the already‑selected set
+S. Let 𝑅𝑅(𝑠, 𝑣) denote the risk ratio between an existing event 𝑠 ∈ 𝑆 and a candidate event 𝑣, and let 𝑎𝑔𝑔𝑟𝑒𝑔𝑎𝑡𝑒𝑠∈𝑆 be
+a conservative aggregator (e.g., MAX) over these pairwise values. Acceptance condition:
+                                          1
+                                             < 𝑎𝑔𝑔𝑟𝑒𝑔𝑎𝑡𝑒s∈S 𝑅𝑅(𝑠, 𝑣) ≤ ℎ𝑖𝑔ℎ
+                                         1.5
+This symmetric band (𝑙𝑜𝑤 = 1/1.5) respects the multiplicative interpretation of 𝑅𝑅 treating protective associations (<
+ 1) and harmful associations (> 1) in a balanced manner while capping near deterministic couplings (> ℎ𝑖𝑔ℎ) that would
+introduce redundancy or multicollinearity. Excluding values ≪ 1 also avoids strongly anticorrelated additions that can
+create unstable compensations in downstream predictions [20]. Using MAX as the aggregator is conservative (rejects 𝑣 if
+it couples too strongly with any 𝑠 ∈ 𝑆). Controlled Diversity from the Residual Event Pool: After establishing the coherent
+core of relevant events (Top-K features), the algorithm introduces controlled diversity by exploring the residual event pool.
+Those features not included among the top-ranked relevant set. In this phase, a residual candidate 𝑢 ∈ 𝑅 is admitted only
+if it exhibits a meaningful positive association with at least one of the already selected relevant features 𝑠 ∈ 𝑆. This step
+aims to capture latent or contextually related variables that were not strongly ranked individually but still contribute to
+plausible patient variability when correlated with the existing core.
+   To ensure statistical coherence, independence is defined as the range 1/1.5 ≤ 𝑅𝑅(𝑠, 𝑣) ≤ 1.5; any relationship
+within this interval is treated as neutral and thus ignored. Accordingly, only candidates showing stronger associations i.e.,
+𝑅𝑅(𝑠, 𝑣) > 1.5 or 𝑅𝑅(𝑠, 𝑣) < 1/1.5 are eligible for inclusion, provided they were not part of the original relevant set.
+Diversity condition:
+                                                  ∃𝑠 ∈ 𝑆 ∶ 𝑅𝑅(𝑠, 𝑣) > 1.5
+   where R denotes the residual pool (features outside the Top-500), and S represents the previously selected relevant
+features. This mechanism ensures that the resulting simulated patient profiles include a bounded degree of heterogeneity
+driven by correlated but previously under-ranked features, enriching diversity without compromising coherence [19, 20].
+
+
+   The Risk Ratio categories and the corresponding feature inclusion logic are illustrated in Figure 11, which depicts the
+transition from negatively associated to positively associated features and their mapping across Step 3 (relevant) and Step
+4 (coherent but irrelevant) feature sets.
+
+
+
+
+                    Figure 11: Graphical representation of Risk Ratio thresholds and feature selection workflow
+
+    The medical profile generation algorithm constructs a simulated clinical history by selecting events that are both
+clinically meaningful and statistically consistent with real world response patterns. The process begins with a set of
+variables that strongly predict response to the target antidepressant, then filters these candidates through risk based
+constraints to ensure independence and realistic variability. A second expansion stage introduces additional events that
+provide controlled diversity without creating improbable clinical combinations. The final set of events forms a structured
+medical profile that reflects both individual level variability and population level statistical associations.
+  The inputs listed below define the core elements required for the generation of each simulated medical profile. They
+specify the clinical target, the size of the simulated population, the available concept codes, and the demographic
+distributions from which each patient begins, along with the parameters that control risk ratio constraints and diversity
+expansion.
+   Inputs:
+        •    e0 – Concept code of response of target antidepressant
+        •    N– Number of patients to simulate
+        •    All_Concept_Code – List of all the concept code
+        •    G – Categorical distribution over gender (At Birth) codes
+        •    A – Categorical distribution over age-bin codes
+        •    high – Maximum allowed Risk Ratio for selecting a variable
+        •    max_residual_additions – Limit on how many residual-pool events may be
+             appended
+         The helper routines provide the key decision checks used throughout the selection process. They evaluate the
+compatibility of candidate events with the partially constructed profile and ensure that all additions remain within the
+required risk ratio bounds. These routines allow the algorithm to enforce statistical constraints without interrupting the
+main flow of the pseudocode.
+
+Helper Routines:
+        •    𝑃𝑎𝑠𝑠𝑒𝑠𝑅𝑅𝐺𝑎𝑡𝑒(𝑠𝑒𝑙𝑒𝑐𝑡𝑒𝑑, 𝑐𝑎𝑛𝑑𝑖𝑑𝑎𝑡𝑒_𝑒𝑣𝑒𝑛𝑡, 𝑙𝑜𝑤, ℎ𝑖𝑔ℎ) - Returns 𝑇𝑅𝑈𝐸 if the aggregated
+             pairwise risk ratio 𝑅𝑅(𝑠, 𝑐𝑎𝑛𝑑𝑖𝑑𝑎𝑡𝑒_𝑒𝑣𝑒𝑛𝑡) across all s in selected satisfies
+             1/1.5 < 𝑎𝑔𝑔𝑟𝑒𝑔𝑎𝑡𝑒 ≤ ℎ𝑖𝑔ℎ. Otherwise returns 𝐹𝐴𝐿𝑆𝐸.
+        •    𝐴𝑛𝑦𝑅𝑅𝐸𝑥𝑐𝑒𝑒𝑑𝑠(𝑠𝑒𝑙𝑒𝑐𝑡𝑒𝑑, 𝑐𝑎𝑛𝑑𝑖𝑑𝑎𝑡𝑒_𝑒𝑣𝑒𝑛𝑡, 𝑡ℎ𝑟𝑒𝑠ℎ𝑜𝑙𝑑) - Returns 𝑇𝑅𝑈𝐸 if there exists
+             at least one event s in selected such that 𝑅𝑅(𝑠, 𝑐𝑎𝑛𝑑𝑖𝑑𝑎𝑡𝑒_𝑒𝑣𝑒𝑛𝑡) exceeds the
+             given threshold. Otherwise returns 𝐹𝐴𝐿𝑆𝐸.
+        •    𝑃𝑟𝑒𝑑𝑖𝑐𝑡𝑅𝑒𝑠𝑝(𝑆, 𝑒₀): Returns the probability of response to the antidepressant
+             associated with concept 𝑒₀, given the selected event set 𝑆, computed using
+             the MAGI algorithm.
+   Figure 12 combines the inputs and helper routines into a four-stage algorithm that builds each medical profile step by
+step. It begins with a Top K predictor filter, initializes demographic seeds, applies an independence screen to ensure
+statistical coherence, and finally introduces controlled diversity through residual events. Together, these stages create a
+clinically plausible and statistically grounded event set for each simulated patient.
+   Procedure:
+
+
+                # Step‑1: Selection of Top-K and Initialization
+                1. V ← Top500_Predictor_of_e₀(e₀).             \\ Top_500 predictors
+                2. R ← {All_Concept_Code} \ {V ∪ G ∪ A}        \\ Residual Event
+                3. Initialize output container T ← ∅.
+                4. For each patient j = 1..N:
+                5.      S ← ∅    // selected set.
+                6.      Aᵥ ← V; Aᵣ ← R     // fresh available pools.
+                # Step‑2: Demographics Seed
+                7.      S ← S ∪ {weighted_random_choice(G)}     \\ gender
+                8.      S ← S ∪ {weighted_random_choice(A)}     \\ age-bin
+                # Step‑3: Independence-Screened Selection
+                9.      While Aᵥ ≠ ∅:
+                10.             v ← random_choice(Aᵥ).
+                11.             If PassesRRGate(S, v, high=high, low=1/1.5):
+                12.                     Set S ← S ∪ {v}.
+                13.             Remove v from Aᵥ.
+                14.     Define S_intermediate ← S.
+                # Step‑4: Controlled Diversity Expansion
+                15.     i ← 1.
+                16.     While Aᵣ ≠ ∅ and i ≤ max_residual_additions:
+                17,              u ← random_choice(Aᵣ).
+                18.             If AnyRRExceeds(S_intermediate, u, threshold = 1.5):
+                19.                     Set S ← S ∪ {u}; i ← i + 1.
+                20.             Remove u from Aᵣ.
+                21.     Compute final p̂ ← PredictResp(S, e₀).
+                22.     Append (j, e₀, |S|, S, p̂) to T.
+
+
+                                        Figure 12. Medical profile generation algorithm
+
+
+Phase – 2: Probabilistic Patient Selection Using Binomial Distribution
+   The second phase of the medical profile generation process selects a subset of simulated patients whose response
+probabilities collectively reproduce the population-level response distribution observed in the reference dataset. Each
+simulated patient from Phase 1 is associated with a predicted probability of antidepressant response between 0 and 1. The
+selection aims to retain a cohort whose aggregate distribution mirrors the expected binomial pattern defined by the
+population mean response rate (𝑝) and total number of patients (𝑛).
+   To operationalize this, the probability range [0, 1] is divided into seven probability bands corresponding to approximate
+σ-intervals of a binomial distribution 𝐵(𝑛, 𝑝). Each simulated patient is assigned to a band according to their predicted
+probability of response. The population mean (𝜇 = 𝑛𝑝) and standard deviation (𝜎 = √(𝑛𝑝(1 − 𝑝)) ) define the
+expected frequency of patients in each band, which acts as a target allocation weight. For example, for 𝑛 = 100 and 𝑝 =
+ 0.4, the binomial distribution has 𝜇 = 40 and 𝜎 ≈ 4.9; approximately 64 % of the population lies within (𝜇 − 𝜎, 𝜇 +
+ 𝜎], 15 % on each side within (𝜇 ± 1𝜎 𝑡𝑜 𝜇 ± 2𝜎], and only a few percent beyond 𝜇 ± 2𝜎. Table 12 shows a generalized
+sigma-band allocation for the binomial distribution 𝐵(𝑛, 𝑝), including the corresponding ranges and their interpretations.
+                         Table 12: Generalized Sigma-Band Allocation for Binomial Distribution 𝐵 (𝑛, 𝑝).
+
+Sigma Band Interval   Range of Success Counts (k)          Approximate Probability Mass (%)         Interpretation
+k ≤ μ − 3σ            0 ≤ k ≤ ⌊μ − 3σ⌋                     ≈ 0.1–0.3 %                              Extremely low outcome region
+(μ − 3σ, μ − 2σ]      ⌊μ − 3σ⌋ + 1 ≤ k ≤ ⌊μ − 2σ⌋          ≈ 2–3 %                                  Moderately below average region
+(μ − 2σ, μ − 1σ]      ⌊μ − 2σ⌋ + 1 ≤ k ≤ ⌊μ − 1σ⌋          ≈ 14–16 %                                Slightly below average region
+(μ − 1σ, μ + 1σ]      ⌊μ − 1σ⌋ + 1 ≤ k ≤ ⌊μ + 1σ⌋          ≈ 63–65 %                                Central or typical outcome region
+(μ + 1σ, μ + 2σ]      ⌊μ + 1σ⌋ + 1 ≤ k ≤ ⌊μ + 2σ⌋          ≈ 14–16 %                                Slightly above average region
+(μ + 2σ, μ + 3σ]      ⌊μ + 2σ⌋ + 1 ≤ k ≤ ⌊μ + 3σ⌋          ≈ 2–3 %                                  Moderately high outcome region
+k > μ + 3σ            ⌊μ + 3σ⌋ + 1 ≤ k ≤ n                 ≈ 0.1–0.3 %                              Extremely high outcome region
+
+
+     Patients are then sampled proportionally to these weights so that the empirical distribution of predicted response
+ probabilities in the final cohort approximates the theoretical binomial distribution. This approach ensures that the selected
+ subset preserves both the central tendency and natural variability of the population while avoiding over- or under-
+ representation of extreme responders. The outcome is a statistically balanced and demographically diverse cohort suitable
+ for downstream simulation and evaluation.
+
+ 9.1.3 Behavioral Profiles
+     We present the mapping of 13 commonly observed patient behaviors documented by Simpson et al. [54] into four
+ higher-level behavioral categories: Inquisitive and Open-Ended, Reserved & Minimalist, Distracted & Unfocused, and
+ Adversarial & Combative in Table 13. In addition to these four categories, Structured & Cooperative is included as the
+ baseline behavioral category.
+
+                             Table 13: Mapping of behavioral profiles to their associated patient behaviors.
+
+                             Behavioral Profile            Associated Patient Situation
+                             Inquisitive & Open Ended      Is uncertain what they want
+                             Reserved & Minimalist         Is reluctant to work together
+                                                           Is anxious, worried, or upset
+                                                           Worries they will never get better
+                             Adversarial & Combative       Is angry
+                                                           Is demanding
+                                                           Brings up negative feelings in the clinician
+                             Distracted & Unfocused        Is difficult to direct or disorganized
+                                                           Has an unclear diagnosis
+                                                           Is an unreliable historian
+                                                           Has a difficult time changing their behavior
+                                                           Does not take medications regularly
+                                                           Has difficulty planning ahead
+

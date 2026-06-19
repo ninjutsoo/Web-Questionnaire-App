@@ -1,0 +1,369 @@
+PhysioNet
+Share
+About
+FAQs
+Explore 
+
+Search PhysioNet
+Log in
+ Database  Credentialed Access
+
+PatientSim: A Persona-Driven Simulator for Realistic Doctor-Patient Interactions
+Daeun Kyung  ,  Hyunseung Chung  ,  Seongsu Bae  ,  Jiho Kim  ,  Jae Ho Sohn  ,  Taerim Kim  ,  Soo Kim  ,  Edward Choi 
+
+Published: Oct. 18, 2025. Version: 1.0.0
+
+When using this resource, please cite:  
+Kyung, D., Chung, H., Bae, S., Kim, J., Sohn, J. H., Kim, T., Kim, S., & Choi, E. (2025). PatientSim: A Persona-Driven Simulator for Realistic Doctor-Patient Interactions (version 1.0.0). PhysioNet. RRID:SCR_007345. https://doi.org/10.13026/vq0d-v871
+
+Additionally, please cite the original publication:
+Kyung, D., Chung, H., Bae, S., Kim, J., Sohn, J. H., Kim, T., Kim, S. K., & Choi, E. (2025). PatientSim: A persona-driven simulator for realistic doctor-patient interactions. The Thirty-eight Conference on Neural Information Processing Systems Datasets and Benchmarks Track.
+
+Please include the standard citation for PhysioNet: (show more options)
+Goldberger, A., Amaral, L., Glass, L., Hausdorff, J., Ivanov, P. C., Mark, R., ... & Stanley, H. E. (2000). PhysioBank, PhysioToolkit, and PhysioNet: Components of a new research resource for complex physiologic signals. Circulation [Online]. 101 (23), pp. e215–e220. RRID:SCR_007345.
+
+Abstract
+Doctor-patient consultations require multi-turn, context-aware communication tailored to diverse patient personas. Training or evaluating doctor LLMs in such settings requires realistic patient interaction systems. However, existing simulators often fail to reflect the full range of personas seen in clinical practice. To address this, we introduce PATIENTSIM, a patient simulator that generates realistic and diverse patient personas for clinical scenarios, grounded in medical expertise. PATIENTSIM operates using: 1) clinical profiles, including symptoms and medical history, derived from real-world data in the MIMIC-ED and MIMIC-IV datasets, and 2) personas defined by four axes: personality, language proficiency, medical history recall level, and cognitive confusion level, resulting in 37 unique combinations. We evaluated eight LLMs for factual accuracy and persona consistency. The top-performing open-source model, Llama 3.3 70B, was validated by four clinicians to confirm the robustness of our framework. As an open-source, customizable platform, PATIENTSIM provides a reproducible and scalable solution that can be customized for specific training needs. Offering a privacy-compliant environment, it serves as a robust testbed for evaluating medical dialogue systems across diverse patient presentations and shows promise as an educational tool for healthcare.
+
+Background
+Large language models (LLMs) have shown impressive performance on medical question-answering benchmarks such as MedQA [1], MedMCQA [2], and PubMedQA [3], even surpassing human experts. However, these benchmarks use single-turn settings where patient data is readily provided, and models simply analyze these data to select the most likely diagnosis or treatment. In contrast, real-world clinicians engage in multi-turn, context-aware conversations to gather patient information actively. As a result, these models may not guarantee effectiveness in practical clinical settings. To evaluate LLM-powered virtual doctors (i.e., doctor LLMs) in multi-turn settings, realistic patient interaction systems are needed. Traditionally, standardized patients (SPs) [4], trained actors simulating symptoms and histories, have been used to train and assess medical students’ communication and clinical skills. In this context, SPs could serve as a benchmark for evaluating doctor LLMs by providing dynamic, interactive patient encounters. However, SPs are limited by high costs, inconsistent availability, and scaling challenges due to the need for human actors [5]. In contrast, LLM-based patient simulators provide a scalable, accessible, and cost-effective alternative [6]. They reduce the need for repetitive human acting, eliminate geographic and time constraints, and lower costs compared to SPs. These advantages highlight the potential of AI as a powerful tool for training and evaluating medical students [7-9], as well as doctor LLMs [10-16].
+
+Recent work highlights the potential of LLM-based patient simulators, but a significant gap remains between these systems and real clinical settings. A number of studies [13-15, 17] explored doctors’ interactive information-seeking abilities by providing LLMs with patient data and having them role-play patients. However, these studies focused on evaluating the performance of doctor LLMs, even though the validity of these evaluations depends on how closely patient simulators emulate actual patient behavior. Recognizing this importance, some studies [10, 18-19] have begun evaluating patient simulators focusing on how accurately they convey symptomatic information. However, doctor-patient consultations are more than just patients accurately reciting their symptoms. Effective consultations must take into account patient behaviors dictated by multiple axes such as their emotional states and language skills, which significantly influence health outcomes.
+
+To this end, we propose PATIENTSIM, a system that simulates diverse patient personas encountered in clinical settings. Our simulator acts based on: 1) clinical profiles, including symptoms and medical history, and 2) personas defined by four axes: personality, language proficiency, medical history recall level, and cognitive confusion level. Patient profiles are constructed based on real-world medical records from the MIMIC-ED and MIMIC-IV datasets, totaling 170 profiles. For personas, we defined 37 distinct combinations across four axes, designed to reflect key factors impacting doctor-patient consultation quality, based on literature reviews and guided by medical experts. We evaluate eight LLMs as the backbone of our simulator and select Llama 3.3 70B as the final model, which maintains a persistent persona while ensuring factual accuracy. The resulting simulator was assessed by four clinical experts and received an average quality score of 3.89 out of 4 across six criteria. For reproducibility, we release the patient profiles with simulated dialogues between PATIENTSIM powered by various LLMs and either virtual doctors or human clinicians.
+
+Methods
+Patient Profile Construction
+Structured patient profile
+In this project, we focus on the initial consultation in the emergency department (ED), defined as the history-taking process during a first-time, single-session ED visit. At this stage, physicians often rely on verbal information from the patient, such as symptoms and medical history, before test results become available. Thus, we focus on differential diagnosis based on this initial consultation, which typically does not require test data. Accordingly, patient profiles are designed to reflect the patient’s condition at the time of ED admission.
+
+To ensure clinical relevance while minimizing ambiguity in the simulations, we construct detailed and structured profiles based on real clinical data from MIMIC-IV [20], MIMIC-IV-ED [21], and MIMIC-IV-Note [22]. We extracted accurate patient data from structured tables and used clinical notes to capture detailed information, such as lifestyle and present symptoms, not included in the tables. This hybrid approach combined structured data’s accuracy with the depth of narrative notes. As a result, each patient profile includes 24 items, covering demographics, social and medical history, and ED visit details. Clinical experts reviewed each item for clinical relevance.
+
+Target disease selection
+We select the five prevalent diseases from the MIMIC-IV-ED dataset: myocardial infarction, pneumonia, urinary tract infection, intestinal obstruction, and cerebral infarction (stroke). These conditions were chosen for their clinical significance, prevalence in ED, and distinct symptomatology, enabling meaningful differential diagnosis (DDx) tasks. The selection process was guided by two medical experts, one of whom is an ER doctor with 13 years of experience.
+
+Database preprocessing
+To integrate patient information from both structured tables and free-text data, we selected patients from MIMIC-IV-ED (v2.2) with triage information and diagnosis records, and corresponding free-text discharge summaries from MIMIC-IV-Note (v2.2). This selection ensured access to detailed subjective symptoms, primarily captured in free-text notes rather than structured tables. The detailed cohort selection criteria were as follows:
+
+Each hospital admission (hadm_id) must include exactly one ED stay. Admissions with multiple ED stays were excluded.
+To ensure diagnostic clarity, we included only ED stays with a single diagnosis code.
+We excluded records with missing or unknown values in the fields marital_status, insurance, race, chiefcomplaint, or arrival_transport.
+Pain scores were converted to numeric values based on field definitions. Non-numeric values and scores outside the 0–10 range were treated as outliers and removed.
+We capped the maximum number of medications per patient at 15.
+The History of Present Illness (HPI) section was limited to a maximum of 350 words and a minimum of 10 words. The Past Medical History (PMH) section was limited to a maximum of 80 words.
+To ensure the accuracy of symptom descriptions, we excluded records where the chiefcomplaint field or the Complaint or HPI sections of the discharge notes contained terms such as “coma,” “stupor,” or “altered mental status.”
+To avoid potential confounds related to language fluency, we excluded records where the chiefcomplaint field or the Complaint or HPI sections contained terms such as “slurred speech,” “dysarthria,” or “aphasia.”
+From the resulting cohort, we randomly sampled up to 40 patient records per diagnosis category to ensure class balance and manage dataset size, resulting in 170 profiles.
+
+Persona Definition
+We defined four key axes for persona simulation that impact consultation quality in clinical practice, based on literature reviews and guidance from medical experts.
+
+Personality Personality is a well-established factor influencing consultation quality [23-26]. The Big Five framework [27], one of the most widely recognized models of personality, has been used in previous patient simulation studies [18], but its traits are broad and tend to influence patient–physician interactions only indirectly. Recent psychological therapy research emphasizes observable conversational styles that directly manifest in patient interactions. Drawing on this, we adapt these styles into doctor-patient consultation-specific personality traits that are directly observable and actionable for simulation. Based on literature review [28-31] and guidance from medical experts, we define six personalities relevant to medical consultations in ED: impatient, overanxious, distrustful, overly positive, verbose, and neutral (straightforward communication) as the baseline.
+
+Language proficiency A patient’s language proficiency is a critical determinant of doctor-patient communication quality [32, 33], yet it has been underexplored in simulation contexts. By specifying language proficiency levels, we simulate scenarios in which physicians must adapt to patients with varying proficiency by using appropriate language to ensure understanding. We use the Common European Framework of Reference for Languages (CEFR) [34], which defines six proficiency levels (A1, A2, B1, B2, C1, C2). To facilitate the human evaluation by physicians, we consolidated these into three levels, A (basic), B (intermediate), and C (advanced).
+
+Medical history recall level Patients may not always accurately recall the details of their medical history [36, 37]. Assuming perfect recall, as in traditional settings, represents an idealized case. In low-recall scenarios, physicians must ask additional questions to build diagnostic confidence. We define two settings: high recall and low recall, enabling practice with diverse patient profiles.
+
+Level of cognitive confusion Patients visiting the ED often present acute symptom exacerbation, leading to a highly confused and dazed state. These patients may initially struggle with coherent communication but stabilize through interaction. To simulate such cases, we define two mental status levels: highly confused and normal.
+
+To avoid overlap between confusion and other axes (e.g., impatient personality, low language proficiency, or low recall), highly confused patients are limited to neutral personality, intermediate language proficiency, and high recall. This results in 37 distinct personas; 36 from combinations of 6 personalities, 3 language proficiency levels, 2 recall levels, and 1 from the high confusion persona.
+
+Prompt Design
+PATIENTSIM The PATIENTSIM prompt comprises profile information, four persona axes, and general behavioral guidelines. The prompt was iteratively refined through a process of LLM evaluation, qualitative analysis by the authors, and two rounds of feedback from medical experts. In the first round, two medical experts, who are also co-authors, provided feedback after engaging in extensive conversations with our simulators. The second round incorporated input from four additional medical experts external to the author group, based on their review of 10 sample cases.
+
+Doctor LLM Our research focuses on developing realistic patient simulators rather than doctor simulators. However, for automated evaluation, we require a doctor LLM capable of asking appropriate questions to elicit and assess patient responses. To achieve this, the doctor prompt was carefully designed, drawing on a medical textbook [35] and expert advice, to ensure it includes all essential, routine questions.
+
+Data Description
+Data statistics
+Our dataset consists of a total of 170 patient profiles and corresponding doctor-patient consultation histories. Table 1 presents detailed statistics on the demographic and clinical characteristics of these profiles. Age is grouped into 10-year intervals. Numerical variables (i.e., age, pain score) are sorted by value, while categorical variables are ordered by descending frequency.
+
+Table 1: Detailed patient profile statistics for PATIENTSIM, based on a total of 170 patient profiles.
+Category	Distribution
+Age Group	20-30: 9 (5.3%), 30-40: 7 (4.1%), 40-50: 18 (10.6%), 50-60: 29 (17.1%), 60-70: 37 (21.8%), 70-80: 33 (19.4%), 80-90: 30 (17.6%), 90-100: 7 (4.1%)
+Gender	Female: 88 (51.8%), Male: 82 (48.2%)
+Race	White: 106 (62.4%), Black/African American: 24 (14.1%), Asian - Chinese: 6 (3.5%), Black/Cape Verdean: 6 (3.5%), Hispanic/Latino - Puerto Rican: 6 (3.5%), Other: 5 (2.9%), Asian: 2 (1.2%), Asian - Asian Indian: 2 (1.2%), Hispanic/Latino - Dominican: 2 (1.2%), White - Other European: 2 (1.2%), White - Russian: 2 (1.2%), Asian - South East Asian: 1 (0.6%), Black/African: 1 (0.6%), Hispanic/Latino - Central American: 1 (0.6%), Hispanic/Latino - Colombian: 1 (0.6%), Hispanic/Latino - Guatemalan: 1 (0.6%), Hispanic/Latino - Mexican: 1 (0.6%), Hispanic/Latino - Salvadoran: 1 (0.6%)
+Marital Status	Married: 84 (49.4%), Single: 51 (30.0%), Widowed: 24 (14.1%), Divorced: 11 (6.5%)
+Insurance	Medicare: 84 (49.4%), Private: 55 (32.4%), Medicaid: 23 (13.5%), Other: 8 (4.7%)
+Arrival Transport	Walk In: 95 (55.9%), Ambulance: 74 (43.5%), Other: 1 (0.6%)
+Disposition	Admitted: 164 (96.5%), Other: 6 (3.5%)
+Pain Score	0: 82 (48.2%), 1: 3 (1.8%), 2: 5 (2.9%), 3: 10 (5.9%), 4: 11 (6.5%), 5: 6 (3.5%), 6: 7 (4.1%), 7: 12 (7.1%), 8: 14 (8.2%), 9: 5 (2.9%), 10: 15 (8.8%)
+Diagnosis	Intestinal obstruction: 39 (22.9%), Pneumonia: 34 (20.0%), Urinary tract infection: 34 (20.0%), Myocardial infarction: 34 (20.0%), Cerebral infarction: 29 (17.1%)
+Files and Structure
+We provide 170 patient profiles divided as follows:
+
+Persona Evaluation (108 profiles) – located in the persona_test folder.
+Factual Accuracy & Clinical Plausibility Evaluation (52 profiles) – located in the info_test folder.
+Sentence Classification Validation (10 profiles) – located in the sentence_cls_valid folder.
+We also include dialogue histories generated by PATIENTSIM (our patient simulator) interacting with either a human clinician or a doctor LLM, along with corresponding evaluation logs. Specifically, we provide:
+
+Dialogue history between a human doctor and PATIENTSIM, including expert evaluation of the simulator’s quality (located in persona_test/expert_dialogue.jsonl).
+Dialogue history between a doctor LLM and PATIENTSIM, including LLM-generated evaluations of the simulator’s quality. For this part, we provide logs for all ablation studies to investigate the performance of various LLMs used as the PATIENTSIM backbone (located in persona_test/{LLM model}/llm_dialogue.jsonl).
+Plausibility scores for unsupported sentences in pre-generated dialogues between the doctor LLM (GPT-4o-mini) and PATIENTSIM (located in info_test/expert_plausibility_label.jsonl).
+To help users understand our data, we provide a Jupyter file to analyze the results (analysis.ipynb).
+
+Directory Structure
+PatientSim
+├── patient_profile.json
+├── persona_test/
+│   ├── expert_dialogue.jsonl
+│   └── llm_simulation/
+│       ├── deepseek-llama-70b/
+│       ├── ...
+│       └── qwen2.5-72b-instruct/
+│           ├── llm_dialogue.jsonl
+│           ├── gemini-2.5-flash-preview-04-17_ddx_Patient.json
+│           ├── gemini-2.5-flash-preview-04-17_profile_consistency_Patient.json
+│           └── gemini-2.5-flash-preview-04-17_profile_consistency_LLMscore_Patient.json
+├── info_test/
+│   ├── dialogue.jsonl
+│   ├── expert_plausibility_label.jsonl
+│   ├── llm_plausibility_label.jsonl
+│   ├── sentence_label.json
+│   └── llm_simulation/
+│       ├── deepseek-llama-70b/
+│       ├── ...
+│       └── qwen2.5-72b-instruct/
+│           ├── llm_dialogue.jsonl
+│           ├── llm_label.jsonl
+│           ├── gemini-2.5-flash-preview-04-17_sentence_label.json
+│           ├── gemini-2.5-flash-preview-04-17_profile_consistency_Patient.json
+│           └── gemini-2.5-flash-preview-04-17_profile_consistency_LLMscore_Patient.json
+└── sentence_cls_valid/
+    ├── dialogue.jsonl
+    ├── sentence_label_gpt-4o.json
+    ├── sentence_label_gemini-2.5-flash-preview-04-17.json
+    └── sentence_label_manual.json
+File Format and Contents
+Patient profile
+Patient profiles are stored in the JSON file (patient_profile.json). This file contains a list of Python dictionaries, with each dictionary representing a single patient profile. The keys in each dictionary are as follows:
+
+hadm_id: Unique hospital admission ID.
+age: Patient's age.
+gender: Patient's gender (e.g., M/F).
+race: Patient's race.
+marital_status: Marital status.
+insurance: Insurance provider or plan.
+occupation: Patient's current or former job.
+living_situation: Current living arrangement.
+children: Number of children or status.
+exercise: Description of physical activity.
+tobacco: Smoking history.
+alcohol: Alcohol consumption habits.
+illicit_drug: Use of illegal substances.
+sexual_history: Basic information about sexual activity.
+allergies: Known allergies or adverse drug reactions.
+family_medical_history: Notable family health conditions.
+medical_device: Any implanted or assistive medical devices.
+medical_history: Past medical conditions and procedures.
+chiefcomplaint: Main reason for seeking care.
+pain: Patient’s self-reported pain level (ranging from 0 to 10) at the time of triage upon ED admission.
+medication: A list of medications the patient was taking prior to their ED visit.
+arrival_transport: Mode of arrival (e.g., WALK IN, ambulance).
+disposition: Clinical outcome (e.g., ADMITTED, DISCHARGED).
+diagnosis: Primary diagnosis for the visit.
+present_illness_positive: Reported symptoms or findings.
+present_illness_negative: Negated symptoms (if recorded).
+cefr_A1 to cefr_C2: Lists of vocabulary at each CEFR level (for language reasoning tasks).
+med_A to med_C: Medical vocabulary categorized by complexity.
+split: Dataset split identifier (e.g., "persona").
+cefr: Assigned CEFR proficiency level (A1–C2).
+personality: Assigned personality trait (e.g., "distrust").
+recall_level: Assigned memory accuracy level (e.g., "low", "high").
+dazed_level: Assigned mental clarity (e.g., "normal", "high").
+Persona test
+In the persona evaluation, human doctors conduct consultations with virtual patients powered by PATIENTSIM (LLaMA 3.3 70B). For ablation studies, dialogue histories and evaluation results with PATIENTSIM using eight different LLMs are also provided. To evaluate the quality of the simulator, both human and LLM evaluators rated each dialogue sample across the following categories. Prior to evaluation, evaluators were provided with persona descriptions for each patient. Each category was rated on a 4-point scale (1 = Strongly disagree, 4 = Strongly agree):
+
+personality: The simulated patient’s personality is consistently and accurately reflected during the interaction.
+cefr: The patient’s language use (vocabulary, grammar, fluency) is appropriate to their assigned language proficiency level.
+recall: The patient’s ability to recall medical and personal information is consistent with their assigned recall level (e.g., low or high).
+confused: The patient’s coherence and clarity of thought match the assigned level of cognitive confusion.
+realism: The patient’s overall communication style matches what I would expect from a real ED patient.
+Dialogue history (human)
+
+We provide the dialogue history between a human doctor and PATIENTSIM in the JSONL file (persona_test/expert_dialogue.jsonl). This file contains a list of annotated dialogue histories between a human doctor and PATIENTSIM. Any real names mentioned by the doctor have been anonymized and replaced with pseudonyms. Each entry includes:
+
+labeler_name: Identifier for the human annotator who reviewed the dialogue.
+hadm_id: Unique hospital admission ID used to link the dialogue to a patient profile.
+dialogue_history: A chronological list of conversational turns between the doctor and patient. Each turn includes a 'role' ("Doctor" or "Patient") and a 'content' string with the utterance text.
+doc_ddx: Differential diagnoses considered by the annotator based on the conversation.
+personality: Expert-assigned rating (1–4) for how well the patient’s dialogue reflected their assigned personality.
+cefr: Expert rating (1–4) of the patient’s English proficiency in dialogue.
+recall: Expert rating (1–4) of the patient’s memory recall accuracy in dialogue.
+confused: Expert rating (1–4) of the patient’s confusion level in dialogue.
+realism: Overall realism score (1–4) for how plausible and natural the patient’s behavior appeared.
+realism_reason: Optional textual justification or comments regarding the realism score (nullable).
+realism_other: Additional realism-related notes (nullable).
+tool_usefulness: Score (1–4) reflecting how useful PATIENTSIM is in education for practicing consultation skills.
+llm_result: Automated evaluation results from an LLM, including estimates for CEFR level, recall level, personality, and realism both generally and with respect to profile consistency.
+Dialogue history (Doctor LLM)
+
+We provide the dialogue history between a doctor LLM and PATIENTSIM with the eight different LLM backbones in the JSONL file (persona_test/{LLM model}/llm_dialogue.jsonl). Each item in the JSONL file is a dictionary with the following fields:
+
+hadm_id: Unique hospital admission ID used to link the dialogue to a patient profile.
+doctor_engine_name: LLM backbone name for the doctor LLM.
+patient_engine_name: LLM backbone name for PATIENTSIM.
+dialogue_history: A chronological list of conversational turns between the doctor and patient. Each turn includes a 'role' ("Doctor" or "Patient") and a 'content' string with the utterance text.
+diagnosis: Differential diagnoses considered by the annotator based on the conversation.
+cefr_type: The CEFR category assigned to the patient’s English proficiency, such as A, B, or C.
+personality_type: A descriptive label of the simulated patient’s personality.
+recall_level_type: A categorical description of the patient’s memory recall ability.
+dazed_level_type: A description of the patient’s apparent cognitive clarity.
+personality: LLM evaluator-assigned rating (1–4) for how well the patient’s dialogue reflected their assigned personality.
+cefr: LLM evaluator rating (1–4) of the patient’s English proficiency in dialogue.
+recall: LLM evaluator rating (1–4) of the patient’s memory recall accuracy in dialogue.
+confused: LLM evaluator rating (1–4) of the patient’s confusion level in dialogue.
+realism: Overall realism score (1–4) for how plausible and natural the patient’s behavior appeared.
+Info test
+Dialogue history
+
+We provide the dialogue history between a doctor LLM and PATIENTSIM with LLaMA 3.3 70B in the JSONL file (info_test/dialogue.jsonl). This file contains a list of dialogue histories between a doctor LLM and PATIENTSIM. Each item in the JSONL file is a dictionary with the following fields:
+
+hadm_id: Unique hospital admission ID used to link the dialogue to a patient profile.
+doctor_engine_name: LLM backbone name for the doctor LLM.
+patient_engine_name: LLM backbone name for PATIENTSIM.
+dialogue_history: A chronological list of conversational turns between the doctor and patient. Each turn includes a 'role' ("Doctor" or "Patient") and a 'content' string with the utterance text.
+diagnosis: Differential diagnoses considered by the annotator based on the conversation.
+cefr_type: The CEFR category assigned to the patient’s English proficiency, such as A, B, or C.
+personality_type: A descriptive label of the simulated patient’s personality.
+recall_level_type: A categorical description of the patient's memory recall ability.
+dazed_level_type: A description of the patient's apparent cognitive clarity.
+Plausibility scores
+We provide the plausibility scores for unsupported sentences in the JSONL file (info_test/expert_plausibility_label.jsonl). These scores represent expert ratings of how plausible each patient simulator's utterance is, based on the corresponding patient profile (1 = implausible, 2 = somewhat implausible, 3 = somewhat plausible, 4 = plausible). This file includes human-annotated plausibility ratings for specific unsupported or hallucinated utterances generated by LLMs during simulated medical dialogues. Each item is a dictionary with the following fields:
+
+labeler_name: Identifier for the human annotator.
+hadm_id: Hospital admission ID for the patient profile.
+utterance_id: Unique ID combining the patient and utterance index (e.g., plaus_<hadm_id>_utter_<idx>_<subidx>).
+score: Human-assigned plausibility score on a 1–4 scale.
+We also provide LLM-annotated plausibility ratings for the same target sentences in the JSONL file (info_test/llm_plausibility_label.jsonl). To aid understanding, we provide dialogue histories and LLM-annotated plausibility ratings for all PATIENTSIM LLM backbone candidates in the JSONL files (info_test/{LLM model}/llm_dialogue.jsonl and info_test/{LLM model}/llm_label.jsonl).
+
+Usage Notes
+Dataset Utility
+PATIENTSIM is a system designed to simulate diverse patient personas for clinical settings. Its primary utility lies in addressing the need for realistic patient interaction systems to train and evaluate Large Language Models (LLMs) that function as virtual doctors in multi-turn settings. Key utilities include:
+
+LLM Training and Evaluation: It serves as a robust testbed for evaluating medical dialogue systems across diverse patient presentations, especially for LLM-powered virtual doctors in multi-turn interactions.
+Educational Tool: It is designed as an educational tool for healthcare professionals to practice consultation skills. Clinical experts have evaluated its potential as an effective educational tool, assigning an average usefulness score of 3.75 out of 4. This offers a scalable, accessible, and cost-effective alternative to traditional standardized patients by reducing the need for repetitive human acting and eliminating geographic and time constraints.
+Open-Source and Customizable Platform: Built on an open-source model, PATIENTSIM offers an accessible, reproducible tool for providing doctor-patient consultation data while prioritizing patient privacy. This scalable, privacy-compliant solution enables researchers and practitioners to validate their models’ performance and adapt it for clinical uses.
+Limitations
+Although we carefully designed the overall framework, several limitations remain: 1) Our experiment is based on the MIMIC database, given that it is currently the only publicly available dataset to integrate clinical notes with ED triage information. This may limit the generalizability of our findings. 2) Due to the text-based nature of our simulation environment, the simulator cannot capture nonverbal expressions (e.g., facial features, body movements), leading to limited persona representation. 3) Human evaluation was conducted with four clinicians, which could limit the generalizability of the evaluation results. To enhance the realism and generalizability of our framework, several avenues can be explored in future work. First, incorporating multimodal features (e.g., tone, facial expressions, or gestures), possibly via virtual reality (VR) simulations, would allow for more comprehensive modeling of patient personas. Second, increasing the scale and diversity of human evaluators can provide more reliable validation of LLM-based assessments.
+
+Release Notes
+This is version 1.0.0 of the PATIENTSIM dataset. For any questions or concerns regarding this dataset, please feel free to reach out to us (kyungdaeun@kaist.ac.kr). We appreciate your interest and are eager to assist.
+
+Ethics
+The authors have no ethical concerns to declare.
+
+Acknowledgements
+We thank Jun-Min Lee for his contribution to the development of the official PATIENTSIM package. This work was supported by the Institute of Information & Communications Technology Planning & Evaluation (IITP) grants (No.RS-2019-II190075, No.RS-2022-00155966, No.RS-2025-02304967) and National Research Foundation of Korea (NRF) grants (NRF-2020H1D3A2A03100945, No.RS-2024-00342044), funded by the Korea government (MSIT).
+
+Conflicts of Interest
+The authors have no conflicts of interest to declare.
+
+References
+D. Jin, E. Pan, N. Oufattole, W.-H. Weng, H. Fang, and P. Szolovits. What disease does this patient have? A large-scale open domain question answering dataset from medical exams. arXiv preprint arXiv:2009.13081, 2020
+A. Pal, L. K. Umapathi, and M. Sankarasubbu. MedMCQA: A large-scale multi-subject multichoice dataset for medical domain question answering. In Proceedings of the Conference on Health, Inference, and Learning, pages 248–260, 2022
+Q. Jin, B. Dhingra, Z. Liu, W. Cohen, and X. Lu. Pubmedqa: A dataset for biomedical research question answering. In Proceedings of the 2019 Conference on Empirical Methods in Natural Language Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP), pages 2567–2577, 2019
+H. S. Barrows. An overview of the uses of standardized patients for teaching and evaluating clinical skills. Academic Medicine, 68(6):443–451, 1993
+C. Elendu, D. C. Amaechi, A. U. Okatta, E. C. Amaechi, T. C. Elendu, C. P. Ezeh, and I. D. Elendu. The impact of simulation-based training in medical education: A review. Medicine, 103(27):e38813, July 2024. doi: 10.1097/MD.0000000000038813
+D. A. Cook. Creating virtual patients using large language models: scalable, global, and low cost. Medical Teacher, 47(1):40–42, 2025. doi: 10.1080/0142159X.2024.2376879
+Y. Hicke, J. Geathers, N. Rajashekar, C. Chan, A. G. Jack, J. Sewell, M. Preston, S. Cornes, D. Shung, and R. Kizilcec. Medsimai: Simulation and formative feedback generation to enhance deliberate practice in medical education, 2025. URL https://arxiv.org/abs/2503.05793
+Y. Li, C. Zeng, J. Zhong, R. Zhang, M. Zhang, and L. Zou. Leveraging large language model as simulated patients for clinical education, 2024. URL https://arxiv.org/abs/2404.13066
+H. Wei, J. Qiu, H. Yu, and W. Yuan. Medco: Medical education copilots based on a multi-agent framework, 2024. URL https://arxiv.org/abs/2408.12496
+Z. Fan, L. Wei, J. Tang, W. Chen, W. Siyuan, Z. Wei, and F. Huang. Ai hospital: Benchmarking large language models in a multi-agent medical interaction simulator. In Proceedings of the 31st International Conference on Computational Linguistics, 2025
+S. Johri, J. Jeong, B. A. Tran, D. I. Schlessinger, S. Wongvibulsin, Z. R. Cai, R. Daneshjou, and P. Rajpurkar. CRAFT-MD: A conversational evaluation framework for comprehensive assessment of clinical LLMs. In AAAI 2024 Spring Symposium on Clinical Foundation Models, 2024
+J. Li, Y. Lai, W. Li, J. Ren, M. Zhang, X. Kang, S. Wang, P. Li, Y.-Q. Zhang, W. Ma, and Y. Liu. Agent hospital: A simulacrum of hospital with evolvable medical agents, 2025
+S. S. Li, V. Balachandran, S. Feng, J. S. Ilgen, E. Pierson, P. W. Koh, and Y. Tsvetkov. Mediq: Question-asking LLMs and a benchmark for reliable interactive clinical reasoning. In The Thirty-eighth Annual Conference on Neural Information Processing Systems, 2024
+Y. Liao, Y. Meng, H. Liu, Y. Wang, and Y. Wang. An automatic evaluation framework for multi-turn medical consultations capabilities of large language models, 2023. URL https: //arxiv.org/abs/2309.02077
+S. Schmidgall, R. Ziaei, C. Harris, E. Reis, J. Jopling, and M. Moor. Agentclinic: a multimodal agent benchmark to evaluate ai in simulated clinical environments, 2024
+T. Tu, A. Palepu, M. Schaekermann, K. Saab, J. Freyberg, R. Tanno, A. Wang, B. Li, M. Amin, N. Tomasev, S. Azizi, K. Singhal, Y. Cheng, L. Hou, A. Webson, K. Kulkarni, S. S. Mahdavi, C. Semturs, J. Gottweis, J. Barral, K. Chou, G. S. Corrado, Y. Matias, A. Karthikesalingam, and V. Natarajan. Towards conversational diagnostic ai, 2024. URL https://arxiv.org/abs/2401.05654.
+H. Liu, Y. Liao, S. Ou, Y. Wang, H. Liu, Y. Wang, and Y. Wang. Med-pmc: Medical personalized multi-modal consultation with a proactive ask-first-observe-next paradigm, 2024. URL https: //arxiv.org/abs/2408.08693
+Z. Du, L. Zheng, R. Hu, Y. Xu, X. Li, Y. Sun, W. Chen, J. Wu, H. Cai, and H. Ying. Llms can simulate standardized patients via agent coevolution, 2024. URL https://arxiv.org/abs/ 2412.11716
+Y. Liao, Y. Meng, Y. Wang, H. Liu, Y. Wang, and Y. Wang. Automatic interactive evaluation for large language models with state aware patient simulator, 2024
+A. Johnson, L. Bulgarelli, T. Pollard, B. Gow, B. Moody, S. Horng, L. A. Celi, and R. Mark. MIMIC-IV (version 3.1). https://doi.org/10.13026/kpb9-mt58, 2024. PhysioNet
+A. Johnson, L. Bulgarelli, T. Pollard, L. A. Celi, R. Mark, and S. Horng. MIMIC-IV-ED (version 2.2). https://doi.org/10.13026/5ntk-km72, 2023. PhysioNet
+A. Johnson, T. Pollard, S. Horng, L. A. Celi, and R. Mark. MIMIC-IV-Note: Deidentified free-text clinical notes (version 2.2). https://doi.org/10.13026/1n74-ne17, 2023. PhysioNet
+G. B. Clack, J. Allen, D. Cooper, and J. O. Head. Personality differences between doctors and their patients: implications for the teaching of communication skills. Medical Education, 38(2): 177–186, 2004. doi: 10.1111/j.1365-2923.2004.01752
+G. Cousin and M. Schmid Mast. Agreeable patient meets affiliative physician: How physician behavior affects patient outcomes depends on patient personality. Patient Education and Counseling, 90(3):399–404, 2013. ISSN 0738-3991.
+S. D. Lifchez and R. J. Redett. A standardized patient model to teach and assess professionalism and communication skills: The effect of personality type on performance. Journal of Surgical Education, 71(3):297–301, 2014. ISSN 1931-7204. doi: https://doi.org/10.1016/j.jsurg.2013.09.010
+D. A. Redelmeier, U. Najeeb, and E. E. Etchells. Understanding patient personality in medical care: Five-factor model. Journal of General Internal Medicine, 36(7):2111–2114, 2021. ISSN 1525-1497. doi: 10.1007/s11606-021-06598-8
+R. R. McCrae and P. T. Costa. Validation of the five-factor model of personality across instruments and observers. Journal of Personality and Social Psychology, 52(1):81–90, 1987
+A. Banerjee and D. Sanyal. Dynamics of doctor–patient relationship: A cross-sectional study on concordance, trust, and patient enablement. Journal of Family and Community Medicine, 19 (1):12–19, 2012. doi: 10.4103/2230-8229.94006
+F. Chipidza, R. S. Wallwork, T. N. Adams, and T. A. Stern. Evaluation and treatment of the angry patient. Primary Care Companion for CNS Disorders, 18(3), 2016
+M. Legg, S. E. Andrews, H. Huynh, A. Ghane, A. Tabuenca, and K. Sweeny. Patients’ anxiety and hope: predictors and adherence intentions in an acute care context. Health Expectations, 18 (6):3034–3043, 2015. doi: 10.1111/hex.12288
+D. E. Stubbe. Alleviating anxiety: Optimizing communication with the anxious patient. Focus (Am Psychiatr Publ), 15(2):182–184, 2017. doi: 10.1176/appi.focus.20170001
+E. J. Pérez-Stable and S. El-Toukhy. Communicating with diverse patients: How patient and clinician factors affect disparities. Patient Education and Counseling, 101(12):2186–2194, 2018. ISSN 0738-3991. doi: https://doi.org/10.1016/j.pec.2018.08.021
+R. L. Sudore, C. S. Landefeld, E. J. Pérez-Stable, K. Bibbins-Domingo, B. A. Williams, and D. Schillinger. Unraveling the relationship between literacy, language proficiency, and patient-physician communication. Patient Education and Counseling, 75(3):398–402, 2009. doi: 10.1016/j.pec.2009.02.019
+C. of Europe. Common European Framework of Reference for Languages: Learning, Teaching, Assessment. Cambridge University Press, Cambridge, 2001
+E. C. Toy, B. Simon, K. Takenaka, T. H. Liu, and A. J. Rosh. Case Files Emergency Medicine. McGraw-Hill Education / Medical, New York, 4th edition, 2017. ISBN 9781259640827
+G. S. Boyer, D. W. Templin, W. P. Goring, J. C. Cornoni-Huntley, D. F. Everett, R. C. Lawrence, S. P. Heyse, and A. Bowler. Discrepancies between patient recall and the medical record. Potential impact on diagnosis and clinical assessment of chronic disease. Archives of Internal Medicine, 155(17):1868–1872, 1995.
+M. B. Laws, Y. Lee, T. Taubin, W. H. Rogers, and I. B. Wilson. Factors associated with patient recall of key information in ambulatory specialty care visits: Results of an innovative methodology. PLoS ONE, 13(2):e0191940, 2018. doi: 10.1371/journal.pone.0191940
+Parent Projects
+PatientSim: A Persona-Driven Simulator for Realistic Doctor-Patient Interactions was derived from:
+MIMIC-IV v3.1
+MIMIC-IV-ED v2.2
+MIMIC-IV-Note: Deidentified free-text clinical notes v2.2
+Please cite them when using this project.
+Share
+    
+Access
+Access Policy:
+Only credentialed users who sign the DUA can access the files.
+
+License (for files):
+PhysioNet Credentialed Health Data License 1.5.0
+
+Data Use Agreement:
+PhysioNet Credentialed Health Data Use Agreement 1.5.0
+
+Required training:
+CITI Data or Specimens Only Research
+
+Discovery
+DOI (version 1.0.0):
+https://doi.org/10.13026/vq0d-v871
+
+DOI (latest version):
+https://doi.org/10.13026/4b4t-9e66
+
+Topics:
+electronic health records multi-turn dialogue llm simulation doctor-patient consultation
+
+Project Website:
+ https://github.com/dek924/PatientSim
+
+Project Views
+65
+Current Version
+65
+All Versions
+Project Views by Unique Registered Users
+Corresponding Author
+You must be logged in to view the contact information.
+Versions
+1.0.0
+Oct. 18, 2025
+Files
+This is a restricted-access resource. To access the files, you must fulfill all of the following requirements:
+be a credentialed user
+complete required training:
+CITI Data or Specimens Only Research
+You may submit your training here.
+sign the data use agreement for the project
+
+PhysioNet
+Maintained by the MIT Laboratory for Computational Physiology
+
+Supported by the National Institute of Biomedical Imaging and Bioengineering (NIBIB), National Heart Lung and Blood Institute (NHLBI), and NIH Office of the Director under NIH grant numbers U24EB037545 and R01EB030362
+
+Navigation
+Discover Data
+Share Data
+About
+News
+Explore
+Data
+Software
+Challenges
+Tutorials
+
+
+Accessibility
