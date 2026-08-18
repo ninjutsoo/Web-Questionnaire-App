@@ -1,0 +1,194 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+\setlist[itemize]{leftmargin=1.5em}
+\setlist[enumerate]{leftmargin=1.5em}
+
+\title{\textbf{Remember M.E.}\\
+\large 4Ms Health Questionnaire Platform}
+\author{}
+\date{August 18, 2026}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Remember M.E. is a web-based health questionnaire platform organized around the 4Ms framework: What Matters, Medication, Mentation, and Mobility. It gives older adults a guided way to record priorities, health concerns, medication information, cognitive and emotional well-being, and mobility needs while preserving progress across sessions. The same information carries into review pages, medication entry, care partner communication, and a contextual AI assistant, so the assessment remains useful after the form is complete.
+\end{abstract}
+
+\section{Product Overview}
+
+Remember M.E. gives older adults and care partners a structured way to prepare health information around the 4Ms. Users sign in, complete the assessment, review their answers, return to saved progress, and generate material that can be used during care conversations.
+
+The central purpose is to make important health-related information easier to capture and organize. Instead of presenting one long form, the application separates the experience into four familiar care domains:
+
+\begin{itemize}
+  \item \textbf{What Matters:} goals, values, priorities, concerns, and support needs.
+  \item \textbf{Medication:} prescribed medications, over-the-counter medications, missed doses, management habits, and medication concerns.
+  \item \textbf{Mentation:} happiness, memory worries, sleep quality, stress, mental health concerns, and preferred support.
+  \item \textbf{Mobility:} movement style, mobility challenges, exercise, mobility aids, fall concerns, and practical mobility guidance.
+\end{itemize}
+
+The 4Ms structure follows the Age-Friendly Health Systems model, which centers care for older adults around What Matters, Medication, Mentation, and Mobility \cite{ihi-age-friendly}. In Remember M.E., those domains organize the interface, saved responses, progress tracking, review pages, and AI assistant context.
+
+\section{User Journey}
+
+The user journey follows a clear sequence. Sign-in opens to a dashboard with assessment progress and a direct path back into the questionnaire. Each 4Ms section then presents a focused set of questions, with input methods matched to the kind of information being collected.
+
+This step-by-step structure reflects older-adult mobile design literature that emphasizes simplification, predictable navigation, and reduced decision burden during task completion \cite{gomez-hernandez-older-adult-guidelines}. Short structured choices handle common answers, while text fields, sliders, voice input, and scanner-assisted medication entry cover information that benefits from more detail. At the end of the flow, the review screen brings responses together for checking, editing, saving, printing, sharing, downloading, or use with the AI assistant. Because progress is saved, the questionnaire can be completed over more than one session.
+
+\section{Main Product Areas}
+
+\subsection{Landing and Account Access}
+
+The landing page introduces Remember M.E. and directs users toward sign-in or account creation. The account flow collects basic profile details and supports returning users through sign-in and password reset. Once signed in, the user enters the authenticated portion of the platform.
+
+\subsection{Dashboard}
+
+The dashboard is the user's home base. It displays a welcome message, overall questionnaire progress, and the most recent update status. The primary action is to continue the assessment, keeping the experience centered on returning to the questionnaire.
+
+\subsection{4Ms Questionnaire}
+
+The questionnaire is the core of the application. It presents the four sections as a guided sequence and tracks completion across the full assessment. Users can move forward and backward between sections, review progress, and save their current work.
+
+Each 4Ms section uses question types suited to the kind of information being collected. Concerns, goals, habits, and support needs are captured through tag-plus-text questions. Happiness, memory worry, and sleep quality use slider-style ratings. Medication information is handled through structured entry tools, while mobility guidance begins with the user's selected mobility type.
+
+\subsection{Review and Summary}
+
+The review area brings the user's answers together after the questionnaire sections are complete. It shows section-level completion, response summaries, and edit paths back to each section. This turns the questionnaire from a data-entry sequence into a reusable care-preparation summary.
+
+From the review flow, the user can save the assessment and use output actions such as print, share, or download. The summary carries the assessment into care conversations outside the application.
+
+\section{Design Basis for Older-Adult Use}
+
+The interaction design follows established older-adult usability research. Health applications can become difficult to complete when controls are small or unclear, contrast is weak, forms are dense, navigation is ambiguous, icons are unlabeled, input depends heavily on dropdowns, or exits are hard to find. These barriers matter for users managing changes in vision, dexterity, attention, memory, confidence, or comfort with technology.
+
+Remember M.E. uses a section-by-section questionnaire, visible progress feedback, labeled actions, structured response choices, voice input, read-aloud support, and review paths that let users check information before it is reused. These choices align with a systematic review of mobile app design guidelines for older adults, which emphasizes simplified interaction and larger, clearly spaced controls \cite{gomez-hernandez-older-adult-guidelines}. Touch screen research also connects button size and spacing with reaction time, accuracy, preference, and manual dexterity for older adults \cite{jin-touchscreen-older-adults}. WCAG 2.2 provides broader accessibility guidance for contrast, labels, focus behavior, target size, and accessible authentication \cite{wcag22}.
+
+The platform also favors recognizable controls and visible labels. Research on flat design indicates that visually ambiguous controls can create uncertainty for older users when identifying clickable objects or navigating across pages \cite{urbano-flat-design}. Focus-group research on older adults and tablet use similarly highlights the importance of clear instructions, guidance, and support when adopting unfamiliar digital interactions \cite{vaportzis-tablet-barriers}.
+
+\section{4Ms Section Design}
+
+\subsection{What Matters}
+
+The What Matters section captures the user's priorities and goals. Questions focus on meaningful activities, current concerns, important goals, and the kind of support the user needs most. This section gives the rest of the platform context by making the user's personal priorities visible.
+
+\subsection{Medication}
+
+The Medication section collects information about prescribed medications, over-the-counter medications, concerns, missed doses, and medication management habits. Users can select common categories and add notes in their own words. Scanner-assisted entry reduces manual typing when medication labels or codes are available.
+
+\subsection{Mentation}
+
+The Mentation section covers emotional and cognitive well-being. It includes slider-style ratings for happiness, memory concern, and sleep quality, followed by structured questions about stress, mental health concerns, and preferred sources of support. This section combines quick rating inputs with open-ended explanation.
+
+\subsection{Mobility}
+
+The Mobility section captures how the user usually gets around, what challenges they face, whether they use aids, and whether they have concerns about falling. The section also provides mobility-type-specific guidance for users who identify as bedrest, walker, wheelchair, or independent mobility users.
+
+\section{Accessibility and Input Support}
+
+Remember M.E. includes several interaction options so users are not limited to conventional typing. The questionnaire and assistant both use these options directly, including readable text, contrast, labeled controls, predictable navigation, and alternatives to typed entry. These priorities are consistent with accessibility standards and older-adult technology research \cite{wcag22,gomez-hernandez-older-adult-guidelines,vaportzis-tablet-barriers}.
+
+Structured choices reduce typing burden and make common answers easier to select, while free-text notes allow users to add details when structured options are not enough. Voice input supports longer dictated answers and chat messages, and read-aloud support lets the platform speak question text. QR and barcode scanning help with medication-related entry, while dashboard and section progress cues show how much of the assessment has been completed.
+
+These interaction options support users with different comfort levels, typing ability, vision needs, or preference for spoken interaction. They also match WCAG's broader accessibility direction: web content should support users with low vision, limited movement, speech differences, cognitive limitations, and multiple device types \cite{wcag22}.
+
+\section{AI Assistant}
+
+The AI assistant gives users a conversational way to work with their questionnaire information. It supports typed questions, spoken questions, and quick-question suggestions drawn from the assessment context.
+
+When a user asks a question, the assistant can refer to saved 4Ms responses and, when enabled, location context. This keeps the conversation tied to the user's own assessment rather than a separate general chat.
+
+The form captures structured information. The assistant helps the user return to that information through conversation.
+
+\section{Care Partner Support}
+
+Remember M.E. includes profile fields and communication support for care partners. A care partner email can be stored with the user's profile, and the platform can send mobility tips and medication or mobility reminders.
+
+Within the product experience, care partner communication extends the usefulness of information collected in the assessment, especially around mobility and medication routines.
+
+\section{Integrated System Flow}
+
+Questionnaire data moves through the dashboard, review screen, AI assistant, and communication features. A response entered in one section can update progress, appear in the final summary, inform assistant prompts, and support care partner messages.
+
+\begin{figure}[h]
+\centering
+\begin{tabular}{c}
+\fbox{\parbox{0.82\linewidth}{\centering Account and Profile}} \\
+$\downarrow$ \\
+\fbox{\parbox{0.82\linewidth}{\centering 4Ms Questionnaire: What Matters, Medication, Mentation, Mobility}} \\
+$\downarrow$ \\
+\fbox{\parbox{0.82\linewidth}{\centering Saved Responses and Progress Tracking}} \\
+$\downarrow$ \\
+\fbox{\parbox{0.82\linewidth}{\centering Review, Print, Share, Download}} \\
+$\downarrow$ \\
+\fbox{\parbox{0.82\linewidth}{\centering Contextual AI Assistant and Care Partner Support}} \\
+\end{tabular}
+\caption{Integrated product flow for Remember M.E.}
+\end{figure}
+
+The questionnaire is the center of the system. Saved responses update the dashboard, populate the review screen, shape assistant interactions, and support communication features.
+
+\section{Technical System}
+
+Remember M.E. is organized as a layered digital health application. The interface presents the care experience, while account, data, assistant, medication lookup, and communication services support the work behind each screen.
+
+\begin{longtable}{p{0.27\linewidth}p{0.63\linewidth}}
+\toprule
+\textbf{System Layer} & \textbf{Role in the Product} \\
+\midrule
+Experience layer & Presents landing, account access, dashboard, questionnaire, review, and assistant screens. \\
+Account and data layer & Maintains user identity, profile details, questionnaire structure, saved answers, and return-session continuity. \\
+Questionnaire engine & Organizes the 4Ms sections, question types, progress calculations, and review flow. \\
+Assistant layer & Provides chat responses and quick questions using questionnaire context. \\
+Medication support layer & Uses scanned or entered medication identifiers to help populate medication information. \\
+Communication layer & Sends care partner tips and reminder messages. \\
+\bottomrule
+\end{longtable}
+
+The architecture supports continuity: information entered in one part of the experience remains useful in other parts of the experience.
+
+\section{Extended Capabilities}
+
+The same product model extends to three AI-enabled capabilities: conversational completion, medication understanding, and visit preparation.
+
+\subsection{Conversational 4Ms Completion}
+
+Conversational 4Ms completion allows users to answer portions of the questionnaire through natural speech or typing. The system converts the conversation into section-specific responses, asks simple follow-up questions when information is missing, and presents responses for review before saving.
+
+\subsection{Medication Understanding}
+
+Medication understanding expands scanner-assisted entry by reading visible label details, comparing them with existing questionnaire answers, and organizing possible differences. This makes the medication section easier to complete and easier to review.
+
+\subsection{Visit Preparation}
+
+Visit preparation generates a plain-language page from confirmed questionnaire answers. The page includes a What Matters statement, summarized concerns, medication questions, mobility concerns, and a short set of editable questions for an appointment.
+
+\subsection{Capability Integration}
+
+Each capability collects information, maps it to a 4Ms section, asks for user review, and produces an output the user can keep or share.
+
+\section{Conclusion}
+
+Remember M.E. organizes older-adult health preparation around the 4Ms in a form that can be completed, saved, reviewed, and reused. The product combines a guided questionnaire with accessible input methods, medication support, care partner communication, and an assistant that works from the user's own responses.
+
+The result is a single product flow: users enter information once, return to it over time, review it before use, and carry it into conversations about care.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
